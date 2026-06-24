@@ -6,7 +6,8 @@ export default function Navbar({ onReserve, reserveLabel = "Réserver" }: { onRe
         <ul className="nav-links">
           <li><a href="#histoire">Notre cuisine</a></li>
           <li><a href="#carte">La carte</a></li>
-          <li><a href="#producteurs">Producteurs</a></li>
+          <li><a href="#jour">Plat du jour</a></li>
+          <li><a href="#emporter">À emporter</a></li>
           <li><a href="#galerie">Galerie</a></li>
           <li><a href="#contact">Contact</a></li>
         </ul>
