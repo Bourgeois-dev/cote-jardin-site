@@ -12,9 +12,10 @@ export default function Emporter({ items }: { items: TakeawayItem[] }) {
       <div className="emporter-inner">
         <div className="emporter-tete">
           <p className="emporter-eyebrow">À emporter</p>
-          <h2 className="emporter-titre">Les plats à emporter continuent !</h2>
+          <h2 className="emporter-titre">Nos formules à emporter</h2>
           <p className="emporter-intro">
-            Chaque semaine, votre restaurant Côté Jardin vous propose de bons petits plats à emporter, élaborés à partir de produits frais et locaux !<br>Pour se faire plaisir à la maison comme au restaurant.
+            Galettes, salades et crêpes préparées à la commande — à récupérer
+            directement au restaurant. Appeler pour réserver votre commande.
           </p>
           <a
             href={`tel:${(import.meta.env.VITE_RESTO_PHONE || "").replace(/\s/g, "")}`}
