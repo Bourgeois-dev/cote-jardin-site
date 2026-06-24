@@ -146,7 +146,7 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
           <div className="rond">✓</div>
           <h3>Réservation enregistrée</h3>
           <p>{fmtFR(new Date(date + "T12:00:00"))} à {slot?.replace(":", "h")} — {covers} couvert{covers > 1 ? "s" : ""}</p>
-          <p className="rgpd">Votre demande sera confirmée par le restaurant.</p>
+          <p className="rgpd" style={{ textAlign: "center", marginTop: "18px", marginBottom: "6px" }}>Votre demande sera confirmée par le restaurant.</p>
           <button className="btn btn-accent" onClick={onClose}>Fermer</button>
         </div>
       ) : (
