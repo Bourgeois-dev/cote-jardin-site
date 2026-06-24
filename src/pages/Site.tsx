@@ -37,7 +37,8 @@ export default function Site() {
 
   useEffect(() => {
     (async () => {
-      const [m, g, p, r, s, h, ard, cm, pf, rf, nf, rs, pb, mf, tw, twf] = await Promise.all([
+      // Promise.allSettled évite qu'une seule requête en erreur bloque tout le chargement
+      const results = await Promise.allSettled([
         fetchActive<MenuItem>("menu_items"),
         fetchActive<GalleryImage>("gallery_images"),
         fetchActive<Partner>("partners"),
@@ -49,12 +50,19 @@ export default function Site() {
         fetchContent("partners_enabled"),
         fetchContent("reviews_enabled"),
         fetchContent("newsletter_enabled"),
-        fetchActive<ReservationSettings>("reservation_settings"),
+        fetchActive<ReservationSettings>("reservation_settings", "id"),
         fetchActive<PromoBanner>("promo_banner", "id"),
         fetchContent("menu_file"),
         fetchActive<TakeawayItem>("takeaway_items"),
         fetchContent("takeaway_enabled"),
       ]);
+      const get = (i: number, fallback: any = []) =>
+        results[i].status === "fulfilled" ? (results[i] as PromiseFulfilledResult<any>).value : fallback;
+      const [m, g, p, r, s, h, ard, cm, pf, rf, nf, rs, pb, mf, tw, twf] = [
+        get(0), get(1), get(2), get(3), get(4), get(5),
+        get(6, null), get(7, null), get(8, null), get(9, null), get(10, null),
+        get(11), get(12), get(13, null), get(14), get(15, null),
+      ];
       setMenu(m.filter((x) => x.is_active));
       setGallery(g.filter((x) => x.is_active));
       setPartners(p.filter((x) => x.is_active));
