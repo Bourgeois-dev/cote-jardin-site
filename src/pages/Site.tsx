@@ -91,8 +91,8 @@ export default function Site() {
       <Histoire />
       {ardoise?.enabled !== false && <Ardoise ardoise={ardoise} />}
       <Carte menu={menu} catMeta={catMeta} menuFile={menuFile} />
-      {flags.partners && partners.length > 0 && <Partenaires partners={partners} />}
       {takeawayEnabled && takeaway.length > 0 && <Emporter items={takeaway} />}
+      {flags.partners && partners.length > 0 && <Partenaires partners={partners} />}
       {gallery.length > 0 && <Galerie images={gallery} />}
       {flags.reviews && reviews.length > 0 && <Avis reviews={reviews} />}
       {flags.newsletter && <Newsletter socials={socials} />}
