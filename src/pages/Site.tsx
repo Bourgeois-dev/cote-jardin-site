@@ -94,7 +94,12 @@ export default function Site() {
 
   return (
     <>
-      <Navbar onReserve={reserve} reserveLabel={reserveLabel} />
+      <Navbar onReserve={reserve} reserveLabel={reserveLabel} flags={{
+        ardoise: ardoise?.enabled !== false && !!ardoise?.plat,
+        takeaway: takeawayEnabled && takeaway.length > 0,
+        partners: flags.partners && partners.length > 0,
+        newsletter: flags.newsletter,
+      }} />
       <Hero onReserve={reserve} onHours={() => setHorairesOpen(true)} reserveLabel={resaEnabled ? "Réserver une table" : "Appeler le restaurant"} />
       <Histoire />
       {ardoise?.enabled !== false && <Ardoise ardoise={ardoise} />}
