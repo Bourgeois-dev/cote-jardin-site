@@ -375,9 +375,9 @@ section { padding:clamp(72px,10vw,120px) 0 }
   display:flex; gap:3px; margin-bottom:16px;
 }
 .avis-texte {
-  font-family:var(--font-display); font-style:italic;
-  font-size:clamp(16px,1.8vw,20px); line-height:1.55;
-  color:var(--ink); margin:0 0 18px; flex:1;
+  font-family:var(--font-body); font-weight:300; font-style:italic;
+  font-size:14.5px; line-height:1.65;
+  color:var(--ink-soft); margin:0 0 16px; flex:1;
 }
 .avis-auteur {
   font-family:var(--font-body); font-size:10px; font-weight:700;
