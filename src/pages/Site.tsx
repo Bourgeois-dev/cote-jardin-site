@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase, fetchActive, fetchContent } from "../lib/supabase";
-import type { MenuItem, GalleryImage, Partner, Review, SocialLink, OpeningHour, ReservationSettings, PromoBanner } from "../lib/types";
+import type { MenuItem, GalleryImage, Partner, Review, SocialLink, OpeningHour, ReservationSettings, PromoBanner, TakeawayItem } from "../lib/types";
 import Navbar from "../components/site/Navbar";
 import Hero from "../components/site/Hero";
 import Histoire from "../components/site/Histoire";
@@ -14,6 +14,7 @@ import Footer from "../components/site/Footer";
 import HorairesModal from "../components/site/HorairesModal";
 import ReservationWidget from "../components/site/ReservationWidget";
 import PromoPopup from "../components/site/PromoPopup";
+import Emporter from "../components/site/Emporter";
 
 export default function Site() {
   const [menu, setMenu] = useState<MenuItem[]>([]);
@@ -28,13 +29,15 @@ export default function Site() {
   const [flags, setFlags] = useState<{ partners: boolean; reviews: boolean; newsletter: boolean }>({ partners: true, reviews: true, newsletter: true });
   const [resaEnabled, setResaEnabled] = useState(true);
   const [promo, setPromo] = useState<PromoBanner | null>(null);
+  const [takeaway, setTakeaway] = useState<TakeawayItem[]>([]);
+  const [takeawayEnabled, setTakeawayEnabled] = useState(false);
   const [horairesOpen, setHorairesOpen] = useState(false);
   const [widgetOpen, setWidgetOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const [m, g, p, r, s, h, ard, cm, pf, rf, nf, rs, pb, mf] = await Promise.all([
+      const [m, g, p, r, s, h, ard, cm, pf, rf, nf, rs, pb, mf, tw, twf] = await Promise.all([
         fetchActive<MenuItem>("menu_items"),
         fetchActive<GalleryImage>("gallery_images"),
         fetchActive<Partner>("partners"),
@@ -49,6 +52,8 @@ export default function Site() {
         fetchActive<ReservationSettings>("reservation_settings"),
         fetchActive<PromoBanner>("promo_banner", "id"),
         fetchContent("menu_file"),
+        fetchActive<TakeawayItem>("takeaway_items"),
+        fetchContent("takeaway_enabled"),
       ]);
       setMenu(m.filter((x) => x.is_active));
       setGallery(g.filter((x) => x.is_active));
@@ -62,6 +67,8 @@ export default function Site() {
       setFlags({ partners: pf?.enabled ?? true, reviews: rf?.enabled ?? true, newsletter: nf?.enabled ?? true });
       setResaEnabled(rs[0]?.enabled ?? true);
       setPromo(pb[0] || null);
+      setTakeaway(tw.filter((x) => x.is_active));
+      setTakeawayEnabled(twf?.enabled ?? false);
       setLoading(false);
     })();
   }, []);
@@ -85,6 +92,7 @@ export default function Site() {
       {ardoise?.enabled !== false && <Ardoise ardoise={ardoise} />}
       <Carte menu={menu} catMeta={catMeta} menuFile={menuFile} />
       {flags.partners && partners.length > 0 && <Partenaires partners={partners} />}
+      {takeawayEnabled && takeaway.length > 0 && <Emporter items={takeaway} />}
       {gallery.length > 0 && <Galerie images={gallery} />}
       {flags.reviews && reviews.length > 0 && <Avis reviews={reviews} />}
       {flags.newsletter && <Newsletter socials={socials} />}

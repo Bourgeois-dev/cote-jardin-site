@@ -122,7 +122,7 @@ section { padding:clamp(72px,10vw,120px) 0 }
 .carte { background:#fff }
 .carte-head {
   text-align:center; max-width:52ch;
-  margin:0 auto clamp(40px,6vw,72px);
+  margin:0 auto clamp(24px,3.5vw,44px);
 }
 .carte-eyebrow {
   font-family:var(--font-body); font-size:10px; font-weight:600;
@@ -137,7 +137,7 @@ section { padding:clamp(72px,10vw,120px) 0 }
 .menu-cols { display:flex; flex-direction:column; gap:0 }
 .cat {
   border-top:1px solid var(--line);
-  padding:clamp(28px,4vw,48px) 0;
+  padding:clamp(16px,2vw,28px) 0;
 }
 .cat:last-child { border-bottom:1px solid var(--line) }
 .cat h3 {
@@ -159,7 +159,7 @@ section { padding:clamp(72px,10vw,120px) 0 }
 .plat {
   display:flex; align-items:baseline;
   justify-content:space-between; gap:24px;
-  padding:14px 0; border-bottom:1px solid rgba(22,48,58,.07);
+  padding:9px 0; border-bottom:1px solid rgba(22,48,58,.07);
 }
 .plat:last-child { border-bottom:none }
 .plat-gauche { flex:1; min-width:0 }
@@ -322,43 +322,64 @@ section { padding:clamp(72px,10vw,120px) 0 }
 }
 
 /* ============================================================
-   AVIS — fond vert très doux, carte large centrée
+   AVIS — cards côte à côte, scroll horizontal, fond crème2
    ============================================================ */
-.avis { background:rgba(90,125,79,.07) }
-.avis-inner { text-align:center; max-width:760px; margin:0 auto }
-.avis-inner > .eyebrow { display:block; margin-bottom:14px }
-.avis-inner > h2 {
+.avis { background:var(--cream2); overflow:hidden }
+.avis-tete {
+  max-width:1180px; margin:0 auto clamp(32px,4vw,52px);
+  padding:0 clamp(20px,5vw,64px);
+  display:flex; align-items:flex-end; justify-content:space-between; gap:24px;
+}
+@media(max-width:680px){ .avis-tete { flex-direction:column; align-items:flex-start; gap:12px } }
+.avis-tete h2 {
   font-family:var(--font-display); font-weight:400;
-  font-size:clamp(32px,4vw,46px); color:var(--ink);
-  margin:0 0 clamp(28px,4vw,48px); letter-spacing:-.01em;
+  font-size:clamp(30px,4vw,46px); color:var(--ink);
+  margin:0; letter-spacing:-.01em;
 }
-.avis-carrousel { overflow:hidden }
-.avis-piste { display:flex; transition:transform .5s cubic-bezier(.4,0,.2,1) }
+.avis-nav { display:flex; gap:8px }
+.avis-point {
+  width:8px; height:8px; border-radius:50%; border:none;
+  background:var(--line); cursor:pointer; padding:0; transition:.2s; flex-shrink:0;
+}
+.avis-point.actif { background:var(--accent); width:26px; border-radius:99px }
+/* Piste scrollable */
+.avis-track-wrap {
+  max-width:1180px; margin:0 auto;
+  padding:0 clamp(20px,5vw,64px);
+  overflow:hidden;
+}
+.avis-piste {
+  display:flex; gap:20px;
+  transition:transform .5s cubic-bezier(.4,0,.2,1);
+}
+/* Chaque carte : 3 visibles sur desktop */
 .avis-carte {
-  min-width:100%; padding:0 8px;
+  flex:0 0 calc((100% - 40px) / 3);
+  min-width:0;
 }
+@media(max-width:900px){ .avis-carte { flex:0 0 calc((100% - 20px) / 2) } }
+@media(max-width:580px){ .avis-carte { flex:0 0 100% } }
 .avis-carte-inner {
   background:#fff; border:1px solid var(--line);
-  padding:clamp(28px,4vw,48px) clamp(24px,4vw,56px);
+  padding:28px 28px 24px; height:100%; display:flex; flex-direction:column;
 }
 .avis-etoiles {
-  display:flex; justify-content:center; gap:4px; margin-bottom:20px;
+  display:flex; gap:3px; margin-bottom:16px;
 }
 .avis-texte {
   font-family:var(--font-display); font-style:italic;
-  font-size:clamp(18px,2.4vw,24px); line-height:1.55;
-  color:var(--ink); margin:0 0 18px;
+  font-size:clamp(16px,1.8vw,20px); line-height:1.55;
+  color:var(--ink); margin:0 0 18px; flex:1;
 }
 .avis-auteur {
-  font-family:var(--font-body); font-size:11px; font-weight:700;
+  font-family:var(--font-body); font-size:10px; font-weight:700;
   letter-spacing:.18em; text-transform:uppercase; color:var(--accent);
+  border-top:1px solid var(--line); padding-top:14px; margin-top:auto;
 }
-.avis-nav { display:flex; justify-content:center; gap:8px; margin-top:22px }
-.avis-point {
-  width:7px; height:7px; border-radius:50%; border:none;
-  background:var(--line); cursor:pointer; padding:0; transition:.2s;
-}
-.avis-point.actif { background:var(--accent); width:24px; border-radius:99px }
+/* Compat ancien sélecteur (avis-inner utilisé dans le JSX actuel) */
+.avis-inner { display:contents }
+.avis-inner > .eyebrow { display:none }
+.avis-inner > h2 { display:none }
 
 /* ============================================================
    NEWSLETTER — fond crème2, formulaire inline épuré, pas de carte
@@ -546,3 +567,70 @@ footer a:hover { color:var(--cream) }
 .cj-btn-horaires:hover { background:rgba(246,243,234,.12); border-color:var(--cream) }
 @media(max-width:680px) { .cj-hero { min-height:min(80vh,560px) } .cj-hero-cta .btn,.cj-btn-horaires { flex:1; text-align:center } }
 @media(prefers-reduced-motion:reduce) { .cj-hero-bg { transform:none!important; transition:none } }
+
+/* ============================================================
+   EMPORTER — Bloc « Plats à emporter » (sur mesure Côté Jardin)
+   Fond vert accent, deux colonnes : accroche gauche / liste droite
+   ============================================================ */
+.emporter {
+  background:var(--accent);
+  padding:clamp(56px,8vw,96px) 0;
+}
+.emporter-inner {
+  max-width:1180px; margin:0 auto;
+  padding:0 clamp(20px,5vw,64px);
+  display:grid; grid-template-columns:1fr 1.4fr; gap:clamp(40px,6vw,100px);
+  align-items:start;
+}
+@media(max-width:860px){ .emporter-inner { grid-template-columns:1fr; gap:36px } }
+
+/* Colonne gauche — accroche */
+.emporter-eyebrow {
+  font-family:var(--font-body); font-size:10px; font-weight:600;
+  letter-spacing:.36em; text-transform:uppercase;
+  color:rgba(246,243,234,.65); margin:0 0 14px;
+}
+.emporter-titre {
+  font-family:var(--font-display); font-weight:400;
+  font-size:clamp(30px,4vw,46px); color:var(--cream);
+  margin:0 0 18px; line-height:1.06; letter-spacing:-.01em;
+}
+.emporter-intro {
+  font-family:var(--font-body); font-weight:300;
+  font-size:15px; line-height:1.72;
+  color:rgba(246,243,234,.78); margin:0 0 28px; max-width:38ch;
+}
+.emporter-tel {
+  display:inline-block;
+  font-family:var(--font-display); font-size:26px;
+  color:var(--cream); text-decoration:none; letter-spacing:.02em;
+  border-bottom:1.5px solid rgba(246,243,234,.4);
+  padding-bottom:2px; transition:border-color .15s;
+}
+.emporter-tel:hover { border-color:var(--cream) }
+
+/* Colonne droite — liste des articles */
+.emporter-liste {
+  display:flex; flex-direction:column;
+  border-top:1px solid rgba(246,243,234,.2);
+}
+.emporter-item {
+  display:flex; align-items:baseline;
+  justify-content:space-between; gap:20px;
+  padding:16px 0; border-bottom:1px solid rgba(246,243,234,.12);
+}
+.emporter-item-gauche { flex:1; min-width:0 }
+.emporter-nom {
+  display:block;
+  font-family:var(--font-body); font-weight:600;
+  font-size:15px; color:var(--cream);
+}
+.emporter-desc {
+  display:block; margin-top:3px;
+  font-family:var(--font-body); font-weight:300;
+  font-size:13px; color:rgba(246,243,234,.65); line-height:1.5;
+}
+.emporter-prix {
+  font-family:var(--font-display); font-size:20px;
+  color:var(--gold); white-space:nowrap; flex-shrink:0;
+}

@@ -15,6 +15,7 @@ import TabContacts from "./TabContacts";
 import TabSocial from "./TabSocial";
 import TabAvis from "./TabAvis";
 import TabParametres from "./TabParametres";
+import TabEmporter from "./TabEmporter";
 import { ConfirmProvider } from "./Confirm";
 
 const TABS: { key: string; label: string; comp: React.FC; groupe?: string }[] = [
@@ -32,6 +33,7 @@ const TABS: { key: string; label: string; comp: React.FC; groupe?: string }[] = 
   { key: "partenaires",  label: "Partenaires",        comp: TabPartenaires },
   { key: "social",       label: "Réseaux sociaux",    comp: TabSocial },
   { key: "promo",        label: "Bannière promo",     comp: TabPromo },
+  { key: "emporter",     label: "À emporter",         comp: TabEmporter },
   // — Paramètres —
   { key: "contacts",     label: "Contacts",           comp: TabContacts,     groupe: "Paramètres" },
   { key: "parametres",   label: "Réservations & site",comp: TabParametres },

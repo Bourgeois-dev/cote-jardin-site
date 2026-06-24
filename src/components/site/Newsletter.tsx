@@ -36,8 +36,8 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
       <div className="news-wrap">
         <div className="news-gauche">
           <span className="news-eyebrow">Restez informé</span>
-          <h2 className="news-titre">Nos actualités</h2>
-          <p className="news-baseline">Formules du midi qui changent, soirées en séquences, fermetures : recevez les nouvelles de la maison, sans excès.</p>
+          <h2 className="news-titre">Actualités & saisons</h2>
+          <p className="news-baseline">Galettes du moment, menus de saison, fermetures : les nouvelles de Côté Jardin, à votre rythme.</p>
           {phone && (
             <div className="news-tel">
               <span className="news-tel-lab">Par téléphone</span>
@@ -70,7 +70,7 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
           ) : (
             <div className="news-merci">
               <div className="news-merci-titre">Merci !</div>
-              <p>Vous êtes inscrit·e aux actualités d'Opaline.<br />À très bientôt à table.</p>
+              <p>Vous êtes inscrit·e aux actualités de Côté Jardin.<br />À très bientôt à Côté Jardin !</p>
             </div>
           )}
         </div>

@@ -14,3 +14,5 @@ export interface Lead { id: string; first_name: string; last_name: string; email
 export interface ReservationSettings { id: string; phone_threshold: number; min_advance_hours: number; slot_duration: number; booking_horizon_days: number; enabled: boolean; newsletter_optin: boolean; }
 export interface AdminUser { id: string; email: string; label: string | null; created_at: string; }
 export interface AdminUser { id: string; email: string; label: string; created_at: string; }
+
+export interface TakeawayItem { id: string; name: string; description: string; price: number; position: number; is_active: boolean; }
