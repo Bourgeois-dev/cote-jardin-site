@@ -34,13 +34,53 @@ section { padding:clamp(72px,10vw,120px) 0 }
 }
 .nav-links a:hover { color:var(--accent) }
 @media(max-width:1060px){ .nav-links { gap:16px } .nav-links a { font-size:12px } }
-.nav-header .btn-accent {
+.nav-droite { display:flex; align-items:center; gap:12px }
+.nav-header .btn-accent, .nav-resa {
   background:transparent !important; color:var(--accent) !important;
   border:1.5px solid var(--accent) !important;
   padding:10px 22px !important; font-size:13px !important;
 }
-.nav-header .btn-accent:hover { background:var(--accent) !important; color:#fff !important; }
-@media(max-width:860px) { .nav-links { display:none } }
+.nav-header .btn-accent:hover, .nav-resa:hover {
+  background:var(--accent) !important; color:#fff !important;
+}
+/* Burger */
+.nav-burger {
+  display:none; flex-direction:column; justify-content:center;
+  gap:5px; width:36px; height:36px; padding:6px;
+  background:transparent; border:none; cursor:pointer;
+}
+.nav-burger span {
+  display:block; height:1.5px; background:var(--ink);
+  border-radius:2px; transition:transform .22s ease, opacity .22s ease;
+}
+.nav-burger.ouvert span:nth-child(1) { transform:translateY(6.5px) rotate(45deg) }
+.nav-burger.ouvert span:nth-child(2) { opacity:0 }
+.nav-burger.ouvert span:nth-child(3) { transform:translateY(-6.5px) rotate(-45deg) }
+/* Menu mobile déroulant */
+.nav-mobile {
+  background:rgba(251,249,242,.98); backdrop-filter:blur(12px);
+  border-top:1px solid var(--line);
+  padding:20px clamp(20px,5vw,40px) 28px;
+  animation:navSlide .22s ease;
+}
+@keyframes navSlide { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
+.nav-mobile ul { list-style:none; display:flex; flex-direction:column; gap:0; margin-bottom:20px }
+.nav-mobile ul li { border-bottom:1px solid var(--line) }
+.nav-mobile ul li:first-child { border-top:1px solid var(--line) }
+.nav-mobile ul a {
+  display:block; padding:14px 0;
+  font-family:var(--font-body); font-size:15px; font-weight:500;
+  color:var(--ink); text-decoration:none; transition:color .15s;
+}
+.nav-mobile ul a:hover { color:var(--accent) }
+.nav-mobile-resa { width:100%; text-align:center }
+@media(max-width:860px) {
+  .nav-links { display:none }
+  .nav-burger { display:flex }
+}
+@media(min-width:861px) {
+  .nav-mobile { display:none }
+}
 
 /* ============================================================
    HISTOIRE — « Notre cuisine »
