@@ -1,0 +1,220 @@
+import { useRef, useState, useEffect } from "react";
+import { useTable } from "../../hooks/useTable";
+import { supabase } from "../../lib/supabase";
+import type { RestaurantTable, DiningArea } from "../../lib/types";
+import { useConfirm } from "./Confirm";
+
+const PLAN_H = 380;
+
+export default function TabPlan() {
+  const confirm = useConfirm();
+  const { rows, loading, insert, update, remove } = useTable<RestaurantTable>("restaurant_tables", "label");
+  const areas = useTable<DiningArea>("dining_areas", "position");
+  const [zoneId, setZoneId] = useState<string | null>(null);
+  const [selId, setSelId] = useState<string | null>(null);
+  const [err, setErr] = useState("");
+  const planRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef<{ id: string; ox: number; oy: number; moved: boolean } | null>(null);
+  const [localPos, setLocalPos] = useState<Record<string, { x: number; y: number }>>({});
+  // Modale de zone : mode "create" ou "rename", + valeur du champ
+  const [zoneModal, setZoneModal] = useState<null | "create" | "rename">(null);
+  const [zoneNom, setZoneNom] = useState("");
+
+  // Sélectionne la première zone par défaut
+  useEffect(() => {
+    if (!zoneId && areas.rows.length > 0) setZoneId(areas.rows[0].id);
+  }, [areas.rows, zoneId]);
+
+  const tablesZone = rows.filter((t) => t.area_id === zoneId);
+  const sel = tablesZone.find((t) => t.id === selId) || null;
+  const couvTotal = tablesZone.reduce((s, t) => s + (t.capacity || 0), 0);
+  const zoneActive = areas.rows.find((a) => a.id === zoneId);
+
+  function posOf(t: RestaurantTable) { return localPos[t.id] || { x: Number(t.pos_x) || 20, y: Number(t.pos_y) || 20 }; }
+  function sizeOf(t: RestaurantTable) { return t.capacity > 4 ? 78 : 58; }
+
+  function onPointerDown(e: React.PointerEvent, t: RestaurantTable) {
+    const el = e.currentTarget as HTMLElement;
+    const r = el.getBoundingClientRect();
+    dragState.current = { id: t.id, ox: e.clientX - r.left, oy: e.clientY - r.top, moved: false };
+    el.setPointerCapture(e.pointerId);
+  }
+  function onPointerMove(e: React.PointerEvent, t: RestaurantTable) {
+    const d = dragState.current;
+    if (!d || d.id !== t.id) return;
+    d.moved = true;
+    const plan = planRef.current;
+    if (!plan) return;
+    const pr = plan.getBoundingClientRect();
+    const size = sizeOf(t);
+    let x = e.clientX - pr.left - d.ox;
+    let y = e.clientY - pr.top - d.oy;
+    x = Math.max(0, Math.min(x, plan.clientWidth - size));
+    y = Math.max(0, Math.min(y, plan.clientHeight - size));
+    setLocalPos((p) => ({ ...p, [t.id]: { x: Math.round(x), y: Math.round(y) } }));
+  }
+  async function onPointerUp(t: RestaurantTable) {
+    const d = dragState.current;
+    if (!d || d.id !== t.id) return;
+    dragState.current = null;
+    if (d.moved) {
+      const p = localPos[t.id];
+      if (p) await supabase.from("restaurant_tables").update({ pos_x: p.x, pos_y: p.y }).eq("id", t.id);
+    } else {
+      setSelId((cur) => (cur === t.id ? null : t.id));
+    }
+  }
+
+  async function ajouter() {
+    if (!zoneId) { setErr("Créez d'abord une zone."); return; }
+    const nums = rows.map((t) => parseInt((t.label || "").replace(/\D/g, "")) || 0);
+    const n = Math.max(0, ...nums) + 1;
+    const offset = tablesZone.length;
+    const ok = await insert({
+      label: `T${n}`, capacity: 2, online_limit: 2, shape: "square",
+      pos_x: 20 + (offset * 26) % 320, pos_y: 20 + (offset * 22) % 280, is_active: true, area_id: zoneId,
+    });
+    if (!ok) setErr("Échec de l'ajout de la table.");
+  }
+  async function majSel(champ: string, val: any) {
+    if (!sel) return;
+    const v = (champ === "capacity" || champ === "online_limit") ? Math.max(1, parseInt(val) || 1) : val;
+    await update(sel.id, { [champ]: v });
+  }
+  async function supprimerSel() {
+    if (!sel) return;
+    if (!(await confirm({ titre: "Supprimer cette table ?", message: `« ${sel.label} » sera retirée. Les réservations liées devront être réaffectées.`, confirmer: "Supprimer", danger: true }))) return;
+    const ok = await remove(sel.id);
+    if (ok) setSelId(null); else setErr("Échec de la suppression.");
+  }
+
+  // --- Gestion des zones ---
+  function ouvrirCreation() { setZoneNom(""); setZoneModal("create"); }
+  function ouvrirRenommage() { if (!zoneActive) return; setZoneNom(zoneActive.name); setZoneModal("rename"); }
+  async function validerZone() {
+    const nom = zoneNom.trim();
+    if (!nom) return;
+    if (zoneModal === "create") {
+      const pos = areas.rows.length;
+      const { data, error } = await supabase.from("dining_areas").insert({ name: nom, position: pos }).select().single();
+      if (!error && data) { await areas.reload(); setZoneId(data.id); setSelId(null); }
+    } else if (zoneModal === "rename" && zoneActive) {
+      await supabase.from("dining_areas").update({ name: nom }).eq("id", zoneActive.id);
+      await areas.reload();
+    }
+    setZoneModal(null);
+  }
+  async function supprimerZone() {
+    if (!zoneActive) return;
+    if (tablesZone.length > 0) { setErr("Videz la zone de ses tables avant de la supprimer."); return; }
+    if (areas.rows.length <= 1) { setErr("Il faut conserver au moins une zone."); return; }
+    if (!(await confirm({ titre: "Supprimer cette zone ?", message: `« ${zoneActive.name} » sera supprimée.`, confirmer: "Supprimer", danger: true }))) return;
+    await supabase.from("dining_areas").delete().eq("id", zoneActive.id);
+    await areas.reload();
+    setZoneId(areas.rows.find((a) => a.id !== zoneActive.id)?.id || null);
+  }
+
+  return (
+    <>
+      <div className="topbar"><div><h1>Plan de salle</h1><div className="sous">Disposez vos tables — glissez pour déplacer</div></div></div>
+      <div className="contenu"><div className="bloc">
+        {/* Onglets de zones */}
+        <div className="zones-barre">
+          {areas.rows.map((a) => (
+            <button key={a.id} className={`zone-onglet ${a.id === zoneId ? "active" : ""}`} onClick={() => { setZoneId(a.id); setSelId(null); }}>{a.name}</button>
+          ))}
+          <button className="zone-add" onClick={ouvrirCreation} title="Ajouter une zone">+ Zone</button>
+        </div>
+
+        <div className="bloc-tete">
+          <div>
+            <h2>{zoneActive?.name || "Disposition"}</h2>
+            <div className="desc">Glissez une table pour la déplacer. Cliquez pour la sélectionner.</div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {zoneActive && <button className="btn btn-ligne btn-mini" onClick={ouvrirRenommage}>Renommer</button>}
+            {zoneActive && <button className="btn btn-ligne btn-mini" onClick={supprimerZone}>Supprimer la zone</button>}
+            <button className="btn btn-accent" onClick={ajouter}>+ Ajouter une table</button>
+          </div>
+        </div>
+        {err && <div className="login-err">{err}</div>}
+
+        <div className="plan" ref={planRef} style={{ height: PLAN_H }}>
+          {loading ? (
+            <div className="plan-vide">Chargement…</div>
+          ) : tablesZone.length === 0 ? (
+            <div className="plan-vide">Aucune table dans « {zoneActive?.name} ». Cliquez sur « Ajouter une table ».</div>
+          ) : tablesZone.map((t) => {
+            const p = posOf(t); const size = sizeOf(t);
+            return (
+              <div key={t.id}
+                className={`table-obj ${t.shape === "round" ? "ronde" : "carree"}${t.id === selId ? " select" : ""}`}
+                style={{ left: p.x, top: p.y, width: size, height: size, touchAction: "none" }}
+                onPointerDown={(e) => onPointerDown(e, t)}
+                onPointerMove={(e) => onPointerMove(e, t)}
+                onPointerUp={() => onPointerUp(t)}>
+                {t.label}<small>{t.capacity} pers.</small>
+              </div>
+            );
+          })}
+        </div>
+        <div className="zone-recap">
+          <span className="zone-recap-chiffre">{tablesZone.length}</span> table(s)
+          <span className="zone-recap-sep">·</span>
+          <span className="zone-recap-chiffre">{couvTotal}</span> couverts dans cette zone
+          <span className="zone-recap-sep">·</span>
+          <span className="zone-recap-note">capacité en ligne configurable par table</span>
+        </div>
+
+        {sel && (
+          <div className="bloc" style={{ marginTop: 16, background: "var(--cream2)" }}>
+            <div className="bloc-tete" style={{ marginBottom: 12 }}>
+              <div><h2 style={{ fontSize: 17 }}>Table {sel.label}</h2><div className="desc">Réglages de la table sélectionnée</div></div>
+              <button className="btn btn-mini btn-danger" onClick={supprimerSel}>Supprimer cette table</button>
+            </div>
+            <div className="grid2">
+              <div className="champ"><label>Nom / numéro</label>
+                <input defaultValue={sel.label} onBlur={(e) => majSel("label", e.target.value)} /></div>
+              <div className="champ"><label>Forme</label>
+                <select value={sel.shape} onChange={(e) => majSel("shape", e.target.value)}>
+                  <option value="square">Carrée / rectangulaire</option>
+                  <option value="round">Ronde</option>
+                </select></div>
+            </div>
+            <div className="grid2">
+              <div className="champ"><label>Capacité (couverts)</label>
+                <input type="number" min="1" defaultValue={sel.capacity} onBlur={(e) => majSel("capacity", e.target.value)} /></div>
+              <div className="champ"><label>Couverts en ligne max</label>
+                <input type="number" min="1" defaultValue={sel.online_limit} onBlur={(e) => majSel("online_limit", e.target.value)} /></div>
+            </div>
+            <div className="champ" style={{ marginBottom: 0 }}><label>Zone</label>
+              <select value={sel.area_id || ""} onChange={(e) => majSel("area_id", e.target.value)}>
+                {areas.rows.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select></div>
+          </div>
+        )}
+
+        <div className="hint" style={{ marginTop: 16 }}>
+          💡 Chaque réservation occupe une table précise pendant 1h30, ce qui permet les services successifs. Créez plusieurs zones (intérieur, terrasse…) pour organiser votre salle.
+        </div>
+      </div></div>
+
+      {zoneModal && (
+        <div className="modal-backdrop" onClick={() => setZoneModal(null)}>
+          <div className="modal-in" onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ fontSize: 19, marginBottom: 6 }}>{zoneModal === "create" ? "Nouvelle zone" : "Renommer la zone"}</h2>
+            <div className="desc" style={{ marginBottom: 16 }}>Ex. Salle, Terrasse, Étage, Jardin…</div>
+            <div className="champ"><label>Nom de la zone</label>
+              <input autoFocus value={zoneNom} onChange={(e) => setZoneNom(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") validerZone(); if (e.key === "Escape") setZoneModal(null); }}
+                placeholder="Terrasse" /></div>
+            <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+              <button className="btn btn-accent" onClick={validerZone} disabled={!zoneNom.trim()}>{zoneModal === "create" ? "Créer la zone" : "Renommer"}</button>
+              <button className="btn btn-ligne" onClick={() => setZoneModal(null)}>Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

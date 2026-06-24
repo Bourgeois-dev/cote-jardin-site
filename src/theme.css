@@ -1,0 +1,7 @@
+:root{
+  --accent:#5a7d4f; --accent-light:#8aa67d; --accent-dark:#41603a;
+  --ink:#16303a; --ink-soft:#5f6b58; --cream:#f6f3ea; --cream2:#fbf9f2;
+  --line:#e6e0d2; --gold:#d99a4e;
+  --ok:#3E7D5A; --attente:#C18A2E; --annule:#B5503C;
+  --font-display:'Fraunces', Georgia, serif; --font-body:'Karla', system-ui, sans-serif;
+}
