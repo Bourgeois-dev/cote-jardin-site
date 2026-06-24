@@ -338,7 +338,10 @@ section { padding:clamp(72px,10vw,120px) 0 }
   padding:0 clamp(20px,5vw,64px);
   display:flex; align-items:flex-end; justify-content:space-between; gap:24px;
 }
-@media(max-width:680px){ .avis-tete { flex-direction:column; align-items:flex-start; gap:12px } }
+@media(max-width:680px){
+  .avis-tete { flex-direction:column; align-items:flex-start; gap:16px }
+  .avis-nav { align-self:center }
+}
 .avis-tete h2 {
   font-family:var(--font-display); font-weight:400;
   font-size:clamp(30px,4vw,46px); color:var(--ink);

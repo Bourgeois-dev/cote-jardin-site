@@ -16,21 +16,43 @@ function Stars({ n }: { n: number }) {
 }
 
 export default function Avis({ reviews }: { reviews: Review[] }) {
-  const PER_PAGE = 3;
-  const total = reviews.length;
-  const pages = Math.ceil(total / PER_PAGE);
-  const [page, setPage] = useState(0);
+  const [idx, setIdx] = useState(0);
+  const [perPage, setPerPage] = useState(3);
   const trackRef = useRef<HTMLDivElement>(null);
+  const total = reviews.length;
 
-  // Auto-avance toutes les 6 s
+  // Détecte le nombre de cartes visibles selon la largeur
+  useEffect(() => {
+    function update() {
+      const w = window.innerWidth;
+      setPerPage(w <= 580 ? 1 : w <= 900 ? 2 : 3);
+    }
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  const pages = Math.max(1, Math.ceil(total / perPage));
+
+  // Ramène l'index dans les bornes si perPage change
+  useEffect(() => {
+    setIdx((i) => Math.min(i, pages - 1));
+  }, [pages]);
+
+  // Auto-avance
   useEffect(() => {
     if (pages <= 1) return;
-    const t = setInterval(() => setPage((p) => (p + 1) % pages), 6000);
+    const t = setInterval(() => setIdx((i) => (i + 1) % pages), 6000);
     return () => clearInterval(t);
   }, [pages]);
 
-  // Décalage en % de la largeur de la piste
-  const offset = page * 100;
+  // Décalage : on translate d'un multiple de (100% / perPage) par carte visible
+  // En pratique on translate la piste de idx * (largeur d'une carte + gap)
+  // La carte fait calc((100% - gap*(perPage-1)) / perPage)
+  // On utilise une translation en % de la piste entière
+  const cardPct = 100 / perPage;           // % de la piste par carte
+  const gapPx = perPage > 1 ? 20 : 0;     // gap en px entre cartes
+  const translateX = `calc(-${idx * perPage * cardPct}% - ${idx * gapPx}px)`;
 
   return (
     <section className="avis" id="avis">
@@ -44,8 +66,8 @@ export default function Avis({ reviews }: { reviews: Review[] }) {
             {Array.from({ length: pages }).map((_, i) => (
               <button
                 key={i}
-                className={`avis-point${i === page ? " actif" : ""}`}
-                onClick={() => setPage(i)}
+                className={`avis-point${i === idx ? " actif" : ""}`}
+                onClick={() => setIdx(i)}
                 aria-label={`Page ${i + 1}`}
               />
             ))}
@@ -57,7 +79,7 @@ export default function Avis({ reviews }: { reviews: Review[] }) {
         <div
           ref={trackRef}
           className="avis-piste"
-          style={{ transform: `translateX(calc(-${offset}% - ${page * 20}px))` }}
+          style={{ transform: `translateX(${translateX})` }}
         >
           {reviews.map((r) => (
             <div className="avis-carte" key={r.id}>
