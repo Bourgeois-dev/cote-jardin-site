@@ -44,6 +44,7 @@ const TABS: { key: string; label: string; comp: React.FC; groupe?: string }[] = 
 export default function AdminApp({ session }: { session: Session }) {
   const [active, setActive] = useState("tableau");
   const [nbAttente, setNbAttente] = useState(0);
+  const [forceDate, setForceDate] = useState<string | undefined>();
   const Current = TABS.find((t) => t.key === active)?.comp || TabTableau;
   const siteUrl = import.meta.env.VITE_SITE_URL || "/";
 
@@ -102,7 +103,9 @@ export default function AdminApp({ session }: { session: Session }) {
         </div>
       </aside>
       <main className="main">
-        <Current />
+        {active === "tableau"
+          ? <TabTableau onNavigate={(tab, date) => { setActive(tab); setForceDate(date); }} />
+          : <Current />}
       </main>
     </div>
     </ConfirmProvider>

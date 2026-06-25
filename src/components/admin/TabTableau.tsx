@@ -11,7 +11,7 @@ function estMidi(time: string): boolean {
   return h < 16;
 }
 
-export default function TabTableau() {
+export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, date?: string) => void } = {}) {
   const { rows: resa } = useTable<Reservation>("reservations", "date", true);
   const { rows: leads } = useTable<Lead>("leads", "created_at");
   const { rows: tables } = useTable<RestaurantTable>("restaurant_tables", "label");
@@ -173,6 +173,48 @@ export default function TabTableau() {
           <div className="stat"><div className="lib">Disponibles ce soir</div><div className="val" style={{ color: jours[0].soirDispo === 0 ? "var(--annule)" : "var(--ok)" }}>{jours[0].sertSoir ? jours[0].soirDispo : "—"}</div><div className="det">{jours[0].sertSoir ? `sur ${capacite} couverts` : "pas de service soir"}</div></div>
           <div className="stat"><div className="lib">À confirmer</div><div className="val" style={{ color: att > 0 ? "var(--attente)" : "var(--ink)" }}>{att}</div><div className="det">demandes en attente</div></div>
           <div className="stat"><div className="lib">Contacts récoltés</div><div className="val">{leads.length}</div><div className="det">newsletter + réservations</div></div>
+        </div>
+
+        {/* Vue semaine — 7 jours glissants depuis aujourd'hui */}
+        <div className="bloc semaine-bloc">
+          <div className="bloc-tete">
+            <div><h2>Cette semaine</h2><div className="desc">Couverts réservés par jour et par service — cliquer sur un jour pour ouvrir le plan de service.</div></div>
+          </div>
+          <div className="semaine-grille">
+            {jours.slice(0, 7).map((j) => {
+              const pctMidi = capacite && j.sertMidi ? Math.min(100, Math.round((j.midiRes / capacite) * 100)) : 0;
+              const pctSoir = capacite && j.sertSoir ? Math.min(100, Math.round((j.soirRes / capacite) * 100)) : 0;
+              const etatMidi = !j.sertMidi ? "ferme" : pctMidi >= 100 ? "complet" : pctMidi >= 75 ? "charge" : pctMidi >= 40 ? "moyen" : "libre";
+              const etatSoir = !j.sertSoir ? "ferme" : pctSoir >= 100 ? "complet" : pctSoir >= 75 ? "charge" : pctSoir >= 40 ? "moyen" : "libre";
+              return (
+                <div
+                  key={j.ds}
+                  className={`semaine-jour${j.isToday ? " semaine-jour-auj" : ""}${j.ferme ? " semaine-jour-ferme" : ""}`}
+                  onClick={() => onNavigate?.("reservations", j.ds)}
+                  title={`Voir le plan de service du ${j.d.getDate()} ${MOIS[j.d.getMonth()]}`}
+                >
+                  <div className="semaine-nom">{j.isToday ? "Auj." : JOURS[j.d.getDay()]}</div>
+                  <div className="semaine-date">{j.d.getDate()} {MOIS[j.d.getMonth()]}</div>
+                  {j.ferme ? (
+                    <div className="semaine-ferme">Fermé</div>
+                  ) : (
+                    <div className="semaine-services">
+                      <div className={`semaine-svc semaine-svc-${etatMidi}`}>
+                        <span className="semaine-svc-label">Midi</span>
+                        <div className="semaine-svc-jauge"><div style={{ width: `${pctMidi}%` }} /></div>
+                        <span className="semaine-svc-val">{j.sertMidi ? `${j.midiRes}/${capacite}` : "—"}</span>
+                      </div>
+                      <div className={`semaine-svc semaine-svc-${etatSoir}`}>
+                        <span className="semaine-svc-label">Soir</span>
+                        <div className="semaine-svc-jauge"><div style={{ width: `${pctSoir}%` }} /></div>
+                        <span className="semaine-svc-val">{j.sertSoir ? `${j.soirRes}/${capacite}` : "—"}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="bloc">

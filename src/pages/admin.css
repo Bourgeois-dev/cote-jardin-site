@@ -466,3 +466,42 @@ tr:last-child td{border-bottom:none}
 /* Image du plat du jour (onglet Ardoise) */
 .ardoise-img-actuelle img{display:block;width:100%;max-width:320px;height:180px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
 .ardoise-img-actuelle .actions-ligne{margin-top:10px}
+
+/* ===== Vue semaine — tableau de bord ===== */
+.semaine-grille{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:4px}
+@media(max-width:900px){.semaine-grille{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:540px){.semaine-grille{grid-template-columns:repeat(2,1fr)}}
+
+.semaine-jour{
+  background:var(--fond2);border:1px solid var(--ligne);border-radius:8px;
+  padding:12px 10px;cursor:pointer;transition:border-color .15s,box-shadow .15s;
+  display:flex;flex-direction:column;gap:6px;min-height:110px;
+}
+.semaine-jour:hover{border-color:var(--admin-accent);box-shadow:0 2px 8px rgba(122,31,36,.08)}
+.semaine-jour-auj{border-color:var(--admin-accent);background:#fdf8f8}
+.semaine-jour-ferme{opacity:.5;cursor:default}
+.semaine-jour-ferme:hover{border-color:var(--ligne);box-shadow:none}
+
+.semaine-nom{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+.semaine-jour-auj .semaine-nom{color:var(--admin-accent)}
+.semaine-date{font-size:13px;font-weight:600;color:var(--encre)}
+.semaine-ferme{font-size:11px;color:var(--ink-soft);font-style:italic;margin-top:4px}
+
+.semaine-services{display:flex;flex-direction:column;gap:5px;margin-top:4px}
+.semaine-svc{display:flex;align-items:center;gap:6px}
+.semaine-svc-label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);width:26px;flex-shrink:0}
+.semaine-svc-jauge{flex:1;height:5px;background:var(--ligne);border-radius:99px;overflow:hidden}
+.semaine-svc-jauge div{height:100%;border-radius:99px;transition:width .3s}
+.semaine-svc-val{font-size:10px;font-weight:600;color:var(--encre);white-space:nowrap;min-width:28px;text-align:right}
+
+/* Couleurs par état */
+.semaine-svc-libre .semaine-svc-jauge div{background:var(--ok)}
+.semaine-svc-libre .semaine-svc-val{color:var(--ok)}
+.semaine-svc-moyen .semaine-svc-jauge div{background:var(--attente)}
+.semaine-svc-moyen .semaine-svc-val{color:var(--attente)}
+.semaine-svc-charge .semaine-svc-jauge div{background:#e07020}
+.semaine-svc-charge .semaine-svc-val{color:#e07020}
+.semaine-svc-complet .semaine-svc-jauge div{background:var(--annule)}
+.semaine-svc-complet .semaine-svc-val{color:var(--annule)}
+.semaine-svc-ferme .semaine-svc-label{opacity:.4}
+.semaine-svc-ferme .semaine-svc-val{color:var(--ink-soft)}
