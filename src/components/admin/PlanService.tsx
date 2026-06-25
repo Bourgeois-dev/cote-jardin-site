@@ -51,7 +51,9 @@ function horsCreneaux(dateStr: string, time: string, hours: OpeningHour[]): stri
 
 export default function PlanService({ initialDate }: { initialDate?: string } = {}) {
   const confirm = useConfirm();
-  const { rows: resa, reload, insert } = useTable<Reservation>("reservations", "date", true);
+  // Fenêtre glissante : J-7 à J+60 — évite de charger toute l'historique en mémoire
+  const dateMin = (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0,10); })();
+  const { rows: resa, reload, insert } = useTable<Reservation>("reservations", "date", true, { column: "date", op: "gte", value: dateMin });
   const { rows: tables } = useTable<RestaurantTable>("restaurant_tables", "label");
   const { rows: areas } = useTable<DiningArea>("dining_areas", "position");
   const { rows: hours } = useTable<OpeningHour>("opening_hours", "day_of_week");

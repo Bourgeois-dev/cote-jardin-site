@@ -8,7 +8,9 @@ const STATUTS: Record<string, string> = { attente: "t-attente", confirme: "t-ok"
 const LABELS: Record<string, string> = { attente: "En attente", confirme: "Confirmée", annule: "Annulée", no_show: "Absent" };
 
 export default function TabReservations({ initialDate }: { initialDate?: string } = {}) {
-  const { rows, update } = useTable<Reservation>("reservations", "date", true);
+  // Fenêtre glissante : J-90 à aujourd'hui + futur — historique récent sans tout charger
+  const dateMin90 = (() => { const d = new Date(); d.setDate(d.getDate() - 90); return d.toISOString().slice(0,10); })();
+  const { rows, update } = useTable<Reservation>("reservations", "date", true, { column: "date", op: "gte", value: dateMin90 });
   const { rows: tables } = useTable<RestaurantTable>("restaurant_tables", "label");
   const [msg, setMsg] = useState("");
   const [sensTri, setSensTri] = useState<"asc" | "desc">("asc");

@@ -3,28 +3,32 @@ import { supabase } from "../lib/supabase";
 
 // Hook générique de CRUD sur une table, avec rechargement.
 // realtime=true : recharge automatiquement quand la table change côté serveur.
-export function useTable<T = any>(table: string, orderBy = "position", realtime = false) {
+// filter : objet { column, op, value } pour filtrer les résultats (ex. date >= ...)
+export interface TableFilter { column: string; op: "gte" | "lte" | "eq" | "neq" | "gt" | "lt"; value: string | number | boolean }
+
+export function useTable<T = any>(table: string, orderBy = "position", realtime = false, filter?: TableFilter) {
   const [rows, setRows] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
-  // Identifiant unique de canal, stable pour la durée de vie du composant
   const canalId = useRef(`rt-${table}-${Math.random().toString(36).slice(2)}`);
 
   const reload = useCallback(async () => {
     setLoading(true);
-    let { data, error } = await supabase.from(table).select("*").order(orderBy, { ascending: true });
-    // Repli : si la colonne de tri n'existe pas, on refait la requête sans tri
+    let q = supabase.from(table).select("*");
+    if (filter) q = (q as any)[filter.op](filter.column, filter.value);
+    let { data, error } = await q.order(orderBy, { ascending: true });
     if (error) {
-      const res = await supabase.from(table).select("*");
+      let q2 = supabase.from(table).select("*");
+      if (filter) q2 = (q2 as any)[filter.op](filter.column, filter.value);
+      const res = await q2;
       if (res.error) console.error(`load ${table}`, res.error);
       data = res.data;
     }
     setRows((data as T[]) || []);
     setLoading(false);
-  }, [table, orderBy]);
+  }, [table, orderBy, filter?.column, filter?.op, filter?.value]); // eslint-disable-line
 
   useEffect(() => { reload(); }, [reload]);
 
-  // Abonnement temps réel : recharge sur tout changement (insert/update/delete)
   useEffect(() => {
     if (!realtime) return;
     const canal = supabase.channel(canalId.current);
