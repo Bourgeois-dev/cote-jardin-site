@@ -49,13 +49,13 @@ function horsCreneaux(dateStr: string, time: string, hours: OpeningHour[]): stri
   return `L'heure choisie est hors des créneaux d'ouverture. ${dispo}`;
 }
 
-export default function PlanService() {
+export default function PlanService({ initialDate }: { initialDate?: string } = {}) {
   const confirm = useConfirm();
   const { rows: resa, reload, insert } = useTable<Reservation>("reservations", "date", true);
   const { rows: tables } = useTable<RestaurantTable>("restaurant_tables", "label");
   const { rows: areas } = useTable<DiningArea>("dining_areas", "position");
   const { rows: hours } = useTable<OpeningHour>("opening_hours", "day_of_week");
-  const [date, setDate] = useState(ymd(new Date()));
+  const [date, setDate] = useState(initialDate || ymd(new Date()));
   const [zoneId, setZoneId] = useState<string | null>(null);
   const [service, setService] = useState<"midi" | "soir">("midi");
   const [filtreStatut, setFiltreStatut] = useState<"toutes" | "attente" | "confirme">("toutes");

@@ -7,7 +7,7 @@ import PlanService from "./PlanService";
 const STATUTS: Record<string, string> = { attente: "t-attente", confirme: "t-ok", annule: "t-annule", no_show: "t-noshow" };
 const LABELS: Record<string, string> = { attente: "En attente", confirme: "Confirmée", annule: "Annulée", no_show: "Absent" };
 
-export default function TabReservations() {
+export default function TabReservations({ initialDate }: { initialDate?: string } = {}) {
   const { rows, update } = useTable<Reservation>("reservations", "date", true);
   const { rows: tables } = useTable<RestaurantTable>("restaurant_tables", "label");
   const [msg, setMsg] = useState("");
@@ -56,7 +56,7 @@ export default function TabReservations() {
         </div>
       </div>
       {vue === "plan" ? (
-        <div className="contenu pleine"><PlanService /></div>
+        <div className="contenu pleine"><PlanService initialDate={initialDate} /></div>
       ) : (
       <div className="contenu"><div className="bloc">
         <div className="bloc-tete">

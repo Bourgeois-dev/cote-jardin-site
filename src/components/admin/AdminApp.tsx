@@ -105,6 +105,8 @@ export default function AdminApp({ session }: { session: Session }) {
       <main className="main">
         {active === "tableau"
           ? <TabTableau onNavigate={(tab, date) => { setActive(tab); setForceDate(date); }} />
+          : active === "reservations"
+          ? <TabReservations initialDate={forceDate} />
           : <Current />}
       </main>
     </div>
