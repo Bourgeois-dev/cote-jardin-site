@@ -34,6 +34,7 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
   const [consent, setConsent] = useState(false);
   const [newsletterOptin, setNewsletterOptin] = useState(false);
   const [done, setDone] = useState(false);
+  const [showWaitlist, setShowWaitlist] = useState(false);
 
   const phone = import.meta.env.VITE_RESTO_PHONE || "";
   const phoneThreshold = settings?.phone_threshold ?? 8;
@@ -122,7 +123,8 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
     if (rpcError || !result?.ok) {
       if (result?.error === "no_availability" || result?.error === "slot_closed" || result?.error === "closure_period") {
         setDispo((d) => ({ ...d, [slot || ""]: false }));
-        setStep(2);
+        if (result?.error === "no_availability") setShowWaitlist(true);
+        else setStep(2);
       }
       return;
     }
@@ -145,7 +147,9 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
   return (
     <div className="panneau ouvert" role="dialog" aria-label="Réserver une table">
       <button className="fermer-x" onClick={onClose} aria-label="Fermer">×</button>
-      {done ? (
+      {showWaitlist ? (
+        <ListeAttente date={date} time={slot || ""} covers={covers} onClose={onClose} />
+      ) : done ? (
         <div className="confirm-ok">
           <div className="rond">✓</div>
           <h3>Réservation enregistrée</h3>

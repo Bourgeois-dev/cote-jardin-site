@@ -16,12 +16,14 @@ import TabSocial from "./TabSocial";
 import TabAvis from "./TabAvis";
 import TabParametres from "./TabParametres";
 import TabEmporter from "./TabEmporter";
+import TabListeAttente from "./TabListeAttente";
 import { ConfirmProvider } from "./Confirm";
 
 const TABS: { key: string; label: string; comp: React.FC; groupe?: string }[] = [
   // — Service —
   { key: "tableau",      label: "Tableau de bord",   comp: TabTableau,      groupe: "Service" },
   { key: "reservations", label: "Réservations",       comp: TabReservations },
+  { key: "liste-attente", label: "Liste d'attente",    comp: TabListeAttente },
   { key: "plan",         label: "Plan de salle",      comp: TabPlan },
   { key: "horaires",     label: "Horaires",           comp: TabHoraires },
   { key: "clients",      label: "Clients",            comp: TabClients },

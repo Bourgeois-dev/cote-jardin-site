@@ -30,6 +30,14 @@ export async function fetchContent(sectionKey: string): Promise<any | null> {
 
 // Envoi d'un email de réservation via l'Edge Function (accusé de réception ou confirmation).
 // N'interrompt jamais le flux : en cas d'échec, on logue sans bloquer l'utilisateur.
+export async function notifyWaitlist(date: string, time: string) {
+  try {
+    await supabase.functions.invoke("reservation-reminders", {
+      body: { notify_waitlist: true, date, time },
+    });
+  } catch { /* silencieux */ }
+}
+
 export async function sendReservationEmail(type: "accuse" | "confirmation", reservation: any): Promise<void> {
   try {
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reservation-email`;
