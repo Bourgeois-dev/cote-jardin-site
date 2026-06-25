@@ -111,21 +111,25 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
 
   async function confirmer() {
     if (!form.p || !form.n || !form.e || !form.t || !consent) return;
-    // Garde-fou : revérifier la disponibilité juste avant l'enregistrement
-    // (une autre réservation a pu prendre la dernière table entre-temps).
-    const { data: encoreDispo, error: errDispo } = await supabase.rpc("check_availability", {
+    // Réservation atomique via reserve_table() — vérification + insertion en une seule
+    // transaction Postgres avec verrou (évite les doubles réservations simultanées).
+    const { data: result, error: rpcError } = await supabase.rpc("reserve_table", {
       p_date: date, p_time: slot || "", p_covers: covers,
+      p_customer_name: `${form.p} ${form.n}`,
+      p_email: form.e, p_phone: form.t,
+      p_notes: form.notes || "", p_source: "site",
     });
-    if (!errDispo && encoreDispo === false) {
-      setDispo((d) => ({ ...d, [slot || ""]: false }));
-      setStep(2);
+    if (rpcError || !result?.ok) {
+      if (result?.error === "no_availability" || result?.error === "slot_closed" || result?.error === "closure_period") {
+        setDispo((d) => ({ ...d, [slot || ""]: false }));
+        setStep(2);
+      }
       return;
     }
     const reservation = {
       customer_name: `${form.p} ${form.n}`, email: form.e, phone: form.t,
       date, time: slot || "", covers, notes: form.notes, status: "attente",
     };
-    await supabase.from("reservations").insert(reservation);
     // Opt-in newsletter (si proposé et coché) → alimente leads, sans bloquer si déjà inscrit
     if (proposeNewsletter && newsletterOptin) {
       await supabase.from("leads").insert({
@@ -146,7 +150,7 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
           <div className="rond">✓</div>
           <h3>Réservation enregistrée</h3>
           <p>{fmtFR(new Date(date + "T12:00:00"))} à {slot?.replace(":", "h")} — {covers} couvert{covers > 1 ? "s" : ""}</p>
-          <p className="rgpd" style={{ textAlign: "center", marginTop: "18px", marginBottom: "6px" }}>Votre demande sera confirmée par le restaurant.</p>
+          <p className="rgpd">Votre demande sera confirmée par le restaurant.</p>
           <button className="btn btn-accent" onClick={onClose}>Fermer</button>
         </div>
       ) : (

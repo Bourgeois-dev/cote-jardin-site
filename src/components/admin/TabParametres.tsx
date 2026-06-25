@@ -27,7 +27,7 @@ export default function TabParametres() {
 
   async function save() {
     if (!s) return;
-    await supabase.from("reservation_settings").update({ enabled: s.enabled, phone_threshold: s.phone_threshold, min_advance_hours: s.min_advance_hours, booking_horizon_days: s.booking_horizon_days, newsletter_optin: s.newsletter_optin }).eq("id", s.id);
+    await supabase.from("reservation_settings").update({ enabled: s.enabled, phone_threshold: s.phone_threshold, min_advance_hours: s.min_advance_hours, booking_horizon_days: s.booking_horizon_days, newsletter_optin: s.newsletter_optin, max_covers_per_slot: s.max_covers_per_slot || null }).eq("id", s.id);
     setMsg("Réglages enregistrés ✓"); setTimeout(() => setMsg(""), 2500);
   }
 
@@ -83,6 +83,7 @@ export default function TabParametres() {
           <div className="champ"><label>Seuil groupe (→ téléphone)</label><input type="number" value={s.phone_threshold} onChange={(e) => setS({ ...s, phone_threshold: Number(e.target.value) })} /></div>
           <div className="champ"><label>Délai minimum (heures)</label><input type="number" value={s.min_advance_hours} onChange={(e) => setS({ ...s, min_advance_hours: Number(e.target.value) })} /></div>
           <div className="champ"><label>Horizon de réservation (jours)</label><input type="number" min="1" value={s.booking_horizon_days} onChange={(e) => setS({ ...s, booking_horizon_days: Number(e.target.value) })} /><span className="champ-aide">Jusqu'à combien de jours à l'avance un client peut réserver.</span></div>
+          <div className="champ"><label>Couverts max par créneau</label><input type="number" min="1" value={s.max_covers_per_slot || ""} placeholder="Illimité" onChange={(e) => setS({ ...s, max_covers_per_slot: e.target.value ? Number(e.target.value) : null })} /><span className="champ-aide">Limite le nombre total de couverts acceptés sur un même créneau horaire (toutes tables confondues). Laisser vide = pas de limite.</span></div>
         </div>
         <div style={{ marginTop: 16 }}><button className="btn btn-accent" onClick={save}>Enregistrer</button> {msg && <span className="ok-msg">{msg}</span>}</div>
       </div>
