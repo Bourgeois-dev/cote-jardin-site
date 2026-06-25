@@ -7,7 +7,7 @@ const JOURS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "S
 export default function TabHoraires() {
   const oh = useTable<OpeningHour>("opening_hours", "day_of_week");
   const cp = useTable<ClosurePeriod>("closure_periods", "start_date");
-  const [nc, setNc] = useState({ start_date: "", end_date: "", reason: "" });
+  const [nc, setNc] = useState({ start_date: "", end_date: "", reason: "", service: "", note_interne: "", custom_message: "" });
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
@@ -23,8 +23,8 @@ export default function TabHoraires() {
   }
   async function addClosure() {
     if (!nc.start_date || !nc.end_date) { setErr("Renseignez les deux dates."); return; }
-    const ok = await cp.insert({ ...nc, blocks_reservations: true });
-    if (ok) { setNc({ start_date: "", end_date: "", reason: "" }); setErr(""); }
+    const ok = await cp.insert({ ...nc, blocks_reservations: true, service: nc.service || null });
+    if (ok) { setNc({ start_date: "", end_date: "", reason: "", service: "", note_interne: "", custom_message: "" }); setErr(""); }
     else setErr("Échec de l'ajout.");
   }
 
@@ -69,19 +69,40 @@ export default function TabHoraires() {
         </div>
 
         <div className="bloc">
-          <h2>Fermetures exceptionnelles</h2>
-          <table><thead><tr><th>Du</th><th>Au</th><th>Motif</th><th></th></tr></thead><tbody>
-            {cp.rows.length ? cp.rows.map((c) => (
-              <tr key={c.id}><td>{c.start_date}</td><td>{c.end_date}</td><td>{c.reason || "—"}</td>
-                <td><button className="btn btn-mini btn-danger" onClick={() => cp.remove(c.id)}>Supprimer</button></td></tr>
-            )) : <tr><td colSpan={4} className="vide">Aucune fermeture programmée.</td></tr>}
+          <div className="bloc-tete"><div><h2>Fermetures &amp; événements exceptionnels</h2><div className="desc">Fermetures totales, partielles (midi ou soir uniquement), ou événements privatifs. Le widget masque automatiquement les créneaux bloqués.</div></div></div>
+          <table><thead><tr><th>Du</th><th>Au</th><th>Service</th><th>Motif</th><th>Note interne</th><th></th></tr></thead><tbody>
+            {cp.rows.length ? cp.rows.map((cl) => (
+              <tr key={cl.id}>
+                <td>{cl.start_date}</td>
+                <td>{cl.end_date}</td>
+                <td>{cl.service === "midi" ? "Midi seul." : cl.service === "soir" ? "Soir seul." : "Toute la journée"}</td>
+                <td>{cl.reason || "—"}</td>
+                <td><span className="sub-desc">{cl.note_interne || "—"}</span></td>
+                <td><button className="btn btn-mini btn-danger" onClick={() => cp.remove(cl.id)}>Supprimer</button></td>
+              </tr>
+            )) : <tr><td colSpan={6} className="vide">Aucune fermeture programmée.</td></tr>}
           </tbody></table>
-          <div className="grid2" style={{ marginTop: 14 }}>
-            <div className="champ"><label>Date de début</label><input type="date" value={nc.start_date} onChange={(e) => setNc({ ...nc, start_date: e.target.value })} /></div>
-            <div className="champ"><label>Date de fin</label><input type="date" value={nc.end_date} onChange={(e) => setNc({ ...nc, end_date: e.target.value })} /></div>
+
+          <div style={{ marginTop: 20, borderTop: "1px solid var(--ligne)", paddingTop: 18 }}>
+            <div className="grid2">
+              <div className="champ"><label>Date de début</label><input type="date" value={nc.start_date} onChange={(e) => setNc({ ...nc, start_date: e.target.value })} /></div>
+              <div className="champ"><label>Date de fin</label><input type="date" value={nc.end_date} onChange={(e) => setNc({ ...nc, end_date: e.target.value })} /></div>
+            </div>
+            <div className="grid2">
+              <div className="champ">
+                <label>Service bloqué</label>
+                <select value={nc.service} onChange={(e) => setNc({ ...nc, service: e.target.value })}>
+                  <option value="">Toute la journée</option>
+                  <option value="midi">Midi uniquement</option>
+                  <option value="soir">Soir uniquement</option>
+                </select>
+              </div>
+              <div className="champ"><label>Motif client (affiché sur le widget)</label><input value={nc.reason} onChange={(e) => setNc({ ...nc, reason: e.target.value })} placeholder="Congés d'été" /></div>
+            </div>
+            <div className="champ"><label>Message personnalisé sur le widget</label><input value={nc.custom_message} onChange={(e) => setNc({ ...nc, custom_message: e.target.value })} placeholder="Nous sommes complets ce soir — prochain créneau disponible le…" /></div>
+            <div className="champ"><label>Note interne (non visible sur le site)</label><input value={nc.note_interne} onChange={(e) => setNc({ ...nc, note_interne: e.target.value })} placeholder="Séminaire entreprise, salle privée" /></div>
+            <button className="btn btn-accent" onClick={addClosure}>Ajouter</button>
           </div>
-          <div className="champ"><label>Motif (affiché au client)</label><input value={nc.reason} onChange={(e) => setNc({ ...nc, reason: e.target.value })} placeholder="Congés d'été" /></div>
-          <button className="btn btn-accent" onClick={addClosure}>Ajouter une fermeture</button>
         </div>
       </div>
     </>

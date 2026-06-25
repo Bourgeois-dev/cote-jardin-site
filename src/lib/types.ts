@@ -4,7 +4,7 @@ export interface Partner { id: string; name: string; description: string; logo_u
 export interface Review { id: string; author: string; rating: number; content: string; position: number; is_active: boolean; }
 export interface SocialLink { id: string; platform: string; url: string; position: number; is_active: boolean; }
 export interface OpeningHour { id: string; day_of_week: number; is_closed: boolean; lunch_open: string | null; lunch_close: string | null; dinner_open: string | null; dinner_close: string | null; }
-export interface ClosurePeriod { id: string; start_date: string; end_date: string; reason: string; blocks_reservations: boolean; }
+export interface ClosurePeriod { id: string; start_date: string; end_date: string; reason: string; blocks_reservations: boolean; service: 'midi' | 'soir' | null; note_interne: string; custom_message: string; }
 export interface PromoBanner { id: string; title: string; subtitle: string; message: string; cta_label: string; cta_url: string; event_date: string | null; image_url: string; is_active: boolean; }
 export interface RestaurantTable { id: string; label: string; capacity: number; online_limit: number; pos_x: number; pos_y: number; shape: string; is_active: boolean; area_id: string | null; }
 export interface DiningArea { id: string; name: string; position: number; }

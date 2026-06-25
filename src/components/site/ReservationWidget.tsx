@@ -35,6 +35,7 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
   const [newsletterOptin, setNewsletterOptin] = useState(false);
   const [done, setDone] = useState(false);
   const [showWaitlist, setShowWaitlist] = useState(false);
+  const [closureMsg, setClosureMsg] = useState("");
 
   const phone = import.meta.env.VITE_RESTO_PHONE || "";
   const phoneThreshold = settings?.phone_threshold ?? 8;
@@ -68,19 +69,25 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
     const d = new Date(date + "T12:00:00");
     const h = hours.find((x) => x.day_of_week === d.getDay());
     const closed = !h || h.is_closed;
-    const inClosure = closures.find((c) => date >= c.start_date && date <= c.end_date && c.blocks_reservations);
+    const inClosure = closures.find((cl) =>
+      date >= cl.start_date && date <= cl.end_date && cl.blocks_reservations
+    );
     return { d, h, closed, inClosure };
   }, [date, hours, closures]);
 
   const slots = useMemo(() => {
-    if (!dayInfo || dayInfo.closed || dayInfo.inClosure || !dayInfo.h) return [];
+    if (!dayInfo || dayInfo.closed || !dayInfo.h) return [];
+    const blockedService = dayInfo.inClosure?.service || null;
+    if (dayInfo.inClosure && !blockedService) return []; // fermeture totale
     const today = new Date().toISOString().slice(0, 10);
     const isToday = date === today;
     const all = [...slotsBetween(dayInfo.h.lunch_open, dayInfo.h.lunch_close), ...slotsBetween(dayInfo.h.dinner_open, dayInfo.h.dinner_close)];
     return all.filter((s) => {
+      const [hh] = s.split(":").map(Number);
+      const svc = hh < 16 ? "midi" : "soir";
+      if (blockedService && svc === blockedService) return false; // créneau bloqué
       if (!isToday) return true;
-      const [h] = s.split(":").map(Number);
-      return h - new Date().getHours() >= minAdvance;
+      return hh - new Date().getHours() >= minAdvance;
     });
   }, [dayInfo, date, minAdvance]);
 
@@ -123,8 +130,10 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
     if (rpcError || !result?.ok) {
       if (result?.error === "no_availability" || result?.error === "slot_closed" || result?.error === "closure_period") {
         setDispo((d) => ({ ...d, [slot || ""]: false }));
-        if (result?.error === "no_availability") setShowWaitlist(true);
-        else setStep(2);
+        if (result?.error === "no_availability") { setShowWaitlist(true); }
+        else if (result?.error === "closure_period" && result?.custom_message) {
+          setClosureMsg(result.custom_message); setStep(2);
+        } else { setStep(2); }
       }
       return;
     }
@@ -171,7 +180,14 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
                 </select>
               </div>
               {dayInfo?.closed && <div className="alerte">Le restaurant est fermé ce jour-là.</div>}
-              {dayInfo?.inClosure && <div className="alerte">Fermeture exceptionnelle : {dayInfo.inClosure.reason || "le restaurant est fermé à cette date"}.</div>}
+              {dayInfo?.inClosure && (
+                <div className="alerte">
+                  {dayInfo.inClosure.service === "midi" ? "Service du midi fermé" :
+                   dayInfo.inClosure.service === "soir" ? "Service du soir fermé" :
+                   "Fermeture exceptionnelle"}
+                  {dayInfo.inClosure.reason ? ` — ${dayInfo.inClosure.reason}` : "."}
+                </div>
+              )}
               {groupe && <div className="alerte"><b>Réservation par téléphone</b><br />Pour les groupes de plus de {phoneThreshold}, contactez-nous.{phone && <div style={{ marginTop: 10 }}><a className="btn btn-accent" href={`tel:${phone}`}>Appeler</a></div>}</div>}
               <div className="pan-actions"><button className="btn btn-accent" disabled={dayInfo?.closed || !!dayInfo?.inClosure || groupe || !date} onClick={() => setStep(2)}>Choisir un créneau</button></div>
             </div>
@@ -198,7 +214,8 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
                   );
                 })}
               </div>
-              {slots.length === 0 && <div className="alerte">Aucun créneau disponible pour cette date.</div>}
+              {closureMsg && <div className="alerte"><b>{closureMsg}</b></div>}
+              {slots.length === 0 && !closureMsg && <div className="alerte">Aucun créneau disponible pour cette date.</div>}
               {slots.length > 0 && !dispoLoad && slots.every((s) => dispo[s] === false) && (
                 <div className="alerte">Aucune table disponible pour {covers} couvert{covers > 1 ? "s" : ""} ce jour-là. Essayez une autre date ou réduisez le nombre de couverts{phone && <>, ou appelez-nous au <a href={`tel:${phone}`}>{phone}</a></>}.</div>
               )}
