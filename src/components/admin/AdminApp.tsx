@@ -49,7 +49,7 @@ export default function AdminApp({ session }: { session: Session }) {
   const [forceDate, setForceDate] = useState<string | undefined>();
   const [features, setFeatures] = useState<Record<string, boolean>>({});
   // isEditor calculé directement depuis la session (synchrone, fiable)
-  const isEditor = true; // TEMP : visible pour debug — à restreindre après confirmation
+  const isEditor = (session.user.email || "").toLowerCase().includes("latable-digitale");
   // Onglets masqués selon feature flags
   const FEATURE_MAP: Record<string, string> = {
     "reservations": "reservation", "liste-attente": "liste_attente",
