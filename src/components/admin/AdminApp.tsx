@@ -48,6 +48,7 @@ export default function AdminApp({ session }: { session: Session }) {
   const [forceDate, setForceDate] = useState<string | undefined>();
   const [features, setFeatures] = useState<Record<string, boolean>>({});
   const [isEditor, setIsEditor] = useState(false);
+  const [editorChecked, setEditorChecked] = useState(false);
   // Onglets masqués selon feature flags
   const FEATURE_MAP: Record<string, string> = {
     "reservations": "reservation", "liste-attente": "liste_attente",
@@ -70,6 +71,7 @@ export default function AdminApp({ session }: { session: Session }) {
     supabase.auth.getUser().then(({ data }) => {
       const email = data.user?.email || "";
       setIsEditor(email.toLowerCase().endsWith("@latable-digitale.fr"));
+      setEditorChecked(true);
     });
     supabase.from("feature_flags").select("key,enabled")
       .then(({ data }) => {
@@ -118,7 +120,7 @@ export default function AdminApp({ session }: { session: Session }) {
           </svg>
         </div>
         <nav>
-          {TABS_VISIBLES.filter((t) => t.key !== "features" || isEditor).map((t) => (
+          {TABS_VISIBLES.filter((t) => t.key !== "features" || (editorChecked && isEditor)).map((t) => (
             <div key={t.key}>
               {t.groupe && <div className="nav-groupe">{t.groupe}</div>}
               <button
