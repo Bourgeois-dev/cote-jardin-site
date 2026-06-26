@@ -47,8 +47,8 @@ export default function AdminApp({ session }: { session: Session }) {
   const [nbAttente, setNbAttente] = useState(0);
   const [forceDate, setForceDate] = useState<string | undefined>();
   const [features, setFeatures] = useState<Record<string, boolean>>({});
-  const [isEditor, setIsEditor] = useState(false);
-  const [editorChecked, setEditorChecked] = useState(false);
+  // isEditor calculé directement depuis la session (synchrone, fiable)
+  const isEditor = (session.user.email || "").toLowerCase().endsWith("@latable-digitale.fr");
   // Onglets masqués selon feature flags
   const FEATURE_MAP: Record<string, string> = {
     "reservations": "reservation", "liste-attente": "liste_attente",
@@ -68,11 +68,6 @@ export default function AdminApp({ session }: { session: Session }) {
   // Compteur de réservations en attente, mis à jour en temps réel
   // Charger les feature flags et détecter si éditeur LTD
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      const email = data.user?.email || "";
-      setIsEditor(email.toLowerCase().endsWith("@latable-digitale.fr"));
-      setEditorChecked(true);
-    });
     supabase.from("feature_flags").select("key,enabled")
       .then(({ data }) => {
         if (data) {
@@ -120,7 +115,7 @@ export default function AdminApp({ session }: { session: Session }) {
           </svg>
         </div>
         <nav>
-          {TABS_VISIBLES.filter((t) => t.key !== "features" || (editorChecked && isEditor)).map((t) => (
+          {TABS_VISIBLES.filter((t) => t.key !== "features" || isEditor).map((t) => (
             <div key={t.key}>
               {t.groupe && <div className="nav-groupe">{t.groupe}</div>}
               <button
