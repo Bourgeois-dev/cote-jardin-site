@@ -26,6 +26,11 @@
 .side-marque{display:flex;align-items:center;margin:2px 0 18px;padding:0 10px}
 .side-marque-logo{height:52px;width:auto}
 .side nav{display:flex;flex-direction:column;gap:2px;flex:1;overflow-y:auto;min-height:0}
+.side nav::-webkit-scrollbar{width:3px}
+.side nav::-webkit-scrollbar-track{background:transparent}
+.side nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:99px}
+.side nav::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.3)}
+.side nav{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent}
 .side nav button{display:flex;align-items:center;gap:10px;background:none;border:none;color:rgba(255,255,255,.75);text-align:left;padding:9px 12px;border-radius:8px;font-size:14px;font-weight:600;width:100%;cursor:pointer;font-family:var(--font-body)}
 .side nav button:hover{background:rgba(255,255,255,.08);color:#fff}
 .side nav button.actif{background:var(--admin-accent);color:#fff}
