@@ -52,10 +52,10 @@ export default function AdminApp({ session }: { session: Session }) {
   const isEditor = (session.user.email || "").toLowerCase().includes("latable-digitale");
   // Onglets masqués selon feature flags
   const FEATURE_MAP: Record<string, string> = {
-    "reservations": "reservation", "liste-attente": "liste_attente",
-    "clients": "crm", "partenaires": "partenaires",
-    "emporter": "emporter", "promo": "banniere",
-    "avis": "avis", "newsletter": "newsletter",
+    "reservations": "reservation",
+    "liste-attente": "liste_attente",
+    "clients": "crm",
+    "newsletter": "newsletter",
   };
   const TABS_VISIBLES = TABS.filter((t) => {
     const fk = FEATURE_MAP[t.key];
