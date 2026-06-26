@@ -15,6 +15,7 @@ const PLATEFORMES = [
 export default function TabSocial() {
   const { rows, insert, update } = useTable<SocialLink>("social_links");
   const [urls, setUrls] = useState<Record<string, string>>({});
+  const [saved, setSaved] = useState(false);
   const byKey: Record<string, SocialLink> = {};
   rows.forEach((r) => { byKey[r.platform] = r; });
 
@@ -30,6 +31,8 @@ export default function TabSocial() {
       const existing = byKey[p.key];
       if (existing && urls[p.key] !== undefined) await update(existing.id, { url: urls[p.key] });
     }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   }
 
   return (
@@ -50,7 +53,10 @@ export default function TabSocial() {
             </div>
           );
         })}
-        <div style={{ marginTop: 16 }}><button className="btn btn-accent" onClick={saveUrls}>Enregistrer les liens</button></div>
+        <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 14 }}>
+          <button className="btn btn-accent" onClick={saveUrls}>Enregistrer les liens</button>
+          {saved && <span style={{ color: "var(--ok)", fontSize: 13, fontWeight: 600 }}>✓ Liens enregistrés</span>}
+        </div>
       </div></div>
     </>
   );

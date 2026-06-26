@@ -19,7 +19,7 @@ export default function TabPartenaires() {
 
   async function save() {
     if (!edit?.name?.trim()) return;
-    const vals = { name: edit.name, description: edit.description || "", category: edit.category || "", logo_url: edit.logo_url || "" };
+    const vals = { name: edit.name, description: edit.description || "", category: edit.category || "", image_url: edit.image_url || "" };
     if (edit.id) await update(edit.id, vals); else await insert({ ...vals, position: 99, is_active: true });
     setEdit(null);
   }
@@ -51,7 +51,7 @@ export default function TabPartenaires() {
           </label>
         </div>
         <div className="bloc">
-          <div className="bloc-tete"><div><h2>Vos partenaires</h2></div><button className="btn btn-accent" onClick={() => setEdit({ name: "", description: "", category: "", is_active: true })}>+ Ajouter</button></div>
+          <div className="bloc-tete"><div><h2>Vos partenaires</h2></div><button className="btn btn-accent" onClick={() => setEdit({ name: "", description: "", category: "", image_url: "", is_active: true })}>+ Ajouter</button></div>
           <table><thead><tr><th style={{ width: 56 }}>Visible</th><th>Nom</th><th>Catégorie</th><th></th></tr></thead><tbody>
             {rows.length ? rows.map((p) => (
               <tr key={p.id}>
