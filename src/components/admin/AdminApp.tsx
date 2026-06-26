@@ -118,11 +118,15 @@ export default function AdminApp({ session }: { session: Session }) {
           </svg>
         </div>
         <nav>
-          {TABS_VISIBLES.map((t) => (
+          {TABS_VISIBLES.filter((t) => t.key !== "features" || isEditor).map((t) => (
             <div key={t.key}>
               {t.groupe && <div className="nav-groupe">{t.groupe}</div>}
-              <button className={active === t.key ? "actif" : ""} onClick={() => setActive(t.key)}>
-                {t.label}
+              <button
+                className={active === t.key ? "actif" : ""}
+                onClick={() => setActive(t.key)}
+                style={t.key === "features" ? { borderTop: "1px solid rgba(255,255,255,.1)", marginTop: 4, opacity: .7, fontSize: 12 } : undefined}
+              >
+                {t.key === "features" ? "⚙ Fonctionnalités" : t.label}
                 {t.key === "reservations" && nbAttente > 0 && <span className="nav-pastille">{nbAttente}</span>}
               </button>
             </div>
