@@ -17,6 +17,7 @@ import TabAvis from "./TabAvis";
 import TabParametres from "./TabParametres";
 import TabEmporter from "./TabEmporter";
 import TabListeAttente from "./TabListeAttente";
+import TabFeatures from "./TabFeatures";
 import { ConfirmProvider } from "./Confirm";
 
 const TABS: { key: string; label: string; comp: React.FC; groupe?: string }[] = [
@@ -45,10 +46,41 @@ export default function AdminApp({ session }: { session: Session }) {
   const [active, setActive] = useState("tableau");
   const [nbAttente, setNbAttente] = useState(0);
   const [forceDate, setForceDate] = useState<string | undefined>();
-  const Current = TABS.find((t) => t.key === active)?.comp || TabTableau;
+  const [features, setFeatures] = useState<Record<string, boolean>>({});
+  const [isEditor, setIsEditor] = useState(false);
+  // Onglets masqués selon feature flags
+  const FEATURE_MAP: Record<string, string> = {
+    "reservations": "reservation", "liste-attente": "liste_attente",
+    "clients": "crm", "partenaires": "partenaires",
+    "emporter": "emporter", "promo": "banniere",
+    "avis": "avis", "newsletter": "newsletter",
+  };
+  const TABS_VISIBLES = TABS.filter((t) => {
+    const fk = FEATURE_MAP[t.key];
+    if (!fk) return true; // pas de flag associé = toujours visible
+    if (Object.keys(features).length === 0) return true; // flags pas encore chargés
+    return features[fk] !== false;
+  });
+  const Current = TABS_VISIBLES.find((t) => t.key === active)?.comp || TabTableau;
   const siteUrl = import.meta.env.VITE_SITE_URL || "/";
 
   // Compteur de réservations en attente, mis à jour en temps réel
+  // Charger les feature flags et détecter si éditeur LTD
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const email = data.user?.email || "";
+      setIsEditor(email.toLowerCase().endsWith("@latable-digitale.fr"));
+    });
+    supabase.from("feature_flags").select("key,enabled")
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, boolean> = {};
+          data.forEach((f: any) => { map[f.key] = f.enabled; });
+          setFeatures(map);
+        }
+      });
+  }, []);
+
   useEffect(() => {
     async function compter() {
       const { count } = await supabase
@@ -86,7 +118,7 @@ export default function AdminApp({ session }: { session: Session }) {
           </svg>
         </div>
         <nav>
-          {TABS.map((t) => (
+          {TABS_VISIBLES.map((t) => (
             <div key={t.key}>
               {t.groupe && <div className="nav-groupe">{t.groupe}</div>}
               <button className={active === t.key ? "actif" : ""} onClick={() => setActive(t.key)}>
@@ -107,6 +139,8 @@ export default function AdminApp({ session }: { session: Session }) {
           ? <TabTableau onNavigate={(tab, date) => { setActive(tab); setForceDate(date); }} />
           : active === "reservations"
           ? <TabReservations initialDate={forceDate} />
+          : active === "features" && !isEditor
+          ? <TabTableau onNavigate={(tab, date) => { setActive(tab); setForceDate(date); }} />
           : <Current />}
       </main>
     </div>
