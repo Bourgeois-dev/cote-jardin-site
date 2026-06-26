@@ -40,6 +40,7 @@ const TABS: { key: string; label: string; comp: React.FC; groupe?: string }[] = 
   // — Paramètres —
   { key: "contacts",     label: "Contacts",           comp: TabContacts,     groupe: "Paramètres" },
   { key: "parametres",   label: "Réservations & site",comp: TabParametres },
+  { key: "features",     label: "Fonctionnalités",    comp: TabFeatures },
 ];
 
 export default function AdminApp({ session }: { session: Session }) {
