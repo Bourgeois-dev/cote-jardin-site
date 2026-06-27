@@ -80,7 +80,12 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
   );
   const attenteJour = resa.filter((r) => r.date === date && r.status === "attente");
   const tableOccupee: Record<string, Reservation> = {};
-  duService.forEach((r) => { (r.table_ids || []).forEach((tid) => { tableOccupee[tid] = r; }); });
+  // On occupe une table uniquement si la résa est confirmée
+  // Les résa "attente" du site ont une table pré-assignée pour la dispo
+  // mais ne bloquent le plan visuellement qu'après confirmation
+  duService
+    .filter((r) => r.status === "confirme" || r.status === "no_show" || r.source === "telephone")
+    .forEach((r) => { (r.table_ids || []).forEach((tid) => { tableOccupee[tid] = r; }); });
   const capaciteResa = (r: Reservation) =>
     (r.table_ids || []).reduce((s, tid) => s + (tables.find((t) => t.id === tid)?.capacity || 0), 0);
   const estPlacee = (r: Reservation) => (r.table_ids?.length || 0) > 0 && capaciteResa(r) >= r.covers;
@@ -378,7 +383,7 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
                   onClick={() => { if (occ) setResaEclairee((c) => c === occ.id ? null : occ.id); }}>
                   <div className="ps-table-tete">
                     <span className="ps-table-label">{t.label}</span>
-                    <span className="ps-table-cap">{t.capacity} {occ ? "couv." : "pl."}</span>
+                    <span className="ps-table-cap">{occ ? `${occ.covers} couv.` : `${t.capacity} pl.`}</span>
                   </div>
                   {occ ? (
                     <div className="ps-table-client">{occ.customer_name.split(" ")[0]} · {occ.time}</div>
