@@ -4,19 +4,20 @@ import { supabase, sendReservationEmail } from "../../lib/supabase";
 import type { Reservation, RestaurantTable, DiningArea, OpeningHour } from "../../lib/types";
 import { useConfirm } from "./Confirm";
 
-const PLAN_H = 520;
 const estMidi = (t: string) => (parseInt(String(t || "0").split(":")[0]) || 0) < 16;
 const JOURS = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+const JOURS_C = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
 const MOIS = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+const MOIS_C = ["jan","fév","mar","avr","mai","juin","juil","août","sep","oct","nov","déc"];
 
 function ymd(d: Date) { return d.toISOString().slice(0, 10); }
 function libelleDate(ds: string) {
   const d = new Date(ds + "T12:00:00");
-  return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`;
+  return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`;
 }
 function libelleDateCourt(ds: string) {
   const d = new Date(ds + "T12:00:00");
-  return `${JOURS[d.getDay()].slice(0,3)[0].toUpperCase()}${JOURS[d.getDay()].slice(1,3)}. ${d.getDate()} ${MOIS[d.getMonth()].slice(0,3)}.`;
+  return `${JOURS_C[d.getDay()]}. ${d.getDate()} ${MOIS_C[d.getMonth()]}`;
 }
 function depuisQuand(iso: string): string {
   if (!iso) return "";
@@ -58,7 +59,7 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
   const { rows: hours } = useTable<OpeningHour>("opening_hours", "day_of_week");
   const [date, setDate] = useState(initialDate || ymd(new Date()));
   const [zoneId, setZoneId] = useState<string | null>(null);
-  const [service, setService] = useState<"midi" | "soir">("midi");
+  const [service, setService] = useState<"midi" | "soir">("soir");
   const [filtreStatut, setFiltreStatut] = useState<"toutes" | "attente" | "confirme">("toutes");
   const [drag, setDrag] = useState<string | null>(null);
   const [survol, setSurvol] = useState<string | null>(null);
@@ -73,7 +74,6 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
   function decalerJour(n: number) {
     const d = new Date(date + "T12:00:00"); d.setDate(d.getDate() + n); setDate(ymd(d));
   }
-  const estAujourdhui = date === ymd(new Date());
 
   const duService = resa.filter(
     (r) => r.date === date && r.status !== "annule" && (service === "midi" ? estMidi(r.time) : !estMidi(r.time))
@@ -152,11 +152,11 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
   const placees = duService.filter((r) => estPlacee(r) && passeStatut(r));
   const nbAttente = attenteJour.length;
 
-  // Tables de la zone active
   const tablesZone = tables.filter((t) => t.is_active && t.area_id === zoneId);
   const tablesOccupees = tablesZone.filter((t) => !!tableOccupee[t.id]).length;
   const placesOccupees = tablesZone.filter((t) => !!tableOccupee[t.id]).reduce((s, t) => s + (t.capacity || 0), 0);
   const placesTotal = tablesZone.reduce((s, t) => s + (t.capacity || 0), 0);
+  const pctSalle = placesTotal ? Math.round(placesOccupees / placesTotal * 100) : 0;
 
   const aujMs = new Date(ymd(new Date()) + "T12:00:00").getTime();
   const joursAttente = Object.values(
@@ -170,12 +170,14 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
       }, {})
   ).sort((a, b) => a.date.localeCompare(b.date));
 
+  // Carte réservation (liste de gauche)
   function carteResa(r: Reservation, placee: boolean) {
     const tablesResa = (r.table_ids || []).map((tid) => tables.find((x) => x.id === tid)).filter(Boolean) as RestaurantTable[];
     const labels = tablesResa.map((x) => x.label).join(", ");
     const capa = capaciteResa(r);
     const manque = Math.max(0, r.covers - capa);
     const partiel = (r.table_ids?.length || 0) > 0 && !placee;
+    const statutLabel = r.status === "attente" ? "En attente" : r.status === "confirme" ? "Confirmée" : r.status === "no_show" ? "Absent" : "Annulée";
     return (
       <div key={r.id}
         className={`ps-resa${placee ? " placee" : ""}${partiel ? " partiel" : ""}${drag === r.id ? " drag" : ""}${resaEclairee === r.id ? " eclairee" : ""}`}
@@ -190,33 +192,22 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
           });
         }}
         style={tablesResa.length > 0 ? { cursor: "pointer" } : undefined}>
-        <div className="ps-resa-tete">
-          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <span className={`ps-pastille ${r.status}`} />
-            <b>{r.customer_name}</b>
-          </div>
-          <span className="ps-heure">
-            {(!placee || filtreStatut === "attente") && <span className="ps-svc">{estMidi(r.time) ? "Midi" : "Soir"}</span>}
-            {r.time}
-          </span>
+        <div className="ps-resa-haut">
+          <span className="ps-resa-heure">{r.time}</span>
+          <span className="ps-resa-nom">{r.customer_name}</span>
+          {!placee && <span className="ps-resa-glisser">Glisser →</span>}
+        </div>
+        <div className="ps-resa-bas">
+          <span className="ps-resa-couv">{r.covers} couv.</span>
+          <span className={`ps-badge-statut ${r.status}`}>{statutLabel}</span>
+          {tablesResa.length > 0 && <span className="ps-badge-table">Table{tablesResa.length > 1 ? "s" : ""} {labels}</span>}
+          {!placee && <span className="ps-badge-aplacer">À placer</span>}
+          {r.phone && <span className="ps-resa-tel">{r.phone}</span>}
         </div>
         {r.status === "attente" && r.source === "site" && (
           <div className="ps-resa-recue">Demande reçue {depuisQuand(r.created_at)}</div>
         )}
-        <div className="ps-resa-det">
-          <span>{r.covers} couvert{r.covers > 1 ? "s" : ""}</span>
-          {tablesResa.length > 0 && <span style={{ color: "var(--admin-accent)", fontWeight: 600 }}>Table{tablesResa.length > 1 ? "s" : ""} {labels}</span>}
-          {r.phone && (
-            <span className="ps-tel">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-              </svg>
-              {r.phone}
-            </span>
-          )}
-        </div>
         {partiel && <div className="ps-resa-manque">⚠ Il manque {manque} place{manque > 1 ? "s" : ""}</div>}
-        {r.status === "no_show" && <div className="ps-resa-noshow-tag">👻 Absent</div>}
         {r.notes && <div className="ps-resa-note">📝 {r.notes}</div>}
         <div className="ps-resa-actions">
           {r.status === "attente" && <button className="ps-confirmer" onClick={(e) => { e.stopPropagation(); confirmer(r); }}>✓ Confirmer</button>}
@@ -231,39 +222,42 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
   return (
     <div className="ps-wrap">
 
-      {/* ── Topbar navigation + bouton réservation ── */}
-      <div className="ps-topbar">
-        <div className="ps-nav-date">
-          <button className="ps-fleche" onClick={() => decalerJour(-1)}>‹</button>
-          <div className="ps-date-courante">{libelleDateCourt(date)}</div>
-          <button className="ps-fleche" onClick={() => decalerJour(1)}>›</button>
-          {!estAujourdhui && <button className="puce" onClick={() => setDate(ymd(new Date()))}>Auj.</button>}
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="ps-date-input" />
+      {/* En-tête : titre + topbar */}
+      <div className="ps-entete">
+        <div>
+          <h1 className="ps-titre">Réservations</h1>
+          <div className="ps-sous-titre">Plan de service · {libelleDate(date)}</div>
         </div>
-        <button className="btn btn-accent" onClick={() => { setSaisie({ ...VIDE, time: service === "midi" ? "12:30" : "19:30" }); setErreurSaisie(""); setAvertSaisie(""); }}>
-          + Réservation
-        </button>
+        <div className="ps-entete-droite">
+          <div className="ps-nav-date">
+            <button className="ps-fleche" onClick={() => decalerJour(-1)}>‹</button>
+            <div className="ps-date-courante">{libelleDateCourt(date)}</div>
+            <button className="ps-fleche" onClick={() => decalerJour(1)}>›</button>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="ps-date-input" />
+          </div>
+          <button className="ps-btn-resa" onClick={() => { setSaisie({ ...VIDE, time: service === "midi" ? "12:30" : "19:30" }); setErreurSaisie(""); setAvertSaisie(""); }}>+ Réservation</button>
+        </div>
       </div>
 
-      {/* ── Bandeau rappel jours en attente ── */}
+      {/* Rappel jours en attente */}
       {joursAttente.length > 0 && (
         <div className="ps-attente-rappel">
           <span className="ps-attente-rappel-lab">En attente :</span>
           {joursAttente.map((j) => (
             <button key={j.date} className="ps-attente-jour" onClick={() => { setDate(j.date); setService(j.svc); }}>
-              {libelleDate(j.date)}<span className="ps-attente-jour-nb">{j.n}</span>
+              {libelleDateCourt(j.date)}<span className="ps-attente-jour-nb">{j.n}</span>
             </button>
           ))}
         </div>
       )}
 
-      {/* ── Bandeau Midi / Soir (cliquable, style maquette) ── */}
+      {/* Bandeau Midi / Soir */}
       <div className="ps-services">
         <div className={`ps-service-bloc${service === "midi" ? " actif" : ""}`} onClick={() => setService("midi")}>
           <div className="ps-service-haut">
             <div className="ps-service-gauche">
               <span className="ps-service-nom">MIDI</span>
-              <span className="ps-service-stats">{recap.midi.resa} résa · {recap.midi.couv} couverts</span>
+              <span className="ps-service-stats">{recap.midi.resa === 0 ? "Aucune réservation" : `${recap.midi.resa} résa · ${recap.midi.couv} couverts`}</span>
             </div>
             <span className="ps-service-dispo">{capacite - recap.midi.couv} / {capacite}</span>
           </div>
@@ -273,7 +267,7 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
           <div className="ps-service-haut">
             <div className="ps-service-gauche">
               <span className="ps-service-nom">SOIR</span>
-              <span className="ps-service-stats">{recap.soir.resa} résa · {recap.soir.couv} couverts</span>
+              <span className="ps-service-stats">{recap.soir.resa === 0 ? "Aucune réservation" : `${recap.soir.resa} résa · ${recap.soir.couv} couverts`}</span>
             </div>
             <span className="ps-service-dispo">{capacite - recap.soir.couv} / {capacite}</span>
           </div>
@@ -281,123 +275,122 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
         </div>
       </div>
 
-      {/* ── Filtres statut ── */}
-      <div className="ps-filtres">
-        <button className={`puce-mini${filtreStatut === "toutes" ? " active" : ""}`} onClick={() => setFiltreStatut("toutes")}>Toutes</button>
-        <button className={`puce-mini${filtreStatut === "attente" ? " active" : ""}`} onClick={() => setFiltreStatut("attente")}>
-          En attente{nbAttente > 0 && <span className="ps-pip">{nbAttente}</span>}
-        </button>
-        <button className={`puce-mini${filtreStatut === "confirme" ? " active" : ""}`} onClick={() => setFiltreStatut("confirme")}>Confirmées</button>
-      </div>
-
-      {/* ── Grille liste + plan ── */}
+      {/* Grille : liste (gauche) + plan (droite, large) */}
       <div className="ps-grid">
 
         {/* Colonne liste */}
-        <div className="ps-liste">
-          {saisie ? (
-            <div className="ps-saisie">
-              <div className="ps-saisie-tete">
-                <h3>Réservation téléphone</h3>
-                <button className="ps-saisie-fermer" onClick={() => { setSaisie(null); setErreurSaisie(""); setAvertSaisie(""); }}>✕</button>
-              </div>
-              <div className="ps-saisie-date">{libelleDate(date)} · {service === "midi" ? "Midi" : "Soir"}</div>
-              <div className="ps-saisie-row">
-                <div className="champ"><label>Prénom *</label><input value={saisie.p} onChange={(e) => setSaisie({ ...saisie, p: e.target.value })} /></div>
-                <div className="champ"><label>Nom</label><input value={saisie.n} onChange={(e) => setSaisie({ ...saisie, n: e.target.value })} /></div>
-              </div>
-              <div className="ps-saisie-row">
-                <div className="champ"><label>Téléphone *</label><input type="tel" value={saisie.phone} onChange={(e) => setSaisie({ ...saisie, phone: e.target.value })} /></div>
-                <div className="champ"><label>Email</label><input type="email" value={saisie.email} onChange={(e) => setSaisie({ ...saisie, email: e.target.value })} placeholder="Pour la confirmation" /></div>
-              </div>
-              <div className="ps-saisie-row">
-                <div className="champ"><label>Heure *</label><input type="time" value={saisie.time} onChange={(e) => { setSaisie({ ...saisie, time: e.target.value }); setAvertSaisie(""); }} /></div>
-                <div className="champ"><label>Couverts</label><input type="number" min="1" value={saisie.covers} onChange={(e) => setSaisie({ ...saisie, covers: Number(e.target.value) })} /></div>
-              </div>
-              <div className="champ"><label>Notes</label><input value={saisie.notes} onChange={(e) => setSaisie({ ...saisie, notes: e.target.value })} placeholder="Allergies, occasion…" /></div>
-              {erreurSaisie && <div className="login-err">{erreurSaisie}</div>}
-              {avertSaisie && <div className="avert-creneau">⚠️ {avertSaisie}<br /><span>Vérifiez ou enregistrez malgré tout.</span></div>}
-              <button className="btn btn-accent" style={{ width: "100%", marginTop: 4 }} onClick={enregistrerSaisie}>{avertSaisie ? "Enregistrer malgré tout" : "Enregistrer"}</button>
-              <div className="ps-saisie-aide">La réservation sera ajoutée en « à placer ».</div>
-            </div>
-          ) : (
-            <>
-              {sansTable.length > 0 && (
-                <>
-                  <div className="ps-liste-titre">À placer <span className="ps-liste-nb">{sansTable.length}</span></div>
-                  {sansTable.map((r) => carteResa(r, false))}
-                </>
-              )}
-              {placees.length > 0 && (
-                <>
-                  <div className="ps-liste-titre" style={{ marginTop: 14 }}>Placées <span className="ps-liste-nb">{placees.length}</span></div>
-                  {placees.map((r) => carteResa(r, true))}
-                </>
-              )}
-              {sansTable.length === 0 && placees.length === 0 && (
-                <div className="ps-vide-mini">Aucune réservation pour ce service.</div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Colonne plan */}
-        <div className="ps-plan-wrap">
-          {/* Sélecteur de zone + bandeau capacité */}
-          <div className="ps-plan-header">
-            {areas.length > 1 ? (
-              <div className="zones-barre">
-                {areas.map((a) => (
-                  <button key={a.id} className={`zone-onglet${a.id === zoneId ? " active" : ""}`} onClick={() => setZoneId(a.id)}>{a.name}</button>
-                ))}
+        <div className="ps-col-liste">
+          <div className="ps-filtres">
+            <button className={`puce-mini${filtreStatut === "toutes" ? " active" : ""}`} onClick={() => setFiltreStatut("toutes")}>Toutes</button>
+            <button className={`puce-mini${filtreStatut === "attente" ? " active" : ""}`} onClick={() => setFiltreStatut("attente")}>En attente{nbAttente > 0 && <span className="ps-pip">{nbAttente}</span>}</button>
+            <button className={`puce-mini${filtreStatut === "confirme" ? " active" : ""}`} onClick={() => setFiltreStatut("confirme")}>Confirmées</button>
+          </div>
+          <div className="ps-liste">
+            {saisie ? (
+              <div className="ps-saisie">
+                <div className="ps-saisie-tete">
+                  <h3>Réservation téléphone</h3>
+                  <button className="ps-saisie-fermer" onClick={() => { setSaisie(null); setErreurSaisie(""); setAvertSaisie(""); }}>✕</button>
+                </div>
+                <div className="ps-saisie-date">{libelleDate(date)} · {service === "midi" ? "Midi" : "Soir"}</div>
+                <div className="ps-saisie-row">
+                  <div className="champ"><label>Prénom *</label><input value={saisie.p} onChange={(e) => setSaisie({ ...saisie, p: e.target.value })} /></div>
+                  <div className="champ"><label>Nom</label><input value={saisie.n} onChange={(e) => setSaisie({ ...saisie, n: e.target.value })} /></div>
+                </div>
+                <div className="ps-saisie-row">
+                  <div className="champ"><label>Téléphone *</label><input type="tel" value={saisie.phone} onChange={(e) => setSaisie({ ...saisie, phone: e.target.value })} /></div>
+                  <div className="champ"><label>Email</label><input type="email" value={saisie.email} onChange={(e) => setSaisie({ ...saisie, email: e.target.value })} placeholder="Confirmation" /></div>
+                </div>
+                <div className="ps-saisie-row">
+                  <div className="champ"><label>Heure *</label><input type="time" value={saisie.time} onChange={(e) => { setSaisie({ ...saisie, time: e.target.value }); setAvertSaisie(""); }} /></div>
+                  <div className="champ"><label>Couverts</label><input type="number" min="1" value={saisie.covers} onChange={(e) => setSaisie({ ...saisie, covers: Number(e.target.value) })} /></div>
+                </div>
+                <div className="champ"><label>Notes</label><input value={saisie.notes} onChange={(e) => setSaisie({ ...saisie, notes: e.target.value })} placeholder="Allergies, occasion…" /></div>
+                {erreurSaisie && <div className="login-err">{erreurSaisie}</div>}
+                {avertSaisie && <div className="avert-creneau">⚠️ {avertSaisie}<br /><span>Vérifiez ou enregistrez malgré tout.</span></div>}
+                <button className="btn btn-accent" style={{ width: "100%", marginTop: 4 }} onClick={enregistrerSaisie}>{avertSaisie ? "Enregistrer malgré tout" : "Enregistrer"}</button>
               </div>
             ) : (
-              <div className="ps-zone-nom">{areas.find((a) => a.id === zoneId)?.name || "Salle"}</div>
+              <>
+                {sansTable.length > 0 && (
+                  <>
+                    <div className="ps-liste-titre">À placer <span className="ps-liste-nb">{sansTable.length}</span></div>
+                    {sansTable.map((r) => carteResa(r, false))}
+                  </>
+                )}
+                {placees.length > 0 && (
+                  <>
+                    <div className="ps-liste-titre" style={{ marginTop: 14 }}>Placées <span className="ps-liste-nb">{placees.length}</span></div>
+                    {placees.map((r) => carteResa(r, true))}
+                  </>
+                )}
+                {sansTable.length === 0 && placees.length === 0 && <div className="ps-vide-mini">Aucune réservation pour ce service.</div>}
+              </>
             )}
-            <div className="ps-plan-capacite">
-              <span className="ps-capa-badge">{tablesOccupees}/{tablesZone.length} tables</span>
-              <span className="ps-capa-badge">{placesOccupees}/{placesTotal} places</span>
+          </div>
+        </div>
+
+        {/* Colonne plan (large) */}
+        <div className="ps-col-plan">
+          {/* En-tête salle */}
+          <div className="ps-salle-tete">
+            <div className="ps-salle-gauche">
+              {areas.length > 1 ? (
+                <div className="zones-barre">
+                  {areas.map((a) => (
+                    <button key={a.id} className={`zone-onglet${a.id === zoneId ? " active" : ""}`} onClick={() => setZoneId(a.id)}>{a.name}</button>
+                  ))}
+                </div>
+              ) : (
+                <h2 className="ps-salle-nom">{areas.find((a) => a.id === zoneId)?.name || "Salle"}</h2>
+              )}
+              <span className="ps-salle-pill">{tablesZone.length} tables · {placesTotal} places</span>
+            </div>
+            <div className="ps-legende">
+              <span><span className="ps-leg-dot occupee" /> Occupée</span>
+              <span><span className="ps-leg-dot libre" /> Libre</span>
+              <span><span className="ps-leg-dot eclairee" /> Sélection</span>
             </div>
           </div>
 
-          {/* Canvas plan de salle */}
-          <div className="ps-plan" style={{ height: PLAN_H }}>
+          {/* Jauge globale salle */}
+          <div className="ps-salle-jauge-row">
+            <div className="ps-salle-jauge"><div style={{ width: `${pctSalle}%` }} /></div>
+            <span className="ps-salle-compteur">{placesOccupees} / {placesTotal} places · {tablesOccupees}/{tablesZone.length} tables</span>
+          </div>
+
+          {/* Canvas plan */}
+          <div className="ps-plan">
             {tablesZone.map((t) => {
               const occ = tableOccupee[t.id];
-              const size = t.capacity > 4 ? 88 : 66;
+              // Taille par capacité : 2→petite, 3-4→moyenne, 5+→grande
+              const tier = t.capacity <= 2 ? "t-petite" : t.capacity <= 4 ? "t-moyenne" : "t-grande";
               const eclairee = resaEclairee && occ?.id === resaEclairee;
               const dejaDessus = drag && occ?.id === drag;
               const prise = occ && drag && occ.id !== drag;
               return (
                 <div key={t.id}
-                  className={`ps-table${t.shape === "round" ? " ronde" : " carree"}${occ ? " occupee" : " libre"}${survol === t.id ? " survol" : ""}${prise ? " trop-petit" : ""}${dejaDessus ? " retrait" : ""}${eclairee ? " eclairee" : ""}`}
-                  style={{ left: t.pos_x, top: t.pos_y, width: size, height: size }}
+                  className={`ps-table ${tier}${t.shape === "round" ? " ronde" : " carree"}${occ ? " occupee" : " libre"}${survol === t.id ? " survol" : ""}${prise ? " trop-petit" : ""}${dejaDessus ? " retrait" : ""}${eclairee ? " eclairee" : ""}`}
+                  style={{ left: t.pos_x, top: t.pos_y }}
                   onDragOver={(e) => { if (!prise) e.preventDefault(); setSurvol(t.id); }}
                   onDragLeave={() => setSurvol((s) => (s === t.id ? null : s))}
                   onDrop={() => onDrop(t.id)}
-                  onClick={() => {
-                    if (occ) setResaEclairee((c) => c === occ.id ? null : occ.id);
-                  }}>
-                  <span className="ps-table-label">{t.label}</span>
+                  onClick={() => { if (occ) setResaEclairee((c) => c === occ.id ? null : occ.id); }}>
+                  <div className="ps-table-tete">
+                    <span className="ps-table-label">{t.label}</span>
+                    <span className="ps-table-cap">{t.capacity} {occ ? "couv." : "pl."}</span>
+                  </div>
                   {occ ? (
-                    <span className="ps-table-client">
-                      <span className="ps-table-nom">{occ.customer_name.split(" ")[0]}</span>
-                      <span className="ps-table-time">{occ.time}</span>
-                    </span>
+                    <div className="ps-table-client">{occ.customer_name.split(" ")[0]} · {occ.time}</div>
                   ) : (
-                    <span className="ps-table-cap ps-table-libre">Libre</span>
+                    <div className="ps-table-libre">Libre</div>
                   )}
                 </div>
               );
             })}
             {tablesZone.length === 0 && <div className="ps-vide-plan">Aucune table dans cette zone.</div>}
           </div>
-          <div className="ps-plan-legende">
-            <span><span className="ps-leg-dot occupee" /> Occupée</span>
-            <span><span className="ps-leg-dot libre" /> Libre</span>
-            <span><span className="ps-leg-dot eclairee" /> Sélection</span>
-          </div>
-          <div className="ps-aide">Cliquez sur une réservation pour localiser sa table — et inversement. Glissez une carte sur une table pour l'attribuer ; sur plusieurs tables pour un grand groupe.</div>
+          <div className="ps-aide">Cliquez une réservation pour localiser sa table — et inversement. Glissez une carte sur une table pour l'attribuer ; sur plusieurs tables pour un grand groupe.</div>
         </div>
       </div>
     </div>

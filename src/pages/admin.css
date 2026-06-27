@@ -269,110 +269,152 @@ tr:last-child td{border-bottom:none}
 .th-tri:hover{color:var(--admin-accent)}
 
 /* ===== PLAN DE SERVICE (réservations + plan) ===== */
-.ps-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden}
-.ps-topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 10px;gap:12px;flex-shrink:0}
-.ps-nav-date{display:flex;align-items:center;gap:8px}
-.ps-date-courante{font-size:16px;font-weight:600;color:var(--encre);min-width:130px;text-align:center}
-.ps-fleche{background:transparent;border:1px solid var(--ligne);color:var(--encre);width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
-.ps-fleche:hover{background:var(--fond2);border-color:var(--admin-accent)}
-.ps-date-input{font-size:13px;border:1px solid var(--ligne);border-radius:6px;padding:5px 8px;color:var(--encre);background:var(--fond2);cursor:pointer;height:30px}
-.ps-attente-rappel{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 20px;background:rgba(193,138,46,.06);border-top:1px solid rgba(193,138,46,.2);border-bottom:1px solid rgba(193,138,46,.2);flex-shrink:0}
-.ps-attente-rappel-lab{font-size:11px;font-weight:600;color:var(--attente);letter-spacing:.06em;text-transform:uppercase}
-.ps-attente-jour{background:#fff;border:1px solid rgba(193,138,46,.35);color:var(--encre);font-size:12px;font-weight:500;padding:3px 10px;border-radius:99px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:.15s}
+.ps-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden;background:var(--fond,#faf9f4)}
+
+/* En-tête */
+.ps-entete{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 24px 16px;gap:16px;flex-shrink:0}
+.ps-titre{font-family:var(--font-display);font-size:30px;font-weight:500;color:var(--encre);line-height:1}
+.ps-sous-titre{font-size:13px;color:var(--gris);margin-top:5px}
+.ps-entete-droite{display:flex;align-items:center;gap:12px}
+.ps-nav-date{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--ligne);border-radius:10px;padding:5px 6px}
+.ps-date-courante{font-size:14px;font-weight:600;color:var(--encre);min-width:96px;text-align:center}
+.ps-fleche{background:transparent;border:none;color:var(--encre);width:28px;height:28px;border-radius:7px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.ps-fleche:hover{background:var(--fond2)}
+.ps-date-input{font-size:12px;border:none;border-left:1px solid var(--ligne);padding:4px 6px;color:var(--gris);background:transparent;cursor:pointer}
+.ps-btn-resa{background:var(--admin-accent);color:#fff;border:none;font-size:14px;font-weight:600;padding:11px 20px;border-radius:10px;cursor:pointer;transition:.15s;white-space:nowrap}
+.ps-btn-resa:hover{background:var(--admin-accent-dark)}
+
+/* Rappel attente */
+.ps-attente-rappel{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 24px;background:rgba(193,138,46,.06);border-top:1px solid rgba(193,138,46,.2);border-bottom:1px solid rgba(193,138,46,.2);flex-shrink:0}
+.ps-attente-rappel-lab{font-size:11px;font-weight:600;color:var(--attente,#c18a2e);letter-spacing:.06em;text-transform:uppercase}
+.ps-attente-jour{background:#fff;border:1px solid rgba(193,138,46,.35);color:var(--encre);font-size:12px;font-weight:500;padding:3px 10px;border-radius:99px;cursor:pointer;display:flex;align-items:center;gap:5px}
 .ps-attente-jour:hover{background:rgba(193,138,46,.1)}
-.ps-attente-jour-nb{background:var(--attente);color:#fff;font-size:10px;font-weight:700;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center}
-.ps-services{display:grid;grid-template-columns:1fr 1fr;gap:0;flex-shrink:0;border-bottom:1px solid var(--ligne)}
-.ps-service-bloc{padding:16px 22px;cursor:pointer;transition:background .2s;border-right:1px solid var(--ligne);user-select:none;position:relative}
-.ps-service-bloc:last-child{border-right:none}
-.ps-service-bloc:hover:not(.actif){background:rgba(122,31,36,.03)}
-.ps-service-bloc.actif{background:var(--admin-accent)}
-.ps-service-haut{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
-.ps-service-gauche{display:flex;flex-direction:column;gap:3px}
+.ps-attente-jour-nb{background:var(--attente,#c18a2e);color:#fff;font-size:10px;font-weight:700;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+
+/* Bandeau Midi / Soir */
+.ps-services{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:4px 24px 16px;flex-shrink:0}
+.ps-service-bloc{padding:16px 20px;cursor:pointer;transition:.2s;user-select:none;background:#fff;border:1px solid var(--ligne);border-radius:14px}
+.ps-service-bloc:hover:not(.actif){border-color:rgba(122,31,36,.25)}
+.ps-service-bloc.actif{background:var(--admin-accent);border-color:var(--admin-accent)}
+.ps-service-haut{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.ps-service-gauche{display:flex;flex-direction:column;gap:4px}
 .ps-service-nom{font-size:10px;font-weight:700;letter-spacing:.28em;color:var(--gris);font-family:monospace;line-height:1}
 .ps-service-bloc.actif .ps-service-nom{color:rgba(255,255,255,.6)}
-.ps-service-stats{font-size:13px;font-weight:500;color:var(--encre)}
+.ps-service-stats{font-size:13px;font-weight:500;color:var(--gris)}
 .ps-service-bloc.actif .ps-service-stats{color:rgba(255,255,255,.9)}
-.ps-service-dispo{font-size:22px;font-weight:700;color:var(--encre);font-family:monospace;line-height:1;text-align:right}
+.ps-service-dispo{font-size:24px;font-weight:700;color:var(--encre);font-family:monospace;line-height:1}
 .ps-service-bloc.actif .ps-service-dispo{color:#fff}
-.ps-service-jauge{height:5px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden;margin-top:10px}
+.ps-service-jauge{height:6px;background:rgba(0,0,0,.07);border-radius:99px;overflow:hidden}
 .ps-service-bloc.actif .ps-service-jauge{background:rgba(255,255,255,.2)}
 .ps-service-jauge div{height:100%;background:var(--or);border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1)}
 .ps-service-bloc.actif .ps-service-jauge div{background:rgba(255,255,255,.85)}
-.ps-filtres{display:flex;align-items:center;gap:6px;padding:10px 20px;border-bottom:1px solid var(--ligne);flex-shrink:0}
-.ps-grid{display:grid;grid-template-columns:320px 1fr;flex:1;min-height:0;overflow:hidden}
-@media(max-width:880px){.ps-grid{grid-template-columns:1fr}}
-.ps-liste{overflow-y:auto;padding:12px;border-right:1px solid var(--ligne);display:flex;flex-direction:column;gap:0}
-.ps-liste-titre{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gris);padding:8px 4px 6px;display:flex;align-items:center;gap:7px}
-.ps-liste-nb{background:var(--admin-accent);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:99px;letter-spacing:0}
-.ps-vide-mini{font-size:13px;color:var(--gris);padding:16px 4px;font-style:italic}
-.ps-resa{background:#fff;border:1px solid var(--ligne);border-left:3px solid var(--ligne);border-radius:6px;padding:10px 12px;margin-bottom:6px;cursor:grab;transition:box-shadow .15s,border-color .15s;user-select:none}
-.ps-resa:hover{box-shadow:0 2px 8px rgba(0,0,0,.08);border-color:rgba(122,31,36,.25)}
-.ps-resa.drag{opacity:.55}
-.ps-resa.eclairee{border-color:var(--admin-accent);box-shadow:0 0 0 2px rgba(122,31,36,.15)}
-.ps-resa.partiel{border-left-color:var(--attente)}
-.ps-resa.placee{border-left-color:var(--ok)}
-.ps-resa-tete{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px}
-.ps-resa-tete b{font-size:14px;color:var(--encre)}
-.ps-heure{font-size:12px;color:var(--gris);white-space:nowrap;display:flex;align-items:center;gap:4px;font-family:monospace}
-.ps-svc{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:var(--fond2);border:1px solid var(--ligne);color:var(--gris);padding:1px 5px;border-radius:3px}
-.ps-resa-recue{font-size:11px;color:var(--attente);font-weight:600;margin-bottom:4px}
-.ps-resa-det{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;color:var(--gris);margin-bottom:6px}
-.ps-tel{display:flex;align-items:center;gap:3px;color:var(--gris)}
-.ps-resa-manque{font-size:11px;color:var(--attente);font-weight:600;margin-bottom:4px}
-.ps-resa-noshow-tag,.ps-resa-note{font-size:11px;color:var(--gris);margin-bottom:4px}
-.ps-resa-note{font-style:italic}
-.ps-resa-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
-.ps-confirmer{font-size:11px;font-weight:700;background:var(--ok);color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer}
-.ps-confirmer:hover{opacity:.85}
-.ps-noshow-btn,.ps-annuler-btn,.ps-detacher{font-size:11px;font-weight:500;background:transparent;border:1px solid var(--ligne);color:var(--gris);padding:3px 10px;border-radius:4px;cursor:pointer;transition:.15s}
-.ps-noshow-btn:hover,.ps-annuler-btn:hover{border-color:var(--annule);color:var(--annule)}
+
+/* Grille principale : liste étroite + plan large */
+.ps-grid{display:grid;grid-template-columns:340px 1fr;gap:0;flex:1;min-height:0;overflow:hidden;padding:0 24px 20px}
+@media(max-width:960px){.ps-grid{grid-template-columns:1fr;overflow:auto}}
+
+/* Colonne liste */
+.ps-col-liste{display:flex;flex-direction:column;min-height:0;padding-right:20px}
+.ps-filtres{display:flex;align-items:center;gap:6px;padding:0 0 12px;flex-shrink:0}
+.puce-mini{font-size:13px;font-weight:500;background:#fff;border:1px solid var(--ligne);color:var(--gris);padding:6px 14px;border-radius:99px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center}
+.puce-mini:hover{border-color:rgba(122,31,36,.3)}
+.puce-mini.active{background:var(--admin-accent);border-color:var(--admin-accent);color:#fff}
+.ps-liste{overflow-y:auto;display:flex;flex-direction:column;gap:0;flex:1;min-height:0}
+.ps-liste-titre{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gris);padding:4px 2px 8px;display:flex;align-items:center;gap:7px}
+.ps-liste-nb{background:var(--admin-accent);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;letter-spacing:0}
+.ps-vide-mini{font-size:13px;color:var(--gris);padding:16px 2px;font-style:italic}
+
+/* Cartes réservation */
+.ps-resa{background:#fff;border:1px solid var(--ligne);border-left:4px solid var(--admin-accent);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:grab;transition:box-shadow .15s,border-color .15s;user-select:none}
+.ps-resa:hover{box-shadow:0 3px 12px rgba(0,0,0,.07)}
+.ps-resa.drag{opacity:.5}
+.ps-resa.eclairee{box-shadow:0 0 0 2px var(--admin-accent)}
+.ps-resa.partiel{border-left-color:var(--attente,#c18a2e)}
+.ps-resa.placee{border-left-color:var(--ok,#3e7d5a)}
+.ps-resa-haut{display:flex;align-items:baseline;gap:10px;margin-bottom:7px}
+.ps-resa-heure{font-family:monospace;font-size:15px;font-weight:700;color:var(--encre)}
+.ps-resa-nom{font-size:14px;font-weight:600;color:var(--encre);flex:1}
+.ps-resa-glisser{font-size:11px;color:var(--admin-accent);font-weight:600;white-space:nowrap}
+.ps-resa-bas{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.ps-resa-couv{font-size:12px;color:var(--gris)}
+.ps-badge-statut{font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px}
+.ps-badge-statut.attente{background:rgba(193,138,46,.14);color:var(--attente,#c18a2e)}
+.ps-badge-statut.confirme{background:rgba(62,125,90,.14);color:var(--ok,#3e7d5a)}
+.ps-badge-statut.no_show,.ps-badge-statut.annule{background:var(--fond2);color:var(--gris)}
+.ps-badge-table{font-size:10px;font-weight:600;color:var(--admin-accent);background:rgba(122,31,36,.08);padding:2px 8px;border-radius:99px}
+.ps-badge-aplacer{font-size:10px;font-weight:600;color:var(--admin-accent);border:1px solid rgba(122,31,36,.3);padding:2px 8px;border-radius:99px}
+.ps-resa-tel{font-size:11px;color:var(--gris);font-family:monospace}
+.ps-resa-recue{font-size:11px;color:var(--attente,#c18a2e);font-weight:600;margin-top:6px}
+.ps-resa-manque{font-size:11px;color:var(--attente,#c18a2e);font-weight:600;margin-top:6px}
+.ps-resa-note{font-size:11px;color:var(--gris);font-style:italic;margin-top:6px}
+.ps-resa-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.ps-confirmer{font-size:11px;font-weight:700;background:var(--ok,#3e7d5a);color:#fff;border:none;padding:4px 11px;border-radius:5px;cursor:pointer}
+.ps-noshow-btn,.ps-annuler-btn,.ps-detacher{font-size:11px;font-weight:500;background:transparent;border:1px solid var(--ligne);color:var(--gris);padding:4px 11px;border-radius:5px;cursor:pointer;transition:.15s}
+.ps-noshow-btn:hover,.ps-annuler-btn:hover{border-color:var(--annule,#a3433a);color:var(--annule,#a3433a)}
 .ps-detacher:hover{border-color:var(--admin-accent);color:var(--admin-accent)}
-.ps-pastille{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.ps-pastille.attente{background:var(--attente)}
-.ps-pastille.confirme{background:var(--ok)}
-.ps-pastille.annule{background:var(--annule)}
-.ps-pastille.no_show{background:var(--gris)}
-.ps-plan-wrap{display:flex;flex-direction:column;overflow:hidden}
-.ps-plan-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--ligne);flex-shrink:0;gap:12px}
-.ps-zone-nom{font-size:14px;font-weight:600;color:var(--encre)}
-.ps-plan-capacite{display:flex;gap:8px}
-.ps-capa-badge{font-size:11px;font-weight:600;color:var(--gris);background:var(--fond2);border:1px solid var(--ligne);padding:3px 10px;border-radius:99px;font-family:monospace}
-.ps-plan{position:relative;flex:1;overflow:auto;background:var(--fond2);padding:16px}
-.ps-vide-plan{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--gris);font-style:italic}
-.ps-table{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:default;transition:box-shadow .15s,transform .1s;user-select:none}
-.ps-table.ronde{border-radius:50%}
-.ps-table.carree{border-radius:10px}
-.ps-table.libre{background:#fff;border:2px dashed rgba(122,31,36,.3);color:var(--gris)}
-.ps-table.occupee{background:var(--or);border:2px solid rgba(0,0,0,.08);color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12)}
-.ps-table.occupee:hover{box-shadow:0 4px 16px rgba(0,0,0,.18);transform:translateY(-1px)}
-.ps-table.survol{box-shadow:0 0 0 3px var(--admin-accent);z-index:5}
-.ps-table.eclairee{box-shadow:0 0 0 3px var(--admin-accent),0 4px 16px rgba(0,0,0,.18);z-index:5;transform:translateY(-2px)}
-.ps-table.trop-petit{opacity:.45;cursor:not-allowed}
-.ps-table.retrait{box-shadow:0 0 0 3px var(--annule)}
-.ps-table-label{font-size:10px;font-weight:700;letter-spacing:.1em;opacity:.75}
-.ps-table.occupee .ps-table-label{color:rgba(255,255,255,.85)}
-.ps-table.libre .ps-table-label{color:var(--admin-accent)}
-.ps-table-client{display:flex;flex-direction:column;align-items:center;gap:1px}
-.ps-table-nom{font-size:12px;font-weight:700;color:#fff}
-.ps-table-time{font-size:10px;color:rgba(255,255,255,.8);font-family:monospace}
-.ps-table-cap{font-size:11px}
-.ps-table-libre{color:var(--gris);font-style:italic}
-.ps-plan-legende{display:flex;align-items:center;gap:16px;padding:8px 16px;font-size:11px;color:var(--gris);border-top:1px solid var(--ligne);flex-shrink:0}
-.ps-leg-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+
+/* Colonne plan (large) */
+.ps-col-plan{display:flex;flex-direction:column;min-height:0;background:#fff;border:1px solid var(--ligne);border-radius:16px;overflow:hidden}
+.ps-salle-tete{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;gap:12px;flex-shrink:0}
+.ps-salle-gauche{display:flex;align-items:center;gap:12px}
+.ps-salle-nom{font-family:var(--font-display);font-size:18px;font-weight:500;color:var(--encre)}
+.ps-salle-pill{font-size:11px;font-weight:600;color:var(--gris);background:var(--fond2);border:1px solid var(--ligne);padding:4px 11px;border-radius:99px}
+.ps-legende{display:flex;align-items:center;gap:16px;font-size:11px;color:var(--gris)}
+.ps-leg-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
 .ps-leg-dot.occupee{background:var(--or)}
-.ps-leg-dot.libre{background:#fff;border:2px dashed rgba(122,31,36,.3)}
-.ps-leg-dot.eclairee{background:var(--admin-accent)}
-.ps-aide{font-size:11px;color:var(--gris);padding:8px 16px;font-style:italic;border-top:1px solid var(--ligne);flex-shrink:0}
-.ps-saisie{padding:4px}
+.ps-leg-dot.libre{background:#fff;border:1.5px dotted var(--gris)}
+.ps-leg-dot.eclairee{background:transparent;border:2px solid var(--admin-accent)}
+
+/* Jauge globale salle */
+.ps-salle-jauge-row{display:flex;align-items:center;gap:14px;padding:0 20px 14px;flex-shrink:0}
+.ps-salle-jauge{flex:1;height:7px;background:var(--fond2);border-radius:99px;overflow:hidden}
+.ps-salle-jauge div{height:100%;background:var(--or);border-radius:99px;transition:width .5s}
+.ps-salle-compteur{font-size:12px;font-weight:600;color:var(--gris);white-space:nowrap}
+
+/* Canvas plan */
+.ps-plan{position:relative;flex:1;overflow:auto;background:var(--fond2);margin:0 16px;border-radius:12px;min-height:340px}
+.ps-vide-plan{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--gris);font-style:italic}
+
+/* Tables — taille par capacité */
+.ps-table{position:absolute;display:flex;flex-direction:column;justify-content:space-between;padding:10px 12px;cursor:default;transition:box-shadow .15s,transform .1s;user-select:none;box-sizing:border-box}
+.ps-table.t-petite{width:96px;height:96px}
+.ps-table.t-moyenne{width:118px;height:118px}
+.ps-table.t-grande{width:150px;height:150px}
+.ps-table.carree{border-radius:14px}
+.ps-table.ronde{border-radius:50%;align-items:center;justify-content:center;text-align:center}
+.ps-table.libre{background:#fcfaf2;border:2px dashed rgba(122,31,36,.3)}
+.ps-table.occupee{background:var(--or);border:2px solid rgba(0,0,0,.06);box-shadow:0 3px 10px rgba(0,0,0,.12)}
+.ps-table.occupee:hover{box-shadow:0 6px 18px rgba(0,0,0,.18);transform:translateY(-2px);cursor:pointer}
+.ps-table.survol{box-shadow:0 0 0 3px var(--admin-accent);z-index:5}
+.ps-table.eclairee{box-shadow:0 0 0 3px var(--admin-accent),0 6px 18px rgba(0,0,0,.18);z-index:5;transform:translateY(-2px)}
+.ps-table.trop-petit{opacity:.4;cursor:not-allowed}
+.ps-table.retrait{box-shadow:0 0 0 3px var(--annule,#a3433a)}
+.ps-table-tete{display:flex;align-items:flex-start;justify-content:space-between;width:100%;gap:6px}
+.ps-table.ronde .ps-table-tete{flex-direction:column;align-items:center;gap:2px}
+.ps-table-label{font-family:var(--font-display,Georgia,serif);font-size:18px;font-weight:600;line-height:1}
+.ps-table.occupee .ps-table-label{color:#fff}
+.ps-table.libre .ps-table-label{color:var(--gris)}
+.ps-table-cap{font-size:10px;font-weight:500}
+.ps-table.occupee .ps-table-cap{color:rgba(255,255,255,.85)}
+.ps-table.libre .ps-table-cap{color:var(--gris)}
+.ps-table-client{font-size:12px;font-weight:600;color:#fff;line-height:1.2}
+.ps-table-libre{font-size:12px;color:var(--gris);font-style:italic}
+
+.ps-aide{font-size:11.5px;color:var(--gris);padding:12px 20px;font-style:italic;flex-shrink:0}
+
+/* Pip */
+.ps-pip{background:#fff;color:var(--admin-accent);font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:5px}
+.puce-mini.active .ps-pip{background:#fff;color:var(--admin-accent)}
+
+/* Saisie téléphone */
+.ps-saisie{background:#fff;border:1px solid var(--ligne);border-radius:12px;padding:16px}
 .ps-saisie-tete{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .ps-saisie-tete h3{font-size:15px;font-weight:600;color:var(--encre)}
 .ps-saisie-fermer{background:transparent;border:none;font-size:18px;cursor:pointer;color:var(--gris);line-height:1;padding:2px 6px}
 .ps-saisie-date{font-size:12px;color:var(--gris);margin-bottom:12px;font-weight:500}
 .ps-saisie-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.ps-saisie-aide{font-size:11px;color:var(--gris);margin-top:8px;font-style:italic}
 .avert-creneau{background:rgba(193,138,46,.1);border:1px solid rgba(193,138,46,.3);border-radius:5px;padding:10px 12px;font-size:12px;color:#7a5500;margin-bottom:8px}
 .avert-creneau span{display:block;margin-top:4px;font-size:11px;opacity:.8}
-.ps-pip{background:var(--admin-accent);color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:4px}
 
 /* ===== PLAN DE SERVICE — navigation & statuts ===== */
 .ps-nav-date{display:flex;align-items:center;gap:8px}
