@@ -79,17 +79,29 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
     if (!dayInfo || dayInfo.closed || !dayInfo.h) return [];
     const blockedService = dayInfo.inClosure?.service || null;
     if (dayInfo.inClosure && !blockedService) return []; // fermeture totale
-    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
     const isToday = date === today;
+    // Minutes écoulées depuis minuit + délai minimum requis
+    const seuilMin = now.getHours() * 60 + now.getMinutes() + minAdvance * 60;
     const all = [...slotsBetween(dayInfo.h.lunch_open, dayInfo.h.lunch_close), ...slotsBetween(dayInfo.h.dinner_open, dayInfo.h.dinner_close)];
     return all.filter((s) => {
-      const [hh] = s.split(":").map(Number);
+      const [hh, mm] = s.split(":").map(Number);
       const svc = hh < 16 ? "midi" : "soir";
       if (blockedService && svc === blockedService) return false; // créneau bloqué
       if (!isToday) return true;
-      return hh - new Date().getHours() >= minAdvance;
+      return hh * 60 + (mm || 0) >= seuilMin; // délai minimum, précis à la minute
     });
   }, [dayInfo, date, minAdvance]);
+
+  // Vrai si le jour est ouvert mais que tous les créneaux sont déjà passés (délai mini)
+  const tropTardAujourdhui = useMemo(() => {
+    if (!dayInfo || dayInfo.closed || !dayInfo.h) return false;
+    if (date !== new Date().toISOString().slice(0, 10)) return false;
+    if (dayInfo.inClosure) return false;
+    const tousCreneaux = [...slotsBetween(dayInfo.h.lunch_open, dayInfo.h.lunch_close), ...slotsBetween(dayInfo.h.dinner_open, dayInfo.h.dinner_close)];
+    return tousCreneaux.length > 0 && slots.length === 0;
+  }, [dayInfo, date, slots]);
 
   // Interroge la disponibilité réelle (tables libres couvrant `covers`) pour chaque
   // créneau, dès qu'on affiche l'étape 2. Une RPC SECURITY DEFINER fait le calcul
@@ -215,7 +227,10 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
                 })}
               </div>
               {closureMsg && <div className="alerte"><b>{closureMsg}</b></div>}
-              {slots.length === 0 && !closureMsg && <div className="alerte">Aucun créneau disponible pour cette date.</div>}
+              {slots.length === 0 && !closureMsg && tropTardAujourdhui && (
+                <div className="alerte">Il est trop tard pour réserver en ligne pour aujourd'hui. Choisissez une autre date{phone && <>, ou appelez-nous au <a href={`tel:${phone}`}>{phone}</a></>}.</div>
+              )}
+              {slots.length === 0 && !closureMsg && !tropTardAujourdhui && <div className="alerte">Aucun créneau disponible pour cette date.</div>}
               {slots.length > 0 && !dispoLoad && slots.every((s) => dispo[s] === false) && (
                 <div className="alerte">Aucune table disponible pour {covers} couvert{covers > 1 ? "s" : ""} ce jour-là. Essayez une autre date ou réduisez le nombre de couverts{phone && <>, ou appelez-nous au <a href={`tel:${phone}`}>{phone}</a></>}.</div>
               )}
