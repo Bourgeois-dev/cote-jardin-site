@@ -16,7 +16,7 @@ export default function TabParametres() {
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    fetchActive<ReservationSettings>("reservation_settings").then((r) => { setS(r[0] || null); setLoading(false); });
+    fetchActive<ReservationSettings>("reservation_settings", "id").then((r) => { setS(r[0] || null); setLoading(false); });
     fetchContent("newsletter_enabled").then((c) => setNewsletterOn(c?.enabled ?? true));
   }, []);
 

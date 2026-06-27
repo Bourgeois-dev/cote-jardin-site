@@ -47,7 +47,7 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
   useEffect(() => {
     (async () => {
       setClosures(await fetchActive<ClosurePeriod>("closure_periods", "start_date"));
-      const s = await fetchActive<ReservationSettings>("reservation_settings");
+      const s = await fetchActive<ReservationSettings>("reservation_settings", "id");
       setSettings(s[0] || null);
     })();
   }, []);
