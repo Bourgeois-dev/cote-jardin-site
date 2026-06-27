@@ -227,12 +227,9 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
   return (
     <div className="ps-wrap">
 
-      {/* En-tête : titre + topbar */}
+      {/* Barre de navigation date + bouton réservation */}
       <div className="ps-entete">
-        <div>
-          <h1 className="ps-titre">Réservations</h1>
-          <div className="ps-sous-titre">Plan de service · {libelleDate(date)}</div>
-        </div>
+        <div className="ps-sous-titre">Plan de service · {libelleDate(date)}</div>
         <div className="ps-entete-droite">
           <div className="ps-nav-date">
             <button className="ps-fleche" onClick={() => decalerJour(-1)}>‹</button>
