@@ -154,7 +154,7 @@ export default function TabPlan() {
         </div>
 
         {/* Zone principale : canvas + panneau */}
-        <div className="tp-zone-bloc">
+        <div className="tp-zone-bloc" style={{ gridTemplateColumns: sel ? "1fr 260px" : "1fr", gap: sel ? 20 : 0 }}>
           <div className="tp-zone-main">
             {/* En-tête de la zone */}
             <div className="tp-zone-entete">
