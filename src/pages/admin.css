@@ -310,17 +310,17 @@ tr:last-child td{border-bottom:none}
 .ps-service-bloc.actif .ps-service-jauge div{background:rgba(255,255,255,.85)}
 
 /* Grille principale : liste étroite + plan large */
-.ps-grid{display:grid;grid-template-columns:520px 1fr;gap:0;flex:1;min-height:0;overflow:hidden;padding:0 24px 20px}
+.ps-grid{display:grid;grid-template-columns:520px 1fr;gap:0;flex:1;min-height:0;overflow:hidden;padding:0 24px 20px;align-items:stretch}
 @media(max-width:960px){.ps-grid{grid-template-columns:1fr;overflow:auto}}
 
 /* Colonne liste */
-.ps-col-liste{display:flex;flex-direction:column;height:100%;padding-right:20px;overflow:hidden}
-.ps-filtres{display:flex;align-items:center;gap:6px;padding:0 0 12px;flex-shrink:0}
+.ps-col-liste{display:flex;flex-direction:column;min-height:0;max-height:100%;padding-right:20px;overflow:hidden}
+.ps-filtres{display:flex;align-items:center;gap:6px;padding:0 0 12px;flex-shrink:0;flex-grow:0}
 .puce-mini{font-size:13px;font-weight:500;background:#fff;border:1px solid var(--ligne);color:var(--gris);padding:6px 14px;border-radius:99px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center}
 .puce-mini:hover{border-color:rgba(122,31,36,.3)}
 .puce-mini.active{background:var(--admin-accent);border-color:var(--admin-accent);color:#fff}
-.ps-liste{overflow-y:auto;display:flex;flex-direction:column;gap:0;flex:1;min-height:0;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--ligne) transparent}
-.ps-liste-titre{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gris);padding:4px 2px 8px;display:flex;align-items:center;gap:7px}
+.ps-liste{overflow-y:auto;display:flex;flex-direction:column;gap:0;flex:1;min-height:0;padding-right:6px;scrollbar-width:thin;scrollbar-color:var(--ligne) transparent;-webkit-overflow-scrolling:touch}
+.ps-liste-titre{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gris);padding:4px 2px 8px;display:flex;align-items:center;gap:7px;flex-shrink:0}
 .ps-liste-nb{background:var(--admin-accent);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;letter-spacing:0}
 .ps-vide-mini{font-size:13px;color:var(--gris);padding:16px 2px;font-style:italic}
 
