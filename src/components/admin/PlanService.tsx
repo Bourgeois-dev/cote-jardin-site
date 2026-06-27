@@ -6,15 +6,18 @@ import { useConfirm } from "./Confirm";
 
 const PLAN_H = 520;
 const estMidi = (t: string) => (parseInt(String(t || "0").split(":")[0]) || 0) < 16;
-const JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
-const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const JOURS = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+const MOIS = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 
 function ymd(d: Date) { return d.toISOString().slice(0, 10); }
 function libelleDate(ds: string) {
   const d = new Date(ds + "T12:00:00");
   return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`;
 }
-// "reçue il y a X" à partir de l'horodatage de création (created_at).
+function libelleDateCourt(ds: string) {
+  const d = new Date(ds + "T12:00:00");
+  return `${JOURS[d.getDay()].slice(0,3)[0].toUpperCase()}${JOURS[d.getDay()].slice(1,3)}. ${d.getDate()} ${MOIS[d.getMonth()].slice(0,3)}.`;
+}
 function depuisQuand(iso: string): string {
   if (!iso) return "";
   const diff = Date.now() - new Date(iso).getTime();
@@ -23,10 +26,8 @@ function depuisQuand(iso: string): string {
   if (min < 60) return `il y a ${min} min`;
   const h = Math.floor(min / 60);
   if (h < 24) return `il y a ${h} h`;
-  const j = Math.floor(h / 24);
-  return `il y a ${j} j`;
+  return `il y a ${Math.floor(h / 24)} j`;
 }
-// Vérifie si une date+heure tombe dans un créneau d'ouverture. Retourne un message si hors créneau, sinon "".
 function horsCreneaux(dateStr: string, time: string, hours: OpeningHour[]): string {
   if (!dateStr || !time) return "";
   const d = new Date(dateStr + "T12:00:00");
@@ -45,13 +46,11 @@ function horsCreneaux(dateStr: string, time: string, hours: OpeningHour[]): stri
   const services: string[] = [];
   if (h.lunch_open) services.push(`midi ${h.lunch_open}–${h.lunch_close}`);
   if (h.dinner_open) services.push(`soir ${h.dinner_open}–${h.dinner_close}`);
-  const dispo = services.length ? `Ce ${jour}, service : ${services.join(", ")}.` : `Aucun service le ${jour}.`;
-  return `L'heure choisie est hors des créneaux d'ouverture. ${dispo}`;
+  return `Hors créneaux. ${services.length ? `Ce ${jour} : ${services.join(", ")}.` : `Aucun service le ${jour}.`}`;
 }
 
 export default function PlanService({ initialDate }: { initialDate?: string } = {}) {
   const confirm = useConfirm();
-  // Fenêtre glissante : J-7 à J+60 — évite de charger toute l'historique en mémoire
   const dateMin = (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0,10); })();
   const { rows: resa, reload, insert } = useTable<Reservation>("reservations", "date", true, { column: "date", op: "gte", value: dateMin });
   const { rows: tables } = useTable<RestaurantTable>("restaurant_tables", "label");
@@ -64,7 +63,6 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
   const [drag, setDrag] = useState<string | null>(null);
   const [survol, setSurvol] = useState<string | null>(null);
   const [resaEclairee, setResaEclairee] = useState<string | null>(null);
-  // Panneau de saisie téléphone (recouvre la colonne de gauche)
   const VIDE = { p: "", n: "", phone: "", email: "", time: "", covers: 2, notes: "" };
   const [saisie, setSaisie] = useState<typeof VIDE | null>(null);
   const [erreurSaisie, setErreurSaisie] = useState("");
@@ -80,32 +78,22 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
   const duService = resa.filter(
     (r) => r.date === date && r.status !== "annule" && (service === "midi" ? estMidi(r.time) : !estMidi(r.time))
   );
-  // Réservations en attente sur toute la journée (les deux services) — pour ne rien oublier
   const attenteJour = resa.filter((r) => r.date === date && r.status === "attente");
-  // Une table est occupée si elle figure dans les table_ids d'une résa du service.
-  // tableOccupee : table_id -> la réservation qui l'occupe.
   const tableOccupee: Record<string, Reservation> = {};
   duService.forEach((r) => { (r.table_ids || []).forEach((tid) => { tableOccupee[tid] = r; }); });
-
-  // Capacité cumulée des tables d'une réservation.
   const capaciteResa = (r: Reservation) =>
     (r.table_ids || []).reduce((s, tid) => s + (tables.find((t) => t.id === tid)?.capacity || 0), 0);
-  // Une résa est "complètement placée" si la somme des capacités couvre les couverts.
   const estPlacee = (r: Reservation) => (r.table_ids?.length || 0) > 0 && capaciteResa(r) >= r.covers;
 
-  // Remplace la liste de tables d'une réservation.
   async function setTables(reservationId: string, ids: string[]) {
     const { error } = await supabase.from("reservations").update({ table_ids: ids }).eq("id", reservationId);
     if (!error) reload();
   }
-  // Ajoute (ou retire si déjà présente) une table à une réservation.
   async function toggleTable(reservationId: string, tableId: string) {
     const r = resa.find((x) => x.id === reservationId);
     if (!r) return;
     const actuelles = r.table_ids || [];
-    const ids = actuelles.includes(tableId)
-      ? actuelles.filter((t) => t !== tableId)
-      : [...actuelles, tableId];
+    const ids = actuelles.includes(tableId) ? actuelles.filter((t) => t !== tableId) : [...actuelles, tableId];
     await setTables(reservationId, ids);
   }
   async function confirmer(r: Reservation) {
@@ -113,39 +101,27 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
     if (!error) { reload(); if (r.email) sendReservationEmail("confirmation", r); }
   }
   async function marquerNoShow(r: Reservation) {
-    const ok = await confirm({
-      titre: "Marquer cette réservation comme absente ?",
-      message: `${r.customer_name} (${r.covers} couvert${r.covers > 1 ? "s" : ""}, ${r.time}) sera marqué·e absent·e.`,
-      confirmer: "Marquer absent",
-      danger: true,
-    });
+    const ok = await confirm({ titre: "Marquer comme absent ?", message: `${r.customer_name} (${r.covers} cvt, ${r.time})`, confirmer: "Marquer absent", danger: true });
     if (!ok) return;
     const { error } = await supabase.from("reservations").update({ status: "no_show" }).eq("id", r.id);
     if (!error) reload();
   }
   async function annuler(r: Reservation) {
-    const ok = await confirm({
-      titre: "Annuler cette réservation ?",
-      message: `La réservation de ${r.customer_name} (${r.covers} couvert${r.covers > 1 ? "s" : ""}, ${r.time}) sera annulée et ses tables libérées.`,
-      confirmer: "Annuler la réservation",
-      danger: true,
-    });
+    const ok = await confirm({ titre: "Annuler cette réservation ?", message: `${r.customer_name} — ${r.covers} cvt, ${r.time}`, confirmer: "Annuler", danger: true });
     if (!ok) return;
-    // Annulation : statut annulé + tables libérées (le trigger remet table_id à null).
     const { error } = await supabase.from("reservations").update({ status: "annule", table_ids: [] }).eq("id", r.id);
     if (!error) reload();
   }
   async function enregistrerSaisie() {
     if (!saisie) return;
-    if (!saisie.p.trim() || !saisie.phone.trim() || !saisie.time) { setErreurSaisie("Prénom, téléphone et heure sont requis."); return; }
-    // Vérification des créneaux : on avertit une première fois, puis on laisse forcer au clic suivant
+    if (!saisie.p.trim() || !saisie.phone.trim() || !saisie.time) { setErreurSaisie("Prénom, téléphone et heure requis."); return; }
     const probleme = horsCreneaux(date, saisie.time, hours);
     if (probleme && !avertSaisie) { setAvertSaisie(probleme); return; }
     const reservation: any = {
       customer_name: [saisie.p.trim(), saisie.n.trim()].filter(Boolean).join(" "),
       email: saisie.email.trim(), phone: saisie.phone.trim(),
-      date, time: saisie.time, covers: saisie.covers,
-      notes: saisie.notes, status: "confirme", source: "telephone",
+      date, time: saisie.time, covers: saisie.covers, notes: saisie.notes,
+      status: "confirme", source: "telephone",
     };
     const ok = await insert(reservation);
     if (ok) { if (saisie.email.trim()) sendReservationEmail("confirmation", reservation); setSaisie(null); setErreurSaisie(""); setAvertSaisie(""); reload(); }
@@ -153,57 +129,43 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
   }
   function onDrop(tableId: string) {
     if (!drag) return;
-    // Si la table est déjà occupée par une AUTRE réservation, on refuse le drop.
     const occ = tableOccupee[tableId];
     if (occ && occ.id !== drag) { setDrag(null); setSurvol(null); return; }
     toggleTable(drag, tableId);
     setDrag(null); setSurvol(null);
   }
 
-  // Réservations du jour entier (les deux services), hors annulées — pour ne rien oublier à placer
   const duJourEntier = resa.filter((r) => r.date === date && r.status !== "annule");
   const passeStatut = (r: Reservation) => filtreStatut === "toutes" || r.status === filtreStatut;
-
-  // Récap couverts : capacité totale des tables actives (toutes zones), et couverts réservés par service
   const capacite = tables.filter((t) => t.is_active).reduce((s, t) => s + (t.capacity || 0), 0);
   const midiResa = duJourEntier.filter((r) => estMidi(r.time));
   const soirResa = duJourEntier.filter((r) => !estMidi(r.time));
   const couvMidi = midiResa.reduce((s, r) => s + r.covers, 0);
   const couvSoir = soirResa.reduce((s, r) => s + r.covers, 0);
   const recap = {
-    midi: { resa: midiResa.length, couv: couvMidi, reste: Math.max(0, capacite - couvMidi) },
-    soir: { resa: soirResa.length, couv: couvSoir, reste: Math.max(0, capacite - couvSoir) },
-    jour: { resa: duJourEntier.length, couv: couvMidi + couvSoir },
+    midi: { resa: midiResa.length, couv: couvMidi, pct: capacite ? Math.min(100, Math.round(couvMidi / capacite * 100)) : 0 },
+    soir: { resa: soirResa.length, couv: couvSoir, pct: capacite ? Math.min(100, Math.round(couvSoir / capacite * 100)) : 0 },
   };
-
-  // "À placer" : réservations de la journée pas (ou pas complètement) placées.
-  // Une résa partiellement placée (tables insuffisantes) reste à placer.
-  // "À placer" triées par ancienneté de la demande (la plus ancienne en attente
-  // d'abord) pour aider à prioriser le traitement.
   const sansTable = duJourEntier
     .filter((r) => !estPlacee(r) && r.status !== "no_show" && passeStatut(r))
     .sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
-  // "Placées" : réservations complètement placées du service affiché.
   const placees = duService.filter((r) => estPlacee(r) && passeStatut(r));
-  const enAttenteActif = filtreStatut === "attente";
   const nbAttente = attenteJour.length;
 
-  // Jours (>= aujourd'hui) ayant au moins une réservation en attente, hors jour
-  // déjà affiché. Sert au bandeau de rappel : on voit d'un coup d'œil quels
-  // jours ont des demandes à traiter, et un clic y saute directement (jour + service).
+  // Tables de la zone active
+  const tablesZone = tables.filter((t) => t.is_active && t.area_id === zoneId);
+  const tablesOccupees = tablesZone.filter((t) => !!tableOccupee[t.id]).length;
+  const placesOccupees = tablesZone.filter((t) => !!tableOccupee[t.id]).reduce((s, t) => s + (t.capacity || 0), 0);
+  const placesTotal = tablesZone.reduce((s, t) => s + (t.capacity || 0), 0);
+
   const aujMs = new Date(ymd(new Date()) + "T12:00:00").getTime();
   const joursAttente = Object.values(
-    resa
-      .filter((r) => r.status === "attente" && r.date !== date && new Date(r.date + "T12:00:00").getTime() >= aujMs)
+    resa.filter((r) => r.status === "attente" && r.date !== date && new Date(r.date + "T12:00:00").getTime() >= aujMs)
       .reduce<Record<string, { date: string; n: number; svc: "midi" | "soir"; premier: string }>>((acc, r) => {
         const svc: "midi" | "soir" = estMidi(r.time) ? "midi" : "soir";
         const cur = acc[r.date];
-        // Service retenu = celui de la réservation la plus matinale du jour
         if (!cur) acc[r.date] = { date: r.date, n: 1, svc, premier: r.time };
-        else {
-          cur.n += 1;
-          if (r.time < cur.premier) { cur.premier = r.time; cur.svc = svc; }
-        }
+        else { cur.n += 1; if (r.time < cur.premier) { cur.premier = r.time; cur.svc = svc; } }
         return acc;
       }, {})
   ).sort((a, b) => a.date.localeCompare(b.date));
@@ -213,48 +175,54 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
     const labels = tablesResa.map((x) => x.label).join(", ");
     const capa = capaciteResa(r);
     const manque = Math.max(0, r.covers - capa);
-    const partiel = (r.table_ids?.length || 0) > 0 && !placee; // a des tables mais pas assez
+    const partiel = (r.table_ids?.length || 0) > 0 && !placee;
     return (
       <div key={r.id}
-        className={`ps-resa ${placee ? "placee" : ""} ${partiel ? "partiel" : ""} ${drag === r.id ? "drag" : ""} ${resaEclairee === r.id ? "eclairee" : ""}`}
+        className={`ps-resa${placee ? " placee" : ""}${partiel ? " partiel" : ""}${drag === r.id ? " drag" : ""}${resaEclairee === r.id ? " eclairee" : ""}`}
         draggable onDragStart={() => setDrag(r.id)} onDragEnd={() => { setDrag(null); setSurvol(null); }}
         onClick={() => {
           if (tablesResa.length === 0) return;
           setResaEclairee((cur) => {
             const allume = cur !== r.id;
             const prem = tablesResa[0];
-            if (allume && prem?.area_id && prem.area_id !== zoneId) setZoneId(prem.area_id); // bascule sur la zone des tables
+            if (allume && prem?.area_id && prem.area_id !== zoneId) setZoneId(prem.area_id);
             return allume ? r.id : null;
           });
         }}
         style={tablesResa.length > 0 ? { cursor: "pointer" } : undefined}>
         <div className="ps-resa-tete">
-          <b><span className={`ps-pastille ${r.status}`} title={r.status === "attente" ? "En attente" : r.status === "no_show" ? "Absent (no-show)" : r.status === "annule" ? "Annulée" : "Confirmée"} />{r.customer_name}</b>
-          <span className="ps-heure">{(!placee || enAttenteActif) && <span className="ps-svc">{estMidi(r.time) ? "Midi" : "Soir"}</span>}{r.time}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <span className={`ps-pastille ${r.status}`} />
+            <b>{r.customer_name}</b>
+          </div>
+          <span className="ps-heure">
+            {(!placee || filtreStatut === "attente") && <span className="ps-svc">{estMidi(r.time) ? "Midi" : "Soir"}</span>}
+            {r.time}
+          </span>
         </div>
         {r.status === "attente" && r.source === "site" && (
           <div className="ps-resa-recue">Demande reçue {depuisQuand(r.created_at)}</div>
         )}
         <div className="ps-resa-det">
-          {r.covers} couvert(s)
-          {tablesResa.length > 0 && <> · <b style={{ color: "var(--admin-accent)" }}>Table{tablesResa.length > 1 ? "s" : ""} {labels}</b></>}
+          <span>{r.covers} couvert{r.covers > 1 ? "s" : ""}</span>
+          {tablesResa.length > 0 && <span style={{ color: "var(--admin-accent)", fontWeight: 600 }}>Table{tablesResa.length > 1 ? "s" : ""} {labels}</span>}
           {r.phone && (
-            <> · <span className="ps-tel">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <span className="ps-tel">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
               </svg>
               {r.phone}
-            </span></>
+            </span>
           )}
         </div>
-        {partiel && <div className="ps-resa-manque">⚠ Il manque {manque} place{manque > 1 ? "s" : ""} — ajoutez une table (glissez-la ici).</div>}
-        {r.status === "no_show" && <div className="ps-resa-noshow-tag">👻 Absent — n'est pas venu</div>}
+        {partiel && <div className="ps-resa-manque">⚠ Il manque {manque} place{manque > 1 ? "s" : ""}</div>}
+        {r.status === "no_show" && <div className="ps-resa-noshow-tag">👻 Absent</div>}
         {r.notes && <div className="ps-resa-note">📝 {r.notes}</div>}
         <div className="ps-resa-actions">
           {r.status === "attente" && <button className="ps-confirmer" onClick={(e) => { e.stopPropagation(); confirmer(r); }}>✓ Confirmer</button>}
-          {(r.status === "attente" || r.status === "confirme") && <button className="ps-noshow-btn" onClick={(e) => { e.stopPropagation(); marquerNoShow(r); }}>Marquer absent</button>}
+          {(r.status === "attente" || r.status === "confirme") && <button className="ps-noshow-btn" onClick={(e) => { e.stopPropagation(); marquerNoShow(r); }}>Absent</button>}
           {(r.status === "attente" || r.status === "confirme") && <button className="ps-annuler-btn" onClick={(e) => { e.stopPropagation(); annuler(r); }}>Annuler</button>}
-          {tablesResa.length > 0 && <button className="ps-detacher" onClick={(e) => { e.stopPropagation(); setTables(r.id, []); }}>Retirer {tablesResa.length > 1 ? "les tables" : "de la table"}</button>}
+          {tablesResa.length > 0 && <button className="ps-detacher" onClick={(e) => { e.stopPropagation(); setTables(r.id, []); }}>Retirer {tablesResa.length > 1 ? "tables" : "table"}</button>}
         </div>
       </div>
     );
@@ -262,59 +230,76 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
 
   return (
     <div className="ps-wrap">
-      <div className="ps-controls">
+
+      {/* ── Topbar navigation + bouton réservation ── */}
+      <div className="ps-topbar">
         <div className="ps-nav-date">
-          <button className="ps-fleche" onClick={() => decalerJour(-1)} aria-label="Jour précédent">‹</button>
-          <div className="ps-date-courante">{libelleDate(date)}</div>
-          <button className="ps-fleche" onClick={() => decalerJour(1)} aria-label="Jour suivant">›</button>
-          <button className={`puce ${estAujourdhui ? "active" : ""}`} onClick={() => setDate(ymd(new Date()))}>Auj.</button>
+          <button className="ps-fleche" onClick={() => decalerJour(-1)}>‹</button>
+          <div className="ps-date-courante">{libelleDateCourt(date)}</div>
+          <button className="ps-fleche" onClick={() => decalerJour(1)}>›</button>
+          {!estAujourdhui && <button className="puce" onClick={() => setDate(ymd(new Date()))}>Auj.</button>}
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="ps-date-input" />
         </div>
-        <div className="ps-compte">
-          <button className="btn btn-mini btn-accent" onClick={() => { setSaisie({ ...VIDE, time: service === "midi" ? "12:30" : "19:30" }); setErreurSaisie(""); setAvertSaisie(""); }}>+ Réservation téléphone</button>
-        </div>
+        <button className="btn btn-accent" onClick={() => { setSaisie({ ...VIDE, time: service === "midi" ? "12:30" : "19:30" }); setErreurSaisie(""); setAvertSaisie(""); }}>
+          + Réservation
+        </button>
       </div>
 
+      {/* ── Bandeau rappel jours en attente ── */}
       {joursAttente.length > 0 && (
         <div className="ps-attente-rappel">
-          <span className="ps-attente-rappel-lab">En attente d'autres jours :</span>
+          <span className="ps-attente-rappel-lab">En attente :</span>
           {joursAttente.map((j) => (
             <button key={j.date} className="ps-attente-jour" onClick={() => { setDate(j.date); setService(j.svc); }}>
-              {libelleDate(j.date)}
-              <span className="ps-attente-jour-nb">{j.n}</span>
+              {libelleDate(j.date)}<span className="ps-attente-jour-nb">{j.n}</span>
             </button>
           ))}
         </div>
       )}
 
-      <div className="ps-recap">
-        <div className="ps-recap-bloc ps-recap-jour">
-          <div className="ps-recap-lab">La journée</div>
-          <div className="ps-recap-val"><b>{recap.jour.resa}</b> réservation(s) · <b>{recap.jour.couv}</b> couverts</div>
+      {/* ── Bandeau Midi / Soir (cliquable, style maquette) ── */}
+      <div className="ps-services">
+        <div className={`ps-service-bloc${service === "midi" ? " actif" : ""}`} onClick={() => setService("midi")}>
+          <div className="ps-service-haut">
+            <span className="ps-service-nom">MIDI</span>
+            <span className="ps-service-stats">{recap.midi.resa} résa · {recap.midi.couv} couverts</span>
+            <span className="ps-service-dispo">{capacite - recap.midi.couv} / {capacite}</span>
+          </div>
+          <div className="ps-service-jauge">
+            <div style={{ width: `${recap.midi.pct}%` }} />
+          </div>
         </div>
-        <div className={`ps-recap-bloc ps-recap-clic ${service === "midi" ? "actif" : ""}`} onClick={() => setService("midi")}>
-          <div className="ps-recap-lab">Midi</div>
-          <div className="ps-recap-val"><b>{recap.midi.resa}</b> résa · <b>{recap.midi.couv}</b> couverts · <span className="ps-reste">{recap.midi.reste} place(s) restante(s)</span></div>
-        </div>
-        <div className={`ps-recap-bloc ps-recap-clic ${service === "soir" ? "actif" : ""}`} onClick={() => setService("soir")}>
-          <div className="ps-recap-lab">Soir</div>
-          <div className="ps-recap-val"><b>{recap.soir.resa}</b> résa · <b>{recap.soir.couv}</b> couverts · <span className="ps-reste">{recap.soir.reste} place(s) restante(s)</span></div>
+        <div className={`ps-service-bloc${service === "soir" ? " actif" : ""}`} onClick={() => setService("soir")}>
+          <div className="ps-service-haut">
+            <span className="ps-service-nom">SOIR</span>
+            <span className="ps-service-stats">{recap.soir.resa} résa · {recap.soir.couv} couverts</span>
+            <span className="ps-service-dispo">{capacite - recap.soir.couv} / {capacite}</span>
+          </div>
+          <div className="ps-service-jauge">
+            <div style={{ width: `${recap.soir.pct}%` }} />
+          </div>
         </div>
       </div>
 
+      {/* ── Filtres statut ── */}
       <div className="ps-filtres">
-        <button className={`puce-mini ${filtreStatut === "toutes" ? "active" : ""}`} onClick={() => setFiltreStatut("toutes")}>Toutes</button>
-        <button className={`puce-mini ${filtreStatut === "attente" ? "active" : ""}`} onClick={() => setFiltreStatut("attente")}>En attente{nbAttente > 0 && <span className="ps-pip">{nbAttente}</span>}</button>
-        <button className={`puce-mini ${filtreStatut === "confirme" ? "active" : ""}`} onClick={() => setFiltreStatut("confirme")}>Confirmées</button>
+        <button className={`puce-mini${filtreStatut === "toutes" ? " active" : ""}`} onClick={() => setFiltreStatut("toutes")}>Toutes</button>
+        <button className={`puce-mini${filtreStatut === "attente" ? " active" : ""}`} onClick={() => setFiltreStatut("attente")}>
+          En attente{nbAttente > 0 && <span className="ps-pip">{nbAttente}</span>}
+        </button>
+        <button className={`puce-mini${filtreStatut === "confirme" ? " active" : ""}`} onClick={() => setFiltreStatut("confirme")}>Confirmées</button>
       </div>
 
+      {/* ── Grille liste + plan ── */}
       <div className="ps-grid">
+
+        {/* Colonne liste */}
         <div className="ps-liste">
           {saisie ? (
             <div className="ps-saisie">
               <div className="ps-saisie-tete">
                 <h3>Réservation téléphone</h3>
-                <button className="ps-saisie-fermer" onClick={() => { setSaisie(null); setErreurSaisie(""); setAvertSaisie(""); }} aria-label="Fermer">✕</button>
+                <button className="ps-saisie-fermer" onClick={() => { setSaisie(null); setErreurSaisie(""); setAvertSaisie(""); }}>✕</button>
               </div>
               <div className="ps-saisie-date">{libelleDate(date)} · {service === "midi" ? "Midi" : "Soir"}</div>
               <div className="ps-saisie-row">
@@ -323,7 +308,7 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
               </div>
               <div className="ps-saisie-row">
                 <div className="champ"><label>Téléphone *</label><input type="tel" value={saisie.phone} onChange={(e) => setSaisie({ ...saisie, phone: e.target.value })} /></div>
-                <div className="champ"><label>Email (optionnel)</label><input type="email" value={saisie.email} onChange={(e) => setSaisie({ ...saisie, email: e.target.value })} placeholder="Pour la confirmation" /></div>
+                <div className="champ"><label>Email</label><input type="email" value={saisie.email} onChange={(e) => setSaisie({ ...saisie, email: e.target.value })} placeholder="Pour la confirmation" /></div>
               </div>
               <div className="ps-saisie-row">
                 <div className="champ"><label>Heure *</label><input type="time" value={saisie.time} onChange={(e) => { setSaisie({ ...saisie, time: e.target.value }); setAvertSaisie(""); }} /></div>
@@ -331,56 +316,90 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
               </div>
               <div className="champ"><label>Notes</label><input value={saisie.notes} onChange={(e) => setSaisie({ ...saisie, notes: e.target.value })} placeholder="Allergies, occasion…" /></div>
               {erreurSaisie && <div className="login-err">{erreurSaisie}</div>}
-              {avertSaisie && <div className="avert-creneau">⚠️ {avertSaisie}<br /><span>Vérifiez l'heure, ou enregistrez malgré tout.</span></div>}
+              {avertSaisie && <div className="avert-creneau">⚠️ {avertSaisie}<br /><span>Vérifiez ou enregistrez malgré tout.</span></div>}
               <button className="btn btn-accent" style={{ width: "100%", marginTop: 4 }} onClick={enregistrerSaisie}>{avertSaisie ? "Enregistrer malgré tout" : "Enregistrer"}</button>
-              <div className="ps-saisie-aide">La réservation est ajoutée en « à placer » — glissez-la ensuite sur une table.</div>
+              <div className="ps-saisie-aide">La réservation sera ajoutée en « à placer ».</div>
             </div>
           ) : (
             <>
-              <div className="ps-liste-titre">À placer ({sansTable.length})</div>
-              {sansTable.length === 0 && <div className="ps-vide-mini">Aucune réservation à placer.</div>}
-              {sansTable.map((r) => carteResa(r, false))}
-              {placees.length > 0 && <div className="ps-liste-titre" style={{ marginTop: 16 }}>Placées ({placees.length})</div>}
-              {placees.map((r) => carteResa(r, true))}
+              {sansTable.length > 0 && (
+                <>
+                  <div className="ps-liste-titre">À placer <span className="ps-liste-nb">{sansTable.length}</span></div>
+                  {sansTable.map((r) => carteResa(r, false))}
+                </>
+              )}
+              {placees.length > 0 && (
+                <>
+                  <div className="ps-liste-titre" style={{ marginTop: 14 }}>Placées <span className="ps-liste-nb">{placees.length}</span></div>
+                  {placees.map((r) => carteResa(r, true))}
+                </>
+              )}
+              {sansTable.length === 0 && placees.length === 0 && (
+                <div className="ps-vide-mini">Aucune réservation pour ce service.</div>
+              )}
             </>
           )}
         </div>
 
+        {/* Colonne plan */}
         <div className="ps-plan-wrap">
-          {areas.length > 1 && (
-            <div className="zones-barre" style={{ marginBottom: 10 }}>
-              {areas.map((a) => (
-                <button key={a.id} className={`zone-onglet ${a.id === zoneId ? "active" : ""}`} onClick={() => setZoneId(a.id)}>{a.name}</button>
-              ))}
+          {/* Sélecteur de zone + bandeau capacité */}
+          <div className="ps-plan-header">
+            {areas.length > 1 ? (
+              <div className="zones-barre">
+                {areas.map((a) => (
+                  <button key={a.id} className={`zone-onglet${a.id === zoneId ? " active" : ""}`} onClick={() => setZoneId(a.id)}>{a.name}</button>
+                ))}
+              </div>
+            ) : (
+              <div className="ps-zone-nom">{areas.find((a) => a.id === zoneId)?.name || "Salle"}</div>
+            )}
+            <div className="ps-plan-capacite">
+              <span className="ps-capa-badge">{tablesOccupees}/{tablesZone.length} tables</span>
+              <span className="ps-capa-badge">{placesOccupees}/{placesTotal} places</span>
             </div>
-          )}
+          </div>
+
+          {/* Canvas plan de salle */}
           <div className="ps-plan" style={{ height: PLAN_H }}>
-            {tables.filter((t) => t.is_active && t.area_id === zoneId).map((t) => {
+            {tablesZone.map((t) => {
               const occ = tableOccupee[t.id];
               const size = t.capacity > 4 ? 88 : 66;
-              // Table éclairée si elle appartient à la réservation actuellement éclairée.
               const eclairee = resaEclairee && occ?.id === resaEclairee;
-              // Glisser une résa déjà sur cette table = on la retirera (drop = toggle).
               const dejaDessus = drag && occ?.id === drag;
-              // Occupée par une AUTRE réservation = drop interdit (visuel "indispo").
               const prise = occ && drag && occ.id !== drag;
               return (
                 <div key={t.id}
-                  className={`ps-table ${t.shape === "round" ? "ronde" : "carree"}${occ ? " occupee" : ""}${survol === t.id ? " survol" : ""}${prise ? " trop-petit" : ""}${dejaDessus ? " retrait" : ""}${eclairee ? " eclairee" : ""}`}
+                  className={`ps-table${t.shape === "round" ? " ronde" : " carree"}${occ ? " occupee" : " libre"}${survol === t.id ? " survol" : ""}${prise ? " trop-petit" : ""}${dejaDessus ? " retrait" : ""}${eclairee ? " eclairee" : ""}`}
                   style={{ left: t.pos_x, top: t.pos_y, width: size, height: size }}
                   onDragOver={(e) => { if (!prise) e.preventDefault(); setSurvol(t.id); }}
                   onDragLeave={() => setSurvol((s) => (s === t.id ? null : s))}
-                  onDrop={() => onDrop(t.id)}>
+                  onDrop={() => onDrop(t.id)}
+                  onClick={() => {
+                    if (occ) setResaEclairee((c) => c === occ.id ? null : occ.id);
+                  }}>
                   <span className="ps-table-label">{t.label}</span>
-                  <span className="ps-table-cap">{occ ? occ.customer_name.split(" ")[0] : `${t.capacity} pl.`}</span>
+                  {occ ? (
+                    <span className="ps-table-client">
+                      <span className="ps-table-nom">{occ.customer_name.split(" ")[0]}</span>
+                      <span className="ps-table-time">{occ.time}</span>
+                    </span>
+                  ) : (
+                    <span className="ps-table-cap ps-table-libre">Libre</span>
+                  )}
                 </div>
               );
             })}
-            {tables.filter((t) => t.is_active && t.area_id === zoneId).length === 0 && <div className="ps-vide-plan">Aucune table dans cette zone.</div>}
+            {tablesZone.length === 0 && <div className="ps-vide-plan">Aucune table dans cette zone.</div>}
           </div>
+          <div className="ps-plan-legende">
+            <span><span className="ps-leg-dot occupee" /> Occupée</span>
+            <span><span className="ps-leg-dot libre" /> Libre</span>
+            <span><span className="ps-leg-dot eclairee" /> Sélection</span>
+          </div>
+          <div className="ps-aide">Cliquez sur une réservation pour localiser sa table — et inversement. Glissez une carte sur une table pour l'attribuer ; sur plusieurs tables pour un grand groupe.</div>
         </div>
       </div>
-      <div className="ps-aide">Glissez une réservation vers une table pour l'attribuer. Pour un grand groupe, glissez-la sur plusieurs tables (elles s'additionnent). Reglisser sur une table déjà attribuée la retire.</div>
     </div>
   );
 }

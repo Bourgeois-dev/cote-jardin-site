@@ -268,36 +268,109 @@ tr:last-child td{border-bottom:none}
 .th-tri:hover{color:var(--admin-accent)}
 
 /* ===== PLAN DE SERVICE (réservations + plan) ===== */
-.ps-controls{display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap}
-.ps-controls input[type=date]{padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-family:var(--font-body);font-size:14px}
-.ps-services{display:flex;gap:6px}
-.ps-compte{font-size:13px;color:var(--ink-soft);margin-left:auto}
-.ps-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.ps-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden}
+.ps-topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 10px;gap:12px;flex-shrink:0}
+.ps-nav-date{display:flex;align-items:center;gap:8px}
+.ps-date-courante{font-size:16px;font-weight:600;color:var(--encre);min-width:130px;text-align:center}
+.ps-fleche{background:transparent;border:1px solid var(--ligne);color:var(--encre);width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.ps-fleche:hover{background:var(--fond2);border-color:var(--admin-accent)}
+.ps-date-input{font-size:13px;border:1px solid var(--ligne);border-radius:6px;padding:5px 8px;color:var(--encre);background:var(--fond2);cursor:pointer;height:30px}
+.ps-attente-rappel{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 20px;background:rgba(193,138,46,.06);border-top:1px solid rgba(193,138,46,.2);border-bottom:1px solid rgba(193,138,46,.2);flex-shrink:0}
+.ps-attente-rappel-lab{font-size:11px;font-weight:600;color:var(--attente);letter-spacing:.06em;text-transform:uppercase}
+.ps-attente-jour{background:#fff;border:1px solid rgba(193,138,46,.35);color:var(--encre);font-size:12px;font-weight:500;padding:3px 10px;border-radius:99px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:.15s}
+.ps-attente-jour:hover{background:rgba(193,138,46,.1)}
+.ps-attente-jour-nb{background:var(--attente);color:#fff;font-size:10px;font-weight:700;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.ps-services{display:grid;grid-template-columns:1fr 1fr;gap:0;flex-shrink:0;border-bottom:1px solid var(--ligne)}
+.ps-service-bloc{padding:14px 20px;cursor:pointer;transition:background .15s;border-right:1px solid var(--ligne);user-select:none}
+.ps-service-bloc:last-child{border-right:none}
+.ps-service-bloc:hover{background:rgba(122,31,36,.03)}
+.ps-service-bloc.actif{background:var(--admin-accent)}
+.ps-service-haut{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.ps-service-nom{font-size:10px;font-weight:700;letter-spacing:.28em;color:var(--gris);font-family:monospace}
+.ps-service-bloc.actif .ps-service-nom{color:rgba(255,255,255,.7)}
+.ps-service-stats{font-size:13px;font-weight:500;color:var(--encre);flex:1}
+.ps-service-bloc.actif .ps-service-stats{color:#fff}
+.ps-service-dispo{font-size:13px;font-weight:700;color:var(--encre);font-family:monospace}
+.ps-service-bloc.actif .ps-service-dispo{color:#fff}
+.ps-service-jauge{height:5px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden}
+.ps-service-bloc.actif .ps-service-jauge{background:rgba(255,255,255,.25)}
+.ps-service-jauge div{height:100%;background:var(--or);border-radius:99px;transition:width .4s}
+.ps-service-bloc.actif .ps-service-jauge div{background:rgba(255,255,255,.9)}
+.ps-filtres{display:flex;align-items:center;gap:6px;padding:10px 20px;border-bottom:1px solid var(--ligne);flex-shrink:0}
+.ps-grid{display:grid;grid-template-columns:320px 1fr;flex:1;min-height:0;overflow:hidden}
 @media(max-width:880px){.ps-grid{grid-template-columns:1fr}}
-.ps-liste{display:flex;flex-direction:column;gap:8px;max-height:460px;overflow-y:auto;padding-right:4px}
-.ps-liste-titre{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
-.ps-vide-mini{font-size:13px;color:var(--ink-soft);padding:8px 0}
-.ps-resa{background:#fff;border:1px solid var(--line);border-left:3px solid var(--admin-accent);border-radius:8px;padding:10px 12px;cursor:grab;transition:box-shadow .15s}
-.ps-resa:hover{box-shadow:0 3px 10px rgba(26,34,56,.1)}
-.ps-resa:active{cursor:grabbing}
-.ps-resa.drag{opacity:.5}
-.ps-resa.placee{border-left-color:var(--gold);background:var(--cream)}
-.ps-resa-tete{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.ps-resa-tete b{font-size:14px}
-.ps-heure{font-size:13px;color:var(--admin-accent);font-weight:600}
-.ps-resa-det{font-size:12px;color:var(--ink-soft);margin-top:3px}
-.ps-detacher{margin-top:7px;background:none;border:none;color:var(--annule);font-size:11.5px;cursor:pointer;padding:0;text-decoration:underline}
-.ps-plan{position:relative;background:var(--cream);border:1px solid var(--line);border-radius:12px;overflow:hidden;background-image:linear-gradient(var(--admin-accent-006) 1px,transparent 1px),linear-gradient(90deg,var(--admin-accent-006) 1px,transparent 1px);background-size:28px 28px}
-.ps-table{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;border:2px solid var(--admin-accent);color:var(--admin-accent-dark);font-weight:700;font-size:13px;box-shadow:0 4px 12px rgba(26,34,56,.1);transition:transform .1s,border-color .15s}
+.ps-liste{overflow-y:auto;padding:12px;border-right:1px solid var(--ligne);display:flex;flex-direction:column;gap:0}
+.ps-liste-titre{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gris);padding:8px 4px 6px;display:flex;align-items:center;gap:7px}
+.ps-liste-nb{background:var(--admin-accent);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:99px;letter-spacing:0}
+.ps-vide-mini{font-size:13px;color:var(--gris);padding:16px 4px;font-style:italic}
+.ps-resa{background:#fff;border:1px solid var(--ligne);border-left:3px solid var(--ligne);border-radius:6px;padding:10px 12px;margin-bottom:6px;cursor:grab;transition:box-shadow .15s,border-color .15s;user-select:none}
+.ps-resa:hover{box-shadow:0 2px 8px rgba(0,0,0,.08);border-color:rgba(122,31,36,.25)}
+.ps-resa.drag{opacity:.55}
+.ps-resa.eclairee{border-color:var(--admin-accent);box-shadow:0 0 0 2px rgba(122,31,36,.15)}
+.ps-resa.partiel{border-left-color:var(--attente)}
+.ps-resa.placee{border-left-color:var(--ok)}
+.ps-resa-tete{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px}
+.ps-resa-tete b{font-size:14px;color:var(--encre)}
+.ps-heure{font-size:12px;color:var(--gris);white-space:nowrap;display:flex;align-items:center;gap:4px;font-family:monospace}
+.ps-svc{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:var(--fond2);border:1px solid var(--ligne);color:var(--gris);padding:1px 5px;border-radius:3px}
+.ps-resa-recue{font-size:11px;color:var(--attente);font-weight:600;margin-bottom:4px}
+.ps-resa-det{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;color:var(--gris);margin-bottom:6px}
+.ps-tel{display:flex;align-items:center;gap:3px;color:var(--gris)}
+.ps-resa-manque{font-size:11px;color:var(--attente);font-weight:600;margin-bottom:4px}
+.ps-resa-noshow-tag,.ps-resa-note{font-size:11px;color:var(--gris);margin-bottom:4px}
+.ps-resa-note{font-style:italic}
+.ps-resa-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.ps-confirmer{font-size:11px;font-weight:700;background:var(--ok);color:#fff;border:none;padding:3px 10px;border-radius:4px;cursor:pointer}
+.ps-confirmer:hover{opacity:.85}
+.ps-noshow-btn,.ps-annuler-btn,.ps-detacher{font-size:11px;font-weight:500;background:transparent;border:1px solid var(--ligne);color:var(--gris);padding:3px 10px;border-radius:4px;cursor:pointer;transition:.15s}
+.ps-noshow-btn:hover,.ps-annuler-btn:hover{border-color:var(--annule);color:var(--annule)}
+.ps-detacher:hover{border-color:var(--admin-accent);color:var(--admin-accent)}
+.ps-pastille{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ps-pastille.attente{background:var(--attente)}
+.ps-pastille.confirme{background:var(--ok)}
+.ps-pastille.annule{background:var(--annule)}
+.ps-pastille.no_show{background:var(--gris)}
+.ps-plan-wrap{display:flex;flex-direction:column;overflow:hidden}
+.ps-plan-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--ligne);flex-shrink:0;gap:12px}
+.ps-zone-nom{font-size:14px;font-weight:600;color:var(--encre)}
+.ps-plan-capacite{display:flex;gap:8px}
+.ps-capa-badge{font-size:11px;font-weight:600;color:var(--gris);background:var(--fond2);border:1px solid var(--ligne);padding:3px 10px;border-radius:99px;font-family:monospace}
+.ps-plan{position:relative;flex:1;overflow:auto;background:var(--fond2);padding:16px}
+.ps-vide-plan{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--gris);font-style:italic}
+.ps-table{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:default;transition:box-shadow .15s,transform .1s;user-select:none}
 .ps-table.ronde{border-radius:50%}
 .ps-table.carree{border-radius:10px}
-.ps-table.occupee{background:var(--gold);border-color:var(--gold);color:#fff}
-.ps-table.survol{transform:scale(1.08);border-color:var(--ok);box-shadow:0 0 0 3px rgba(79,122,82,.3)}
-.ps-table.trop-petit{opacity:.4;border-style:dashed}
-.ps-table-label{font-size:13px}
-.ps-table-cap{font-size:10px;font-weight:500;opacity:.85;max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ps-vide-plan{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);font-size:14px;text-align:center;padding:20px}
-.ps-aide{font-size:12.5px;color:var(--ink-soft);margin-top:12px}
+.ps-table.libre{background:#fff;border:2px dashed rgba(122,31,36,.3);color:var(--gris)}
+.ps-table.occupee{background:var(--or);border:2px solid rgba(0,0,0,.08);color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.ps-table.occupee:hover{box-shadow:0 4px 16px rgba(0,0,0,.18);transform:translateY(-1px)}
+.ps-table.survol{box-shadow:0 0 0 3px var(--admin-accent);z-index:5}
+.ps-table.eclairee{box-shadow:0 0 0 3px var(--admin-accent),0 4px 16px rgba(0,0,0,.18);z-index:5;transform:translateY(-2px)}
+.ps-table.trop-petit{opacity:.45;cursor:not-allowed}
+.ps-table.retrait{box-shadow:0 0 0 3px var(--annule)}
+.ps-table-label{font-size:10px;font-weight:700;letter-spacing:.1em;opacity:.75}
+.ps-table.occupee .ps-table-label{color:rgba(255,255,255,.85)}
+.ps-table.libre .ps-table-label{color:var(--admin-accent)}
+.ps-table-client{display:flex;flex-direction:column;align-items:center;gap:1px}
+.ps-table-nom{font-size:12px;font-weight:700;color:#fff}
+.ps-table-time{font-size:10px;color:rgba(255,255,255,.8);font-family:monospace}
+.ps-table-cap{font-size:11px}
+.ps-table-libre{color:var(--gris);font-style:italic}
+.ps-plan-legende{display:flex;align-items:center;gap:16px;padding:8px 16px;font-size:11px;color:var(--gris);border-top:1px solid var(--ligne);flex-shrink:0}
+.ps-leg-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.ps-leg-dot.occupee{background:var(--or)}
+.ps-leg-dot.libre{background:#fff;border:2px dashed rgba(122,31,36,.3)}
+.ps-leg-dot.eclairee{background:var(--admin-accent)}
+.ps-aide{font-size:11px;color:var(--gris);padding:8px 16px;font-style:italic;border-top:1px solid var(--ligne);flex-shrink:0}
+.ps-saisie{padding:4px}
+.ps-saisie-tete{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ps-saisie-tete h3{font-size:15px;font-weight:600;color:var(--encre)}
+.ps-saisie-fermer{background:transparent;border:none;font-size:18px;cursor:pointer;color:var(--gris);line-height:1;padding:2px 6px}
+.ps-saisie-date{font-size:12px;color:var(--gris);margin-bottom:12px;font-weight:500}
+.ps-saisie-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ps-saisie-aide{font-size:11px;color:var(--gris);margin-top:8px;font-style:italic}
+.avert-creneau{background:rgba(193,138,46,.1);border:1px solid rgba(193,138,46,.3);border-radius:5px;padding:10px 12px;font-size:12px;color:#7a5500;margin-bottom:8px}
+.avert-creneau span{display:block;margin-top:4px;font-size:11px;opacity:.8}
+.ps-pip{background:var(--admin-accent);color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:4px}
 
 /* ===== PLAN DE SERVICE — navigation & statuts ===== */
 .ps-nav-date{display:flex;align-items:center;gap:8px}
