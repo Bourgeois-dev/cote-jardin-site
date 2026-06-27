@@ -261,23 +261,23 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
       <div className="ps-services">
         <div className={`ps-service-bloc${service === "midi" ? " actif" : ""}`} onClick={() => setService("midi")}>
           <div className="ps-service-haut">
-            <span className="ps-service-nom">MIDI</span>
-            <span className="ps-service-stats">{recap.midi.resa} résa · {recap.midi.couv} couverts</span>
+            <div className="ps-service-gauche">
+              <span className="ps-service-nom">MIDI</span>
+              <span className="ps-service-stats">{recap.midi.resa} résa · {recap.midi.couv} couverts</span>
+            </div>
             <span className="ps-service-dispo">{capacite - recap.midi.couv} / {capacite}</span>
           </div>
-          <div className="ps-service-jauge">
-            <div style={{ width: `${recap.midi.pct}%` }} />
-          </div>
+          <div className="ps-service-jauge"><div style={{ width: `${recap.midi.pct}%` }} /></div>
         </div>
         <div className={`ps-service-bloc${service === "soir" ? " actif" : ""}`} onClick={() => setService("soir")}>
           <div className="ps-service-haut">
-            <span className="ps-service-nom">SOIR</span>
-            <span className="ps-service-stats">{recap.soir.resa} résa · {recap.soir.couv} couverts</span>
+            <div className="ps-service-gauche">
+              <span className="ps-service-nom">SOIR</span>
+              <span className="ps-service-stats">{recap.soir.resa} résa · {recap.soir.couv} couverts</span>
+            </div>
             <span className="ps-service-dispo">{capacite - recap.soir.couv} / {capacite}</span>
           </div>
-          <div className="ps-service-jauge">
-            <div style={{ width: `${recap.soir.pct}%` }} />
-          </div>
+          <div className="ps-service-jauge"><div style={{ width: `${recap.soir.pct}%` }} /></div>
         </div>
       </div>
 

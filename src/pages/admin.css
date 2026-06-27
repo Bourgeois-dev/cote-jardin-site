@@ -6,7 +6,8 @@
    Variables sur :root pour couvrir aussi les elements rendus hors de .app
    (modales, portails). Aucun composant du site public n'utilise --admin-*. */
 :root{
-  --admin-accent:#7a1f24;        /* bordeaux — boutons actifs, focus, tables */
+  --admin-accent:#7a1f24;
+  --or:#c8872a;           /* ambre — tables occupées, jauges plan de service */        /* bordeaux — boutons actifs, focus, tables */
   --admin-accent-dark:#5c161a;   /* hover */
   --admin-accent-light:#b8636a;  /* libelles discrets, eyebrows */
   --admin-ink:#1d1a16;           /* encre du kit — fonds sombres (bandeau, login, ardoise) */
@@ -281,21 +282,22 @@ tr:last-child td{border-bottom:none}
 .ps-attente-jour:hover{background:rgba(193,138,46,.1)}
 .ps-attente-jour-nb{background:var(--attente);color:#fff;font-size:10px;font-weight:700;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .ps-services{display:grid;grid-template-columns:1fr 1fr;gap:0;flex-shrink:0;border-bottom:1px solid var(--ligne)}
-.ps-service-bloc{padding:14px 20px;cursor:pointer;transition:background .15s;border-right:1px solid var(--ligne);user-select:none}
+.ps-service-bloc{padding:16px 22px;cursor:pointer;transition:background .2s;border-right:1px solid var(--ligne);user-select:none;position:relative}
 .ps-service-bloc:last-child{border-right:none}
-.ps-service-bloc:hover{background:rgba(122,31,36,.03)}
+.ps-service-bloc:hover:not(.actif){background:rgba(122,31,36,.03)}
 .ps-service-bloc.actif{background:var(--admin-accent)}
-.ps-service-haut{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.ps-service-nom{font-size:10px;font-weight:700;letter-spacing:.28em;color:var(--gris);font-family:monospace}
-.ps-service-bloc.actif .ps-service-nom{color:rgba(255,255,255,.7)}
-.ps-service-stats{font-size:13px;font-weight:500;color:var(--encre);flex:1}
-.ps-service-bloc.actif .ps-service-stats{color:#fff}
-.ps-service-dispo{font-size:13px;font-weight:700;color:var(--encre);font-family:monospace}
+.ps-service-haut{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+.ps-service-gauche{display:flex;flex-direction:column;gap:3px}
+.ps-service-nom{font-size:10px;font-weight:700;letter-spacing:.28em;color:var(--gris);font-family:monospace;line-height:1}
+.ps-service-bloc.actif .ps-service-nom{color:rgba(255,255,255,.6)}
+.ps-service-stats{font-size:13px;font-weight:500;color:var(--encre)}
+.ps-service-bloc.actif .ps-service-stats{color:rgba(255,255,255,.9)}
+.ps-service-dispo{font-size:22px;font-weight:700;color:var(--encre);font-family:monospace;line-height:1;text-align:right}
 .ps-service-bloc.actif .ps-service-dispo{color:#fff}
-.ps-service-jauge{height:5px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden}
-.ps-service-bloc.actif .ps-service-jauge{background:rgba(255,255,255,.25)}
-.ps-service-jauge div{height:100%;background:var(--or);border-radius:99px;transition:width .4s}
-.ps-service-bloc.actif .ps-service-jauge div{background:rgba(255,255,255,.9)}
+.ps-service-jauge{height:5px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden;margin-top:10px}
+.ps-service-bloc.actif .ps-service-jauge{background:rgba(255,255,255,.2)}
+.ps-service-jauge div{height:100%;background:var(--or);border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.ps-service-bloc.actif .ps-service-jauge div{background:rgba(255,255,255,.85)}
 .ps-filtres{display:flex;align-items:center;gap:6px;padding:10px 20px;border-bottom:1px solid var(--ligne);flex-shrink:0}
 .ps-grid{display:grid;grid-template-columns:320px 1fr;flex:1;min-height:0;overflow:hidden}
 @media(max-width:880px){.ps-grid{grid-template-columns:1fr}}
