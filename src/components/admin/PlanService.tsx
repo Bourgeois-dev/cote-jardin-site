@@ -261,7 +261,7 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
               <span className="ps-service-nom">MIDI</span>
               <span className="ps-service-stats">{recap.midi.resa === 0 ? "Aucune réservation" : `${recap.midi.resa} résa · ${recap.midi.couv} couverts`}</span>
             </div>
-            <span className="ps-service-dispo">{capacite - recap.midi.couv} / {capacite}</span>
+            <span className="ps-service-dispo">{recap.midi.couv} / {capacite}</span>
           </div>
           <div className="ps-service-jauge"><div style={{ width: `${recap.midi.pct}%` }} /></div>
         </div>
@@ -271,7 +271,7 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
               <span className="ps-service-nom">SOIR</span>
               <span className="ps-service-stats">{recap.soir.resa === 0 ? "Aucune réservation" : `${recap.soir.resa} résa · ${recap.soir.couv} couverts`}</span>
             </div>
-            <span className="ps-service-dispo">{capacite - recap.soir.couv} / {capacite}</span>
+            <span className="ps-service-dispo">{recap.soir.couv} / {capacite}</span>
           </div>
           <div className="ps-service-jauge"><div style={{ width: `${recap.soir.pct}%` }} /></div>
         </div>
