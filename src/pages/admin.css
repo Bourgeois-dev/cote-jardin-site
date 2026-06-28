@@ -383,9 +383,9 @@ tr:last-child td { border-bottom:none }
 
 .ps-table { position:absolute; display:flex; flex-direction:column; justify-content:space-between;
   padding:10px 12px; cursor:default; transition:box-shadow .15s, transform .1s; user-select:none; box-sizing:border-box }
-.ps-table.t-petite  { width:96px;  height:96px  }
-.ps-table.t-moyenne { width:118px; height:118px }
-.ps-table.t-grande  { width:150px; height:150px }
+.ps-table.t-petite  { width:80px;  height:80px  }
+.ps-table.t-moyenne { width:100px; height:100px }
+.ps-table.t-grande  { width:130px; height:130px }
 .ps-table.carree { border-radius:14px }
 .ps-table.ronde  { border-radius:50%; align-items:center; justify-content:center; text-align:center }
 .ps-table.libre   { background:#fff; border:2px dashed var(--a25) }
@@ -401,14 +401,14 @@ tr:last-child td { border-bottom:none }
 .ps-table.retrait    { box-shadow:0 0 0 3px var(--annule) }
 .ps-table-tete { display:flex; align-items:flex-start; justify-content:space-between; width:100%; gap:6px }
 .ps-table.ronde .ps-table-tete { flex-direction:column; align-items:center; gap:2px }
-.ps-table-label { font-size:18px; font-weight:600; line-height:1 }
+.ps-table-label { font-size:14px; font-weight:600; line-height:1 }
 .ps-table.occupee .ps-table-label { color:#fff }
 .ps-table.libre   .ps-table-label { color:var(--ink-soft) }
-.ps-table-cap { font-size:10px; font-weight:500 }
+.ps-table-cap { font-size:9px; font-weight:500 }
 .ps-table.occupee .ps-table-cap { color:rgba(255,255,255,.85) }
 .ps-table.libre   .ps-table-cap { color:var(--ink-soft) }
-.ps-table-client { font-size:12px; font-weight:600; color:#fff; line-height:1.2 }
-.ps-table-libre  { font-size:12px; color:var(--ink-soft); font-style:italic }
+.ps-table-client { font-size:11px; font-weight:600; color:#fff; line-height:1.2 }
+.ps-table-libre  { font-size:10px; color:var(--ink-soft); font-style:italic }
 .ps-aide { font-size:11px; color:var(--ink-soft); padding:8px 16px; font-style:italic; border-top:1px solid var(--line); flex-shrink:0 }
 
 .ps-saisie { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px }
