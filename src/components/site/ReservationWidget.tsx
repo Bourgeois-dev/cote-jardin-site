@@ -36,6 +36,9 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
   const [done, setDone] = useState(false);
   const [showWaitlist, setShowWaitlist] = useState(false);
   const [closureMsg, setClosureMsg] = useState("");
+  const [calMonth, setCalMonth] = useState<{ y: number; m: number }>(() => {
+    const n = new Date(); return { y: n.getFullYear(), m: n.getMonth() };
+  });
 
   const phone = import.meta.env.VITE_RESTO_PHONE || "";
   const phoneThreshold = settings?.phone_threshold ?? 8;
@@ -129,6 +132,52 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
   if (!open) return null;
   const groupe = covers > phoneThreshold;
 
+  // ── Calendrier ─────────────────────────────────────────────────────────
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const maxDateStr = maxDate;
+  const JOURS = ["LUN.", "MAR.", "MER.", "JEU.", "VEN.", "SAM.", "DIM."];
+  const MOIS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+  function buildCalDays(y: number, m: number) {
+    const first = new Date(y, m, 1);
+    // Lundi = 0 dans notre grille (js: dim=0, lun=1...) → offset
+    const startDow = (first.getDay() + 6) % 7; // 0=lun
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const cells: (number | null)[] = [];
+    for (let i = 0; i < startDow; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    return cells;
+  }
+
+  function isDayDisabled(y: number, m: number, d: number): boolean {
+    const ds = `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    if (ds < todayStr || ds > maxDateStr) return true;
+    const dow = new Date(ds + "T12:00:00").getDay();
+    const h = hours.find((x) => x.day_of_week === dow);
+    if (!h || h.is_closed) return true;
+    const cl = closures.find((c) => ds >= c.start_date && ds <= c.end_date && c.blocks_reservations);
+    if (cl && !cl.service) return true; // fermeture totale
+    return false;
+  }
+
+  function selectDay(y: number, m: number, d: number) {
+    const ds = `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    setDate(ds);
+  }
+
+  function prevMonth() {
+    setCalMonth(({ y, m }) => m === 0 ? { y: y-1, m: 11 } : { y, m: m-1 });
+  }
+  function nextMonth() {
+    setCalMonth(({ y, m }) => m === 11 ? { y: y+1, m: 0 } : { y, m: m+1 });
+  }
+
+  const calCells = buildCalDays(calMonth.y, calMonth.m);
+  const calMin = { y: new Date(todayStr).getFullYear(), m: new Date(todayStr).getMonth() };
+  const calMax = { y: new Date(maxDateStr).getFullYear(), m: new Date(maxDateStr).getMonth() };
+  const canPrev = calMonth.y > calMin.y || (calMonth.y === calMin.y && calMonth.m > calMin.m);
+  const canNext = calMonth.y < calMax.y || (calMonth.y === calMax.y && calMonth.m < calMax.m);
+
   async function confirmer() {
     if (!form.p || !form.n || !form.e || !form.t || !consent) return;
     // Réservation atomique via reserve_table() — vérification + insertion en une seule
@@ -185,7 +234,30 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
 
           {step === 1 && (
             <div>
-              <div className="champ"><label>Date</label><input type="date" value={date} min={new Date().toISOString().slice(0, 10)} max={maxDate} onChange={(e) => setDate(e.target.value)} /></div>
+              <div className="resa-cal">
+                <div className="resa-cal-nav">
+                  <button className="resa-cal-fleche" onClick={prevMonth} disabled={!canPrev} aria-label="Mois précédent">‹</button>
+                  <span className="resa-cal-titre">{MOIS[calMonth.m]} {calMonth.y}</span>
+                  <button className="resa-cal-fleche" onClick={nextMonth} disabled={!canNext} aria-label="Mois suivant">›</button>
+                </div>
+                <div className="resa-cal-grille">
+                  {JOURS.map((j) => <div key={j} className="resa-cal-entete">{j}</div>)}
+                  {calCells.map((d, i) => {
+                    if (!d) return <div key={`v${i}`} />;
+                    const ds = `${calMonth.y}-${String(calMonth.m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+                    const disabled = isDayDisabled(calMonth.y, calMonth.m, d);
+                    const selected = ds === date;
+                    const isToday = ds === todayStr;
+                    return (
+                      <button key={ds}
+                        className={["resa-cal-jour", disabled ? "resa-cal-jour--off" : "", selected ? "resa-cal-jour--sel" : "", isToday && !selected ? "resa-cal-jour--today" : ""].filter(Boolean).join(" ")}
+                        disabled={disabled}
+                        onClick={() => { if (!disabled) selectDay(calMonth.y, calMonth.m, d); }}
+                      >{d}</button>
+                    );
+                  })}
+                </div>
+              </div>
               <div className="champ"><label>Couverts</label>
                 <select value={covers} onChange={(e) => setCovers(Number(e.target.value))}>
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => <option key={n} value={n}>{n}</option>)}
