@@ -597,3 +597,36 @@ tr:last-child td { border-bottom:none }
   background-image:linear-gradient(var(--a06) 1px,transparent 1px),
     linear-gradient(90deg,var(--a06) 1px,transparent 1px);
   background-size:28px 28px }
+
+
+/* ── CLASSES MANQUANTES (ajoutées après refactor) ─────────────────────── */
+
+/* .puce — bouton pill utilisé dans TabReservations (Plan de service / Carnet)
+   et filtres du carnet (À venir / Passées / Toutes) */
+.puce { font-size:13px; font-weight:500; background:#fff; border:1px solid var(--line);
+  color:var(--ink-soft); padding:7px 16px; border-radius:99px; cursor:pointer;
+  transition:.15s; display:inline-flex; align-items:center; font-family:var(--font-body) }
+.puce:hover { border-color:var(--a25); color:var(--admin-accent) }
+.puce.active { background:var(--admin-accent); border-color:var(--admin-accent); color:#fff }
+
+/* Navigation semaine dans la disponibilité par service (TabTableau) */
+.dispo-nav { display:flex; align-items:center; gap:10px }
+.dispo-nav-btn { background:transparent; border:1px solid var(--line); width:30px; height:30px;
+  border-radius:50%; font-size:16px; cursor:pointer; display:flex; align-items:center;
+  justify-content:center; color:var(--ink); transition:.15s; font-family:var(--font-body) }
+.dispo-nav-btn:hover:not(:disabled) { border-color:var(--admin-accent); color:var(--admin-accent) }
+.dispo-nav-btn:disabled { opacity:.35; cursor:not-allowed }
+.dispo-nav-plage { font-size:14px; font-weight:600; color:var(--ink) }
+
+/* Barre de répartition des canaux (en ligne / téléphone) dans TabTableau */
+.canal-barre { height:10px; border-radius:99px; overflow:hidden; display:flex; margin-bottom:10px; background:var(--line) }
+.canal-seg { height:100%; transition:width .4s }
+.canal-seg.canal-site { background:var(--admin-accent) }
+.canal-seg.canal-tel  { background:var(--or) }
+.canal-legende { display:flex; gap:24px; font-size:13px; color:var(--ink-soft) }
+.canal-pastille { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:middle }
+.canal-pastille.canal-site { background:var(--admin-accent) }
+.canal-pastille.canal-tel  { background:var(--or) }
+
+/* Zones de filtres réservations (carnet) */
+.filtres-resa { display:flex; gap:6px; flex-wrap:wrap; align-items:center }
