@@ -602,3 +602,20 @@ footer a:hover { color:var(--cream) }
 .cj-btn-horaires:hover { background:rgba(246,243,234,.12); border-color:var(--cream) }
 @media(max-width:680px) { .cj-hero { min-height:min(80vh,560px) } .cj-hero-cta .btn,.cj-btn-horaires { flex:1; text-align:center } }
 @media(prefers-reduced-motion:reduce) { .cj-hero-bg { transform:none!important; transition:none } }
+
+/* ── Calendrier de réservation (.resa-cal) ───────────────────────────── */
+.resa-cal{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:16px;user-select:none}
+.resa-cal-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.resa-cal-titre{font-family:var(--font-display);font-size:17px;font-weight:500;color:var(--ink)}
+.resa-cal-fleche{background:none;border:none;font-size:22px;color:var(--ink-soft);cursor:pointer;padding:0 6px;line-height:1;border-radius:6px;transition:.12s}
+.resa-cal-fleche:hover:not(:disabled){color:var(--ink)}
+.resa-cal-fleche:disabled{opacity:.3;cursor:not-allowed}
+.resa-cal-grille{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:10px 10px 12px}
+.resa-cal-entete{text-align:center;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--ink-soft);padding:4px 0 8px}
+.resa-cal-jour{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border:none;background:none;border-radius:8px;font-size:14px;font-weight:400;color:var(--ink);cursor:pointer;transition:.12s;padding:0}
+.resa-cal-jour:hover:not(:disabled):not(.resa-cal-jour--off){background:var(--cream);color:var(--accent)}
+.resa-cal-jour--off{color:var(--line);cursor:default;background:none}
+.resa-cal-jour--today{font-weight:700;color:var(--accent)}
+.resa-cal-jour--sel{background:var(--accent);color:#fff;font-weight:600}
+.resa-cal-jour--sel:hover{background:var(--accent-dark,var(--accent));color:#fff}
+
