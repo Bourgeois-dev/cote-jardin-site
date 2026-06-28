@@ -630,3 +630,20 @@ tr:last-child td { border-bottom:none }
 
 /* Zones de filtres réservations (carnet) */
 .filtres-resa { display:flex; gap:6px; flex-wrap:wrap; align-items:center }
+
+
+/* ── TabSocial — inputs URL réseaux sociaux ────────────────────────────── */
+/* Les inputs dans ligne-toggle n'ont pas de classe .champ — style global */
+.ligne-toggle input[type=text],
+.ligne-toggle input[type=url],
+.ligne-toggle input:not([type=checkbox]) {
+  width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:8px;
+  font-family:var(--font-body); font-size:14px; background:#fff; color:var(--ink);
+  transition:border-color .15s;
+}
+.ligne-toggle input:not([type=checkbox]):focus {
+  outline:none; border-color:var(--admin-accent);
+}
+.ligne-toggle input:not([type=checkbox]):disabled {
+  background:var(--cream); color:var(--ink-soft); cursor:not-allowed; opacity:.7;
+}
