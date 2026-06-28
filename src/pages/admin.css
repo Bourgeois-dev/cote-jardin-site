@@ -318,9 +318,9 @@ tr:last-child td { border-bottom:none }
 .ps-service-jauge div { height:100%; background:var(--or); border-radius:99px; transition:width .5s cubic-bezier(.4,0,.2,1) }
 .ps-service-bloc.actif .ps-service-jauge div { background:rgba(255,255,255,.85) }
 
-.ps-grid { display:grid; grid-template-columns:520px 1fr; gap:0; flex:1; min-height:0; overflow:hidden; padding:0 24px 20px; align-items:stretch }
+.ps-grid { display:grid; grid-template-columns:520px 1fr; gap:0; flex:1; min-height:0; overflow:hidden; padding:0 24px 20px; align-items:start }
 @media(max-width:960px) { .ps-grid { grid-template-columns:1fr; overflow:auto } }
-.ps-col-liste { display:flex; flex-direction:column; height:100%; padding-right:20px; overflow:hidden }
+.ps-col-liste { display:flex; flex-direction:column; max-height:100%; padding-right:20px; overflow:hidden; position:sticky; top:0 }
 .ps-liste { overflow-y:auto; display:flex; flex-direction:column; gap:0; flex:1; min-height:0;
   padding-right:6px; scrollbar-width:thin; scrollbar-color:var(--line) transparent; -webkit-overflow-scrolling:touch }
 .ps-liste-titre { font-size:10px; font-weight:700; letter-spacing:.18em; text-transform:uppercase;
