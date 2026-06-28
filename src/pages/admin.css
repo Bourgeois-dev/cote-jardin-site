@@ -665,3 +665,90 @@ tr:last-child td { border-bottom:none }
 .promo-titre { font-family:var(--font-display,Georgia,serif); font-size:20px; margin-bottom:6px; color:var(--ink) }
 .promo-sous  { font-size:13px; color:var(--ink-soft); margin-bottom:14px; line-height:1.5 }
 .promo-cta   { display:block; width:100%; text-align:center; font-size:14px; padding:12px }
+
+
+/* ── 09. CRM CLIENTS (.cli-) — refonte maquette ────────────────────────── */
+.cli-contenu { padding:0; max-width:none; overflow:hidden; height:calc(100vh - 72px) }
+.cli-layout { display:grid; grid-template-columns:380px 1fr; height:100%; overflow:hidden }
+
+/* Colonne liste */
+.cli-col-liste { display:flex; flex-direction:column; gap:12px; padding:24px 20px;
+  border-right:1px solid var(--line); overflow-y:auto; background:var(--cream) }
+.cli-items { list-style:none; display:flex; flex-direction:column; gap:8px }
+.cli-item { width:100%; text-align:left; background:#fff; border:1px solid var(--line);
+  border-radius:12px; padding:14px 16px; cursor:pointer;
+  transition:border-color .15s, box-shadow .15s; display:block }
+.cli-item:hover { border-color:var(--admin-accent); box-shadow:0 2px 8px rgba(122,31,36,.08) }
+.cli-item.actif { border-color:var(--admin-accent); box-shadow:0 0 0 1px var(--admin-accent) }
+.cli-item-tete { display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:4px }
+.cli-item-nom { font-weight:700; font-size:15px; color:var(--ink) }
+.cli-item-nb  { font-size:12px; color:var(--admin-accent); font-weight:600; white-space:nowrap }
+.cli-item-det { font-size:12px; color:var(--ink-soft) }
+
+/* Badges client */
+.cli-badge { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.08em;
+  text-transform:uppercase; padding:2px 8px; border-radius:99px; margin-left:8px;
+  vertical-align:middle }
+.cli-badge-nouveau { background:rgba(193,138,46,.14); color:var(--attente) }
+.cli-badge-fidele  { background:rgba(62,125,90,.14);  color:var(--ok) }
+.cli-badge-vip     { background:var(--admin-accent); color:#fff }
+.vip-pastille { color:var(--admin-accent); margin-left:6px; font-size:13px }
+
+/* Colonne fiche */
+.cli-col-fiche { overflow-y:auto; background:#fff }
+.cli-fiche-vide { display:flex; align-items:center; justify-content:center; height:100% }
+.cli-fiche { padding:32px; display:flex; flex-direction:column; gap:0 }
+
+/* En-tête fiche */
+.cli-fiche-tete { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:20px }
+.cli-fiche-tete-gauche { display:flex; flex-direction:column; gap:4px }
+.cli-fiche-nom { font-family:var(--font-display); font-size:28px; font-weight:500; color:var(--ink); display:flex; align-items:center; flex-wrap:wrap; gap:0 }
+
+/* Coordonnées */
+.cli-coord { display:flex; gap:48px; padding:18px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); margin-bottom:20px }
+.cli-coord > div { display:flex; flex-direction:column; gap:4px }
+.cli-coord-val { font-size:15px; color:var(--ink); font-weight:500; text-decoration:none }
+a.cli-coord-val { color:var(--admin-accent) }
+a.cli-coord-val:hover { text-decoration:underline }
+
+/* Stats */
+.cli-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:8px }
+.cli-stat { background:var(--cream); border:1px solid var(--line); border-radius:12px; padding:18px 14px; text-align:center }
+.cli-stat b { display:block; font-family:var(--font-display); font-size:36px; font-weight:400; color:var(--admin-accent); line-height:1; margin-bottom:6px }
+.cli-stat span { font-size:11px; color:var(--ink-soft); text-transform:none }
+
+/* Sections */
+.cli-section { margin-top:22px; padding-top:22px; border-top:1px solid var(--line) }
+.cli-section-titre { font-size:10px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:12px }
+
+/* Préférences pills */
+.cli-prefs { display:flex; flex-wrap:wrap; gap:8px; align-items:center }
+.cli-pref-pill { display:inline-flex; align-items:center; gap:5px; background:var(--cream);
+  border:1px solid var(--line); border-radius:99px; padding:5px 12px;
+  font-size:13px; color:var(--ink) }
+.cli-pref-del { background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:14px; line-height:1; padding:0 2px }
+.cli-pref-del:hover { color:var(--annule) }
+.cli-pref-add { display:flex }
+.cli-pref-input { border:1.5px dashed var(--admin-accent); background:transparent; border-radius:99px;
+  padding:5px 14px; font-size:13px; color:var(--ink); outline:none; width:140px;
+  font-family:var(--font-body) }
+.cli-pref-input::placeholder { color:var(--admin-accent); opacity:.7 }
+.cli-pref-input:focus { border-style:solid; background:rgba(122,31,36,.04) }
+
+/* Notes */
+.cli-notes { width:100%; border:1px solid var(--line); border-radius:10px; padding:12px 14px;
+  font-family:var(--font-body); font-size:14px; color:var(--ink); resize:vertical;
+  min-height:80px; background:var(--cream) }
+.cli-notes:focus { outline:none; border-color:var(--admin-accent); background:#fff }
+.cli-save-notes { background:none; border:none; color:var(--admin-accent); font-size:13px;
+  font-weight:600; cursor:pointer; padding:6px 0; font-family:var(--font-body);
+  margin-top:6px; display:block }
+.cli-save-notes:disabled { opacity:.45; cursor:default }
+.cli-save-notes:not(:disabled):hover { text-decoration:underline }
+
+/* Supprimer */
+.cli-supprimer { margin-top:28px; padding:14px; width:100%; border:1px solid var(--line);
+  border-radius:10px; color:var(--admin-accent); background:#fff; font-size:14px;
+  font-weight:600; cursor:pointer; text-align:center; font-family:var(--font-body);
+  transition:.15s }
+.cli-supprimer:hover { border-color:var(--annule); color:var(--annule); background:rgba(163,67,58,.04) }
