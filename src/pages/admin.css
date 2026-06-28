@@ -45,7 +45,7 @@
 .topbar{position:sticky;top:0;z-index:10;background:rgba(244,241,234,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:20px 32px;display:flex;align-items:center;justify-content:space-between}
 .topbar h1{font-family:var(--font-display);font-size:26px}
 .topbar .sous{font-size:13px;color:var(--ink-soft)}
-.contenu{padding:26px 32px 70px;max-width:980px}
+.contenu{padding:26px 32px 70px;max-width:1980px}
 .contenu.pleine{max-width:none}
 
 /* ===== CARDS & BLOCS ===== */
