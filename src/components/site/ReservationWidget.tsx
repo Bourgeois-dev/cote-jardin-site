@@ -242,12 +242,12 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
             <div>
               <div className="recap">{dayInfo && fmtFR(dayInfo.d)} · {slot?.replace(":", "h")} · {covers} couvert{covers > 1 ? "s" : ""}</div>
               <div className="news-grid2">
-                <div className="champ"><label>Prénom *</label><input value={form.p} onChange={(e) => setForm({ ...form, p: e.target.value })} /></div>
-                <div className="champ"><label>Nom *</label><input value={form.n} onChange={(e) => setForm({ ...form, n: e.target.value })} /></div>
+                <div className="champ"><label>Prénom *</label><input value={form.p} onChange={(e) => setForm({ ...form, p: e.target.value })} maxLength={50} /></div>
+                <div className="champ"><label>Nom *</label><input value={form.n} onChange={(e) => setForm({ ...form, n: e.target.value })} maxLength={50} /></div>
               </div>
               <div className="champ"><label>Email *</label><input type="email" value={form.e} onChange={(e) => setForm({ ...form, e: e.target.value })} /></div>
-              <div className="champ"><label>Téléphone *</label><input type="tel" value={form.t} onChange={(e) => setForm({ ...form, t: e.target.value })} /></div>
-              <div className="champ"><label>Notes (allergies, occasion…)</label><textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+              <div className="champ"><label>Téléphone *</label><input type="tel" value={form.t} onChange={(e) => setForm({ ...form, t: e.target.value })} maxLength={30} /></div>
+              <div className="champ"><label>Notes (allergies, occasion…)</label><textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={1000} /></div>
               <label className="consent"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} /><span>J'accepte que mes données soient utilisées pour la gestion de ma réservation. *</span></label>
               {proposeNewsletter && (
                 <label className="consent"><input type="checkbox" checked={newsletterOptin} onChange={(e) => setNewsletterOptin(e.target.checked)} /><span>Je souhaite aussi recevoir les actualités du restaurant par e-mail.</span></label>
