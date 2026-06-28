@@ -45,7 +45,7 @@
 .topbar{position:sticky;top:0;z-index:10;background:rgba(244,241,234,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:20px 32px;display:flex;align-items:center;justify-content:space-between}
 .topbar h1{font-family:var(--font-display);font-size:26px}
 .topbar .sous{font-size:13px;color:var(--ink-soft)}
-.contenu{padding:26px 32px 70px;max-width:1980px}
+.contenu{padding:26px 32px 70px;max-width:980px}
 .contenu.pleine{max-width:none}
 
 /* ===== CARDS & BLOCS ===== */
@@ -401,101 +401,6 @@ background-size:32px 32px;margin:0}
 .ardoise-img-actuelle img{display:block;width:100%;max-width:320px;height:180px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
 .ardoise-img-actuelle .actions-ligne{margin-top:10px}
 
-/* ===== Vue semaine — tableau de bord ===== */
-.semaine-grille{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:4px}
-@media(max-width:900px){.semaine-grille{grid-template-columns:repeat(4,1fr)}}
-@media(max-width:540px){.semaine-grille{grid-template-columns:repeat(2,1fr)}}
-
-.semaine-jour{
-  background:var(--fond2);border:1px solid var(--ligne);border-radius:8px;
-  padding:12px 10px;cursor:pointer;transition:border-color .15s,box-shadow .15s;
-  display:flex;flex-direction:column;gap:6px;min-height:110px;
-}
-.semaine-jour:hover{border-color:var(--admin-accent);box-shadow:0 2px 8px rgba(122,31,36,.08)}
-.semaine-jour-auj{border-color:var(--admin-accent);background:#fdf8f8}
-.semaine-jour-ferme{opacity:.5;cursor:default}
-.semaine-jour-ferme:hover{border-color:var(--ligne);box-shadow:none}
-
-.semaine-nom{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
-.semaine-jour-auj .semaine-nom{color:var(--admin-accent)}
-.semaine-date{font-size:13px;font-weight:600;color:var(--encre)}
-.semaine-ferme{font-size:11px;color:var(--ink-soft);font-style:italic;margin-top:4px}
-
-.semaine-services{display:flex;flex-direction:column;gap:5px;margin-top:4px}
-.semaine-svc{display:flex;align-items:center;gap:6px}
-.semaine-svc-label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);width:26px;flex-shrink:0}
-.semaine-svc-jauge{flex:1;height:5px;background:var(--ligne);border-radius:99px;overflow:hidden}
-.semaine-svc-jauge div{height:100%;border-radius:99px;transition:width .3s}
-.semaine-svc-val{font-size:10px;font-weight:600;color:var(--encre);white-space:nowrap;min-width:28px;text-align:right}
-
-/* Couleurs par état */
-.semaine-svc-libre .semaine-svc-jauge div{background:var(--ok)}
-.semaine-svc-libre .semaine-svc-val{color:var(--ok)}
-.semaine-svc-moyen .semaine-svc-jauge div{background:var(--attente)}
-.semaine-svc-moyen .semaine-svc-val{color:var(--attente)}
-.semaine-svc-charge .semaine-svc-jauge div{background:#e07020}
-.semaine-svc-charge .semaine-svc-val{color:#e07020}
-.semaine-svc-complet .semaine-svc-jauge div{background:var(--annule)}
-.semaine-svc-complet .semaine-svc-val{color:var(--annule)}
-.semaine-svc-ferme .semaine-svc-label{opacity:.4}
-.semaine-svc-ferme .semaine-svc-val{color:var(--ink-soft)}
-
-/* ===== Disponibilité par service (TabTableau) ===== */
-.dispo-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.dispo-nav-btn{background:transparent;border:1px solid var(--ligne);width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--encre);transition:.15s}
-.dispo-nav-btn:hover:not(:disabled){border-color:var(--admin-accent);color:var(--admin-accent)}
-.dispo-nav-btn:disabled{opacity:.35;cursor:not-allowed}
-.dispo-nav-plage{font-size:14px;font-weight:600;color:var(--encre)}
-
-.dispo-jours{display:flex;flex-direction:column;gap:0;border:1px solid var(--ligne);border-radius:12px;overflow:hidden}
-.jour-carte{padding:14px 18px;border-bottom:1px solid var(--ligne)}
-.jour-carte:last-child{border-bottom:none}
-.jour-carte.jour-auj{background:rgba(122,31,36,.03)}
-.jour-entete{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.jour-nom{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gris)}
-.jour-date{font-size:13px;font-weight:500;color:var(--encre)}
-.jour-ferme{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gris);background:var(--fond2);border:1px solid var(--ligne);padding:2px 8px;border-radius:4px;margin-left:auto}
-.jour-auj .jour-nom{color:var(--admin-accent)}
-
-.jour-services{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.svc-carte{background:var(--fond2);border:1px solid var(--ligne);border-radius:8px;padding:10px 14px;display:flex;flex-direction:column;gap:5px}
-.svc-carte-label{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gris)}
-.svc-carte-valeur{font-size:22px;font-weight:700;color:var(--encre);line-height:1;font-family:monospace}
-.svc-carte-detail{font-size:11px;color:var(--gris)}
-.svc-carte-jauge{height:5px;background:var(--ligne);border-radius:99px;overflow:hidden}
-.svc-carte-jauge div{height:100%;border-radius:99px;transition:width .4s}
-.svc-carte.svc-disponible .svc-carte-jauge div{background:var(--ok,#3e7d5a)}
-.svc-carte.svc-se-remplit .svc-carte-jauge div{background:var(--or)}
-.svc-carte.svc-complet .svc-carte-jauge div{background:var(--admin-accent)}
-.svc-carte.svc-complet .svc-carte-valeur{color:var(--admin-accent)}
-.svc-carte.svc-ferme{opacity:.55}
-.svc-carte.svc-ferme .svc-carte-valeur{font-size:13px;font-weight:500;color:var(--gris)}
-
-
-/* Cartes de service (disponibilité par service dans TabTableau) */
-.svc{background:var(--fond2);border:1px solid var(--ligne);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
-.svc-titre{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gris)}
-.svc-ferme-txt{font-size:13px;color:var(--gris);font-style:italic}
-.svc-places{display:flex;align-items:baseline;gap:4px}
-.svc-places b{font-size:22px;font-weight:700;color:var(--encre);line-height:1;font-family:monospace}
-.svc-places span{font-size:12px;color:var(--gris)}
-.svc-jauge{height:5px;background:var(--ligne);border-radius:99px;overflow:hidden}
-.svc-jauge-fill{height:100%;border-radius:99px;background:var(--ok,#3e7d5a);transition:width .4s}
-.svc-bas{display:flex;align-items:center;justify-content:space-between}
-.svc-etat{font-size:11px;font-weight:600;color:var(--gris)}
-.svc-res{font-size:11px;color:var(--gris)}
-.svc-libre .svc-jauge-fill{background:var(--ok,#3e7d5a)}
-.svc-libre .svc-etat{color:var(--ok,#3e7d5a)}
-.svc-moyen .svc-jauge-fill{background:var(--or)}
-.svc-moyen .svc-etat{color:var(--or)}
-.svc-charge .svc-jauge-fill{background:var(--attente,#c18a2e)}
-.svc-charge .svc-etat{color:var(--attente,#c18a2e)}
-.svc-complet .svc-jauge-fill{background:var(--admin-accent)}
-.svc-complet .svc-places b{color:var(--admin-accent)}
-.svc-complet .svc-etat{color:var(--admin-accent)}
-.svc-ferme{opacity:.5}
-
-
 /* ===== PLAN DE SERVICE (PlanService.tsx) ===== */
 .ps-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden;background:var(--fond,#faf9f4)}
 .ps-entete{display:flex;align-items:center;justify-content:space-between;padding:16px 24px 14px;gap:16px;flex-shrink:0}
@@ -626,3 +531,77 @@ background-size:32px 32px;margin:0}
 .avert-creneau span{display:block;margin-top:4px;font-size:11px;opacity:.8}
 .ps-pip{background:var(--admin-accent);color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:5px}
 .puce-mini.active .ps-pip{background:#fff;color:var(--admin-accent)}
+
+
+/* ===== Onglet Horaires ===== */
+.tab-horaires{width:100%;border-collapse:collapse;font-size:14px}
+.tab-horaires thead th{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);padding:6px 12px 10px;text-align:left;border-bottom:2px solid var(--line)}
+.tab-horaires tbody tr{border-bottom:1px solid var(--line)}
+.tab-horaires tbody tr:last-child{border-bottom:none}
+.tab-horaires tbody td{padding:12px;vertical-align:middle}
+.creneau-edit{display:flex;align-items:center;gap:8px}
+.creneau-edit input[type=time]{font-family:monospace;font-size:14px;color:var(--encre);background:var(--cream2,#faf9f4);border:1px solid var(--line);border-radius:7px;padding:7px 10px;width:110px;cursor:pointer}
+.creneau-edit input[type=time]:focus{outline:none;border-color:var(--admin-accent);box-shadow:0 0 0 2px rgba(122,31,36,.1)}
+.creneau-edit span{color:var(--ink-soft);font-size:13px;flex-shrink:0}
+.sub-desc{color:var(--ink-soft);font-size:13px}
+
+
+/* ===== Tableau de bord — contraste ===== */
+/* Fond gris très léger sur le contenu pour distinguer les blocs */
+.contenu > .bloc{border-left:3px solid var(--line)}
+.contenu > .bloc:has(h2){border-left-color:var(--line)}
+/* Sections chiffres-clés */
+.stat-grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:4px}
+.stat-item{background:var(--cream2,#faf9f4);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.stat-item-val{font-size:28px;font-weight:700;color:var(--encre);line-height:1;margin-bottom:3px}
+.stat-item-lab{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+/* Semaine */
+.semaine-grille{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.semaine-jour{background:var(--cream2,#faf9f4);border:1px solid var(--line);border-radius:10px;padding:12px 10px;cursor:pointer;transition:.15s}
+.semaine-jour:hover:not(.semaine-jour-ferme){border-color:var(--admin-accent);background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.semaine-jour.semaine-auj{border-color:var(--admin-accent);background:#fff;border-width:2px}
+.semaine-jour-ferme{opacity:.5;cursor:default}
+.semaine-jour-ferme:hover{border-color:var(--ligne);box-shadow:none}
+.semaine-nom{font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:3px}
+.semaine-auj .semaine-nom{color:var(--admin-accent)}
+.semaine-date{font-size:14px;font-weight:700;color:var(--encre);margin-bottom:8px}
+.semaine-svc{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);display:flex;justify-content:space-between;margin-bottom:2px}
+.semaine-val{font-size:11px;font-weight:600;color:var(--encre);display:flex;justify-content:space-between;margin-bottom:4px}
+.semaine-barre{height:4px;background:var(--line);border-radius:99px;overflow:hidden;margin-bottom:6px}
+.semaine-fill{height:100%;border-radius:99px}
+.semaine-ferme-lab{font-size:11px;color:var(--ink-soft);font-style:italic}
+/* Disponibilité par service */
+.dispo-jours{display:flex;flex-direction:column;gap:0;border:1px solid var(--ligne);border-radius:12px;overflow:hidden}
+.jour-carte{padding:14px 18px;border-bottom:1px solid var(--ligne);background:#fff}
+.jour-carte:nth-child(even){background:var(--cream2,#faf9f4)}
+.jour-carte:last-child{border-bottom:none}
+.jour-carte.jour-auj{background:rgba(122,31,36,.03);border-left:3px solid var(--admin-accent)}
+.jour-entete{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.jour-nom{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gris)}
+.jour-date{font-size:13px;font-weight:600;color:var(--encre)}
+.jour-ferme{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gris);background:var(--fond2);border:1px solid var(--ligne);padding:2px 8px;border-radius:4px;margin-left:auto}
+.jour-auj .jour-nom{color:var(--admin-accent)}
+.jour-services{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.svc{background:#fff;border:1px solid var(--ligne);border-radius:8px;padding:10px 14px;display:flex;flex-direction:column;gap:5px}
+.jour-carte:nth-child(even) .svc{background:var(--cream2,#faf9f4)}
+.svc-titre{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gris)}
+.svc-ferme-txt{font-size:13px;color:var(--gris);font-style:italic}
+.svc-places{display:flex;align-items:baseline;gap:4px}
+.svc-places b{font-size:22px;font-weight:700;color:var(--encre);line-height:1;font-family:monospace}
+.svc-places span{font-size:12px;color:var(--gris)}
+.svc-jauge{height:5px;background:var(--ligne);border-radius:99px;overflow:hidden}
+.svc-jauge-fill{height:100%;border-radius:99px;background:var(--ok,#3e7d5a);transition:width .4s}
+.svc-bas{display:flex;align-items:center;justify-content:space-between}
+.svc-etat{font-size:11px;font-weight:600;color:var(--gris)}
+.svc-res{font-size:11px;color:var(--gris)}
+.svc-libre .svc-jauge-fill{background:var(--ok,#3e7d5a)}
+.svc-libre .svc-etat{color:var(--ok,#3e7d5a)}
+.svc-moyen .svc-jauge-fill{background:var(--or)}
+.svc-moyen .svc-etat{color:var(--or)}
+.svc-charge .svc-jauge-fill{background:var(--attente,#c18a2e)}
+.svc-charge .svc-etat{color:var(--attente,#c18a2e)}
+.svc-complet .svc-jauge-fill{background:var(--admin-accent)}
+.svc-complet .svc-places b{color:var(--admin-accent)}
+.svc-complet .svc-etat{color:var(--admin-accent)}
+.svc-ferme{opacity:.5}
+
