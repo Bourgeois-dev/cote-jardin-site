@@ -29,6 +29,7 @@ const TABS: { key: string; label: string; comp: React.FC; groupe?: string }[] = 
   { key: "plan",         label: "Plan de salle",      comp: TabPlan },
   { key: "horaires",     label: "Horaires",           comp: TabHoraires },
   { key: "clients",      label: "Clients",            comp: TabClients },
+  { key: "newsletter",   label: "Newsletter",          comp: TabNewsletter },
   // — Vitrine —
   { key: "carte",        label: "La carte",           comp: TabCarte,        groupe: "Vitrine" },
   { key: "ardoise",      label: "Ardoise du jour",    comp: TabArdoise },
