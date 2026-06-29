@@ -18,6 +18,7 @@ import TabParametres from "./TabParametres";
 import TabEmporter from "./TabEmporter";
 import TabListeAttente from "./TabListeAttente";
 import TabFeatures from "./TabFeatures";
+import TabNewsletter from "./TabNewsletter";
 import { ConfirmProvider } from "./Confirm";
 
 const TABS: { key: string; label: string; comp: React.FC; groupe?: string }[] = [

@@ -12,6 +12,7 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState("");
   const phone = import.meta.env.VITE_RESTO_PHONE || "";
+  const restoName = import.meta.env.VITE_RESTO_NAME || "notre restaurant";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,6 +29,23 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
     }
     setSent(true);
     syncToMailchimp({ email: email.trim().toLowerCase(), first_name: prenom, last_name: nom, source: "newsletter" });
+    // Email de bienvenue automatique via send-newsletter (template welcome)
+    try {
+      const welcomeUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-newsletter`;
+      // Créer une campagne welcome temporaire et l'envoyer
+      const { data: camp } = await supabase.from("newsletter_campaigns").insert({
+        template: "welcome", segment: "tous", subject: `Bienvenue chez ${import.meta.env.VITE_RESTO_NAME || "nous"} !`,
+        content: {}, scheduled_at: new Date().toISOString(), status: "scheduled",
+      }).select().single();
+      if (camp) {
+        // Override : envoyer uniquement à cet email
+        await fetch(welcomeUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ campaign_id: camp.id, override_email: email.trim().toLowerCase(), override_name: `${prenom} ${nom}`.trim() }),
+        });
+      }
+    } catch { /* silencieux */ }
   }
   const actifs = socials.filter((s) => s.url && SOCIAL_SVG[s.platform]);
 
@@ -36,8 +54,8 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
       <div className="news-wrap">
         <div className="news-gauche">
           <span className="news-eyebrow">Restez informé</span>
-          <h2 className="news-titre">Actualités & saisons</h2>
-          <p className="news-baseline">Galettes du moment, menus de saison, fermetures : les nouvelles de Côté Jardin, à votre rythme.</p>
+          <h2 className="news-titre">Nos actualités</h2>
+          <p className="news-baseline">Formules du midi qui changent, soirées en séquences, fermetures : recevez les nouvelles de la maison, sans excès.</p>
           {phone && (
             <div className="news-tel">
               <span className="news-tel-lab">Par téléphone</span>
@@ -70,7 +88,7 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
           ) : (
             <div className="news-merci">
               <div className="news-merci-titre">Merci !</div>
-              <p>Vous êtes inscrit·e aux actualités de Côté Jardin.<br />À très bientôt à Côté Jardin !</p>
+              <p>Vous êtes inscrit·e aux actualités de {restoName}.<br />À très bientôt à table.</p>
             </div>
           )}
         </div>
