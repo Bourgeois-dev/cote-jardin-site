@@ -533,7 +533,7 @@ tr:last-child td { border-bottom:none }
 .fiche-histo th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); font-weight:700; padding:7px 8px; border-bottom:1px solid var(--line) }
 .fiche-histo td { padding:8px; border-bottom:1px solid var(--line) }
 .carnet-barre { display:flex; gap:16px; align-items:center; margin-bottom:16px; flex-wrap:wrap }
-.carnet-search { flex:1; min-width:240px; padding:9px 14px; border:1px solid var(--line); border-radius:8px; font-family:var(--font-body); font-size:14px }
+.carnet-search { flex:none; width:100%; padding:9px 14px; border:1px solid var(--line); border-radius:8px; font-family:var(--font-body); font-size:14px }
 .carnet-search:focus { outline:none; border-color:var(--admin-accent) }
 
 
