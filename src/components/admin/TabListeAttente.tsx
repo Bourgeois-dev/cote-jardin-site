@@ -1,73 +1,175 @@
-import { useTable } from "../../hooks/useTable";
+import { useState, useEffect } from "react";
+import { supabase, sendReservationEmail } from "../../lib/supabase";
 import { useConfirm } from "./Confirm";
 
 interface WaitlistEntry {
-  id: string; date: string; time: string; covers: number;
-  customer_name: string; email: string; phone: string; notified: boolean; created_at: string;
+  id: string;
+  date: string;
+  time: string;
+  covers: number;
+  customer_name: string;
+  email: string;
+  phone: string;
+  notes: string;
+  notified: boolean;
+  created_at: string;
 }
 
-function fmtDate(d: string) {
-  try { return new Date(d + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }); }
-  catch { return d; }
-}
+const fmtDate = (d: string) =>
+  new Date(d + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
 
 export default function TabListeAttente() {
+  const [liste, setListe] = useState<WaitlistEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filtre, setFiltre] = useState<"toutes" | "en_attente" | "notifies">("en_attente");
   const confirm = useConfirm();
-  const { rows, remove } = useTable<WaitlistEntry>("waitlist", "created_at");
 
-  async function supprimer(e: WaitlistEntry) {
-    if (await confirm({ titre: "Retirer de la liste ?", message: `${e.customer_name} sera retiré de la liste d'attente.`, confirmer: "Retirer", danger: true }))
-      remove(e.id);
+  async function charger() {
+    setLoading(true);
+    const { data } = await supabase
+      .from("waitlist")
+      .select("*")
+      .order("date", { ascending: true })
+      .order("time", { ascending: true });
+    setListe(data || []);
+    setLoading(false);
   }
 
-  const enAttente = rows.filter((r) => !r.notified);
-  const notifies  = rows.filter((r) => r.notified);
+  useEffect(() => { charger(); }, []);
+
+  // Realtime
+  useEffect(() => {
+    const ch = supabase.channel("waitlist-admin")
+      .on("postgres_changes", { event: "*", schema: "public", table: "waitlist" }, charger)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  async function notifier(entry: WaitlistEntry) {
+    const ok = await confirm(`Notifier ${entry.customer_name} qu'une place s'est libérée ?`);
+    if (!ok) return;
+    if (entry.email) {
+      await sendReservationEmail("waitlist_confirm", {
+        customer_name: entry.customer_name,
+        email: entry.email,
+        date: entry.date,
+        time: entry.time,
+        covers: entry.covers,
+      });
+    }
+    await supabase.from("waitlist").update({ notified: true }).eq("id", entry.id);
+    charger();
+  }
+
+  async function supprimer(entry: WaitlistEntry) {
+    const ok = await confirm(`Supprimer la demande de ${entry.customer_name} ?`);
+    if (!ok) return;
+    await supabase.from("waitlist").delete().eq("id", entry.id);
+    charger();
+  }
+
+  const affichees = liste.filter((e) => {
+    if (filtre === "en_attente") return !e.notified;
+    if (filtre === "notifies")   return e.notified;
+    return true;
+  });
+
+  const nbAttente = liste.filter((e) => !e.notified).length;
 
   return (
-    <>
+    <div className="contenu">
       <div className="topbar">
         <div>
           <h1>Liste d'attente</h1>
-          <div className="sous">{enAttente.length} client{enAttente.length > 1 ? "s" : ""} en attente de notification</div>
+          <p className="sous">Clients en attente d'une place libérée</p>
         </div>
       </div>
-      <div className="contenu">
-        <div className="bloc">
-          <h2>En attente ({enAttente.length})</h2>
-          <table><thead><tr>
-            <th>Date</th><th>Heure</th><th>Couverts</th><th>Client</th><th>Email</th><th></th>
-          </tr></thead><tbody>
-            {enAttente.length ? enAttente.map((e) => (
-              <tr key={e.id}>
-                <td>{fmtDate(e.date)}</td>
-                <td>{e.time.replace(":", "h")}</td>
-                <td>{e.covers}</td>
-                <td><b>{e.customer_name}</b><div className="sub-desc">{e.phone}</div></td>
-                <td>{e.email}</td>
-                <td><button className="btn btn-mini btn-danger" onClick={() => supprimer(e)}>Retirer</button></td>
-              </tr>
-            )) : <tr><td colSpan={6} className="vide">Aucun client en attente.</td></tr>}
-          </tbody></table>
+
+      <div className="contenu" style={{ paddingTop: 20 }}>
+
+        {/* Filtres */}
+        <div className="filtres-resa" style={{ marginBottom: 20 }}>
+          <button className={`puce-mini${filtre === "en_attente" ? " active" : ""}`} onClick={() => setFiltre("en_attente")}>
+            En attente {nbAttente > 0 && <span className="ps-pip">{nbAttente}</span>}
+          </button>
+          <button className={`puce-mini${filtre === "notifies" ? " active" : ""}`} onClick={() => setFiltre("notifies")}>Notifiés</button>
+          <button className={`puce-mini${filtre === "toutes" ? " active" : ""}`} onClick={() => setFiltre("toutes")}>Toutes</button>
         </div>
-        {notifies.length > 0 && (
+
+        {loading && <p className="vide">Chargement…</p>}
+
+        {!loading && affichees.length === 0 && (
           <div className="bloc">
-            <h2>Notifiés ({notifies.length})</h2>
-            <table><thead><tr>
-              <th>Date</th><th>Heure</th><th>Couverts</th><th>Client</th><th></th>
-            </tr></thead><tbody>
-              {notifies.map((e) => (
-                <tr key={e.id} style={{ opacity: 0.6 }}>
-                  <td>{fmtDate(e.date)}</td>
-                  <td>{e.time.replace(":", "h")}</td>
-                  <td>{e.covers}</td>
-                  <td><b>{e.customer_name}</b></td>
-                  <td><button className="btn btn-mini btn-ligne" onClick={() => supprimer(e)}>Retirer</button></td>
-                </tr>
-              ))}
-            </tbody></table>
+            <p className="vide">
+              {filtre === "en_attente" ? "Aucune demande en attente." :
+               filtre === "notifies"   ? "Aucun client notifié." :
+               "Aucune demande."}
+            </p>
           </div>
         )}
+
+        {!loading && affichees.length > 0 && (
+          <div className="bloc" style={{ padding: 0 }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th>Date · Heure</th>
+                  <th>Couverts</th>
+                  <th>Contact</th>
+                  <th>Inscrit le</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {affichees.map((e) => (
+                  <tr key={e.id} style={{ opacity: e.notified ? 0.5 : 1 }}>
+                    <td>
+                      <b style={{ fontSize: 14 }}>{e.customer_name}</b>
+                      {e.notified && (
+                        <span className="tag t-ok" style={{ fontSize: 10, marginLeft: 8, padding: "2px 7px" }}>Notifié</span>
+                      )}
+                      {e.notes && <div className="sub-desc" style={{ marginTop: 2 }}>{e.notes}</div>}
+                    </td>
+                    <td style={{ fontFamily: "monospace", fontSize: 13 }}>
+                      {fmtDate(e.date)}<br />
+                      <span style={{ color: "var(--ink-soft)" }}>{e.time.replace(":", "h")}</span>
+                    </td>
+                    <td style={{ fontFamily: "monospace" }}>{e.covers}</td>
+                    <td style={{ fontSize: 13 }}>
+                      {e.phone && <div><a href={`tel:${e.phone}`} style={{ color: "var(--ink)", textDecoration: "none" }}>{e.phone}</a></div>}
+                      {e.email && <div className="sub-desc"><a href={`mailto:${e.email}`} style={{ color: "var(--admin-accent)" }}>{e.email}</a></div>}
+                    </td>
+                    <td className="sub-desc" style={{ fontSize: 12 }}>
+                      {new Date(e.created_at).toLocaleDateString("fr-FR")}
+                    </td>
+                    <td>
+                      <div className="actions-ligne">
+                        {!e.notified && (
+                          <button className="btn btn-mini btn-ok" onClick={() => notifier(e)}
+                            title={e.email ? "Envoyer un email de notification" : "Marquer comme notifié (pas d'email)"}>
+                            {e.email ? "✉ Notifier" : "✓ Marquer"}
+                          </button>
+                        )}
+                        <button className="btn btn-mini btn-danger" onClick={() => supprimer(e)}>Supprimer</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Résumé */}
+        {!loading && liste.length > 0 && (
+          <p className="sub-desc" style={{ marginTop: 14, fontSize: 12 }}>
+            {liste.length} demande{liste.length > 1 ? "s" : ""} au total —{" "}
+            {nbAttente} en attente,{" "}
+            {liste.length - nbAttente} notifié{liste.length - nbAttente > 1 ? "s" : ""}
+          </p>
+        )}
       </div>
-    </>
+    </div>
   );
 }

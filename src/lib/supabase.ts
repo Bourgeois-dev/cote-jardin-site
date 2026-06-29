@@ -38,7 +38,7 @@ export async function notifyWaitlist(date: string, time: string) {
   } catch { /* silencieux */ }
 }
 
-export async function sendReservationEmail(type: "accuse" | "confirmation", reservation: any): Promise<void> {
+export async function sendReservationEmail(type: "accuse" | "confirmation" | "waitlist_confirm", reservation: any): Promise<void> {
   try {
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reservation-email`;
     await fetch(url, {

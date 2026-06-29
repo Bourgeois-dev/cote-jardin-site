@@ -19,6 +19,76 @@ function slotsBetween(open: string | null, close: string | null): string[] {
   return out;
 }
 
+// SNIPPET — à insérer dans ReservationWidget.tsx juste avant le `export default`
+
+interface WaitlistProps { date: string; time: string; covers: number; onClose: () => void; }
+
+function ListeAttente({ date, time, covers, onClose }: WaitlistProps) {
+  const fmtFR = (d: Date) => d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  const [form, setForm] = useState({ p: "", n: "", e: "", t: "" });
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [erreur, setErreur] = useState("");
+
+  const dateObj = new Date(date + "T12:00:00");
+
+  async function inscrire() {
+    if (!form.p || !form.n || !form.t) { setErreur("Prénom, nom et téléphone sont requis."); return; }
+    setBusy(true); setErreur("");
+    const { error } = await supabase.from("waitlist").insert({
+      date, time, covers,
+      customer_name: `${form.p.trim()} ${form.n.trim()}`,
+      email: form.e.trim().toLowerCase(),
+      phone: form.t.trim(),
+    });
+    setBusy(false);
+    if (error) { setErreur("Une erreur est survenue, réessayez."); return; }
+    // Email d'accusé si email fourni
+    if (form.e.trim()) {
+      sendReservationEmail("accuse", {
+        customer_name: `${form.p.trim()} ${form.n.trim()}`,
+        email: form.e.trim().toLowerCase(),
+        date, time, covers,
+      });
+    }
+    setDone(true);
+  }
+
+  if (done) return (
+    <div className="confirm-ok">
+      <div className="rond" style={{ background: "var(--ink-soft)" }}>✓</div>
+      <h3>Inscription enregistrée</h3>
+      <p>{fmtFR(dateObj)} à {time.replace(":", "h")} — {covers} couvert{covers > 1 ? "s" : ""}</p>
+      <p className="rgpd">Nous vous contacterons si une place se libère.</p>
+      <button className="btn btn-accent" onClick={onClose}>Fermer</button>
+    </div>
+  );
+
+  return (
+    <div>
+      <h3>Liste d'attente</h3>
+      <p className="sous">Ce créneau est complet. Laissez vos coordonnées, nous vous contacterons si une place se libère.</p>
+      <div className="etapes"><i className="fait" /><i className="fait" /><i /></div>
+      <div style={{ background: "var(--cream)", borderRadius: 8, padding: "10px 14px", fontSize: 14, marginBottom: 16 }}>
+        {fmtFR(dateObj)} à {time.replace(":", "h")} — {covers} couvert{covers > 1 ? "s" : ""}
+      </div>
+      <div className="news-grid2">
+        <div className="champ"><label>Prénom *</label><input value={form.p} onChange={(e) => setForm({ ...form, p: e.target.value })} maxLength={50} /></div>
+        <div className="champ"><label>Nom *</label><input value={form.n} onChange={(e) => setForm({ ...form, n: e.target.value })} maxLength={50} /></div>
+      </div>
+      <div className="champ"><label>Email</label><input type="email" value={form.e} onChange={(e) => setForm({ ...form, e: e.target.value })} /></div>
+      <div className="champ"><label>Téléphone *</label><input type="tel" value={form.t} onChange={(e) => setForm({ ...form, t: e.target.value })} maxLength={30} /></div>
+      {erreur && <div className="alerte">{erreur}</div>}
+      <div className="pan-actions">
+        <button className="btn btn-ligne" onClick={onClose}>Annuler</button>
+        <button className="btn btn-accent" disabled={busy || !form.p || !form.n || !form.t} onClick={inscrire}>
+          {busy ? "…" : "M'inscrire"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function ReservationWidget({ hours, open, onClose }: { hours: OpeningHour[]; open: boolean; onClose: () => void }) {
   const [closures, setClosures] = useState<ClosurePeriod[]>([]);
   const [settings, setSettings] = useState<ReservationSettings | null>(null);
