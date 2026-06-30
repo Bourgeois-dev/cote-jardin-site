@@ -100,24 +100,24 @@ function EventCanvas({ subject, content, imageUrl, restoName }: {
         Aperçu de l'email
       </div>
 
-      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(80,100,60,.12)", maxWidth: 380, margin: "0 auto" }}>
+      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(80,100,60,.12)", maxWidth: 500, margin: "0 auto" }}>
         {/* barre accent */}
         <div style={{ height: 5, background: accent }} />
 
         {/* logo / nom resto */}
-        <div style={{ textAlign: "center", padding: "18px 24px 10px", borderBottom: "none" }}>
-          <span style={{ fontFamily: "var(--font-display)", fontSize: 17, color: "var(--ink)" }}>{restoName || "Votre restaurant"}</span>
+        <div style={{ textAlign: "center", padding: "22px 30px 12px", borderBottom: "none" }}>
+          <span style={{ fontFamily: "var(--font-display)", fontSize: 20, color: "var(--ink)" }}>{restoName || "Votre restaurant"}</span>
         </div>
 
         {/* bandeau header */}
-        <div style={{ background: accent, padding: "22px 28px 24px", textAlign: "center" }}>
+        <div style={{ background: accent, padding: "28px 34px 30px", textAlign: "center" }}>
           {content.eyebrow && (
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 10, letterSpacing: "2px",
-              textTransform: "uppercase", color: "rgba(255,255,255,.75)", marginBottom: 8 }}>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 12, letterSpacing: "2.5px",
+              textTransform: "uppercase", color: "rgba(255,255,255,.75)", marginBottom: 10 }}>
               {content.eyebrow}
             </div>
           )}
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 21, lineHeight: 1.3, color: "#fff", fontWeight: 400 }}>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 27, lineHeight: 1.3, color: "#fff", fontWeight: 400 }}>
             {content.titre || "Titre de l'événement"}
           </div>
         </div>
@@ -127,60 +127,60 @@ function EventCanvas({ subject, content, imageUrl, restoName }: {
           <img src={imageUrl} alt="" style={{ width: "100%", display: "block", aspectRatio: "600/320", objectFit: "cover" }} />
         ) : (
           <div style={{ width: "100%", aspectRatio: "600/320", background: "var(--cream)", display: "flex",
-            alignItems: "center", justifyContent: "center", fontSize: 12, color: "var(--ink-soft)", fontStyle: "italic" }}>
+            alignItems: "center", justifyContent: "center", fontSize: 13, color: "var(--ink-soft)", fontStyle: "italic" }}>
             Aucune image — l'email s'affichera sans photo
           </div>
         )}
 
         {/* corps */}
-        <div style={{ padding: "22px 26px 4px" }}>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "#3A4A2C", marginBottom: 12 }}>
+        <div style={{ padding: "28px 34px 6px" }}>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 17, color: "#3A4A2C", marginBottom: 16 }}>
             Bonjour [Prénom],
           </div>
           {content.date_event && (
-            <div style={{ display: "inline-block", background: "var(--cream)", padding: "5px 12px",
-              borderRadius: 6, fontSize: 12, fontWeight: 700, color: "var(--ink)", marginBottom: 12 }}>
+            <div style={{ display: "inline-block", background: "var(--cream)", padding: "7px 16px",
+              borderRadius: 6, fontSize: 13, fontWeight: 700, color: "var(--ink)", marginBottom: 16 }}>
               📅 {content.date_event}
             </div>
           )}
-          <div style={{ fontSize: 13, lineHeight: 1.6, color: "#4A4A45", whiteSpace: "pre-wrap" }}>
+          <div style={{ fontSize: 14.5, lineHeight: 1.7, color: "#4A4A45", whiteSpace: "pre-wrap" }}>
             {content.description || "La description de votre événement apparaîtra ici…"}
           </div>
         </div>
 
         {/* CTA */}
         {content.cta_label && (
-          <div style={{ textAlign: "center", padding: "16px 26px 6px" }}>
-            <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 13,
-              fontWeight: 700, padding: "10px 26px", borderRadius: 22 }}>
+          <div style={{ textAlign: "center", padding: "20px 34px 8px" }}>
+            <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 14,
+              fontWeight: 700, padding: "12px 30px", borderRadius: 25 }}>
               {content.cta_label}
             </span>
           </div>
         )}
 
         {/* signature */}
-        <div style={{ padding: "14px 26px 24px" }}>
-          <div style={{ fontSize: 13, color: "#4A4A45" }}>À très bientôt,</div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 14, color: accent, fontStyle: "italic", marginTop: 2 }}>
+        <div style={{ padding: "18px 34px 28px" }}>
+          <div style={{ fontSize: 14, color: "#4A4A45" }}>À très bientôt,</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 15, color: accent, fontStyle: "italic", marginTop: 3 }}>
             {restoName || "Votre restaurant"}
           </div>
         </div>
 
         {/* footer */}
-        <div style={{ background: "#F4F2EB", borderTop: "1px solid #E4E2D8", padding: "14px 26px", textAlign: "center" }}>
-          <div style={{ fontSize: 10, color: "#9A9A8E" }}>Se désinscrire · Voir en ligne</div>
+        <div style={{ background: "#F4F2EB", borderTop: "1px solid #E4E2D8", padding: "18px 34px", textAlign: "center" }}>
+          <div style={{ fontSize: 11, color: "#9A9A8E" }}>Se désinscrire · Voir en ligne</div>
         </div>
       </div>
 
-      <div style={{ marginTop: 14, padding: "0 8px" }}>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-soft)", marginBottom: 4 }}>
+      <div style={{ marginTop: 18, padding: "0 8px", maxWidth: 500, marginLeft: "auto", marginRight: "auto" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-soft)", marginBottom: 6 }}>
           Dans la boîte de réception
         </div>
-        <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 8, padding: "10px 12px" }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 8, padding: "14px 16px" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {subject || "Objet de l'email"}
           </div>
-          <div style={{ fontSize: 12, color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }}>
+          <div style={{ fontSize: 13, color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 3 }}>
             {content.preheader || "Le résumé court apparaîtra ici, juste après l'objet…"}
           </div>
         </div>
@@ -276,7 +276,7 @@ function NouveauForm({ onSaved }: { onSaved: () => void }) {
 
       {/* Étape 1 : Template + contenu */}
       {step === 1 && (
-        <div style={{ display: "grid", gridTemplateColumns: template === "evenementiel" ? "1fr 380px" : "1fr", gap: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: template === "evenementiel" ? "minmax(0,1fr) 560px" : "1fr", gap: 28 }}>
           <div>
             <p className="desc">Choisissez un type de newsletter et rédigez le contenu.</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
