@@ -5,6 +5,7 @@ import Site from "./pages/Site";
 import Admin from "./pages/Admin";
 import MentionsLegales from "./pages/MentionsLegales";
 import ProtectionDonnees from "./pages/ProtectionDonnees";
+import Desinscription from "./pages/Desinscription";
 import Annuler from "./pages/Annuler";
 import "./theme.css";
 import "./app.css";
@@ -20,6 +21,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <Route path="/mentions-legales" element={<MentionsLegales />} />
         <Route path="/protection-des-donnees" element={<ProtectionDonnees />} />
         <Route path={ADMIN_PATH} element={<Admin />} />
+        <Route path="/desinscription" element={<Desinscription />} />
         <Route path="/annuler" element={<Annuler />} />
         <Route path="*" element={<Site />} />
       </Routes>
