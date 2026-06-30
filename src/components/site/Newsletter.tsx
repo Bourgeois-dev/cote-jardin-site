@@ -35,7 +35,7 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
       // Créer une campagne welcome temporaire et l'envoyer
       const { data: camp } = await supabase.from("newsletter_campaigns").insert({
         template: "welcome", segment: "optin", subject: `Bienvenue chez ${import.meta.env.VITE_RESTO_NAME || "nous"} !`,
-        content: {}, scheduled_at: new Date().toISOString(), status: "scheduled",
+        content: {}, scheduled_at: new Date().toISOString(), status: "sending",
       }).select().single();
       if (camp) {
         // Override : envoyer uniquement à cet email
