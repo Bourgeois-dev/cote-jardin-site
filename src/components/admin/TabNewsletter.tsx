@@ -26,6 +26,7 @@ const TEMPLATES: Record<string, { label: string; desc: string; icon: string; fie
     label: "Événementiel", icon: "🎉",
     desc: "Annonce d'un événement : soirée thématique, animation, fête…",
     fields: [
+      { key: "preheader", label: "Résumé court (aperçu dans la boîte mail)" },
       { key: "eyebrow", label: "Surtitre (ex. Soirée spéciale)" },
       { key: "titre", label: "Titre de l'événement", required: true },
       { key: "date_event", label: "Date de l'événement (ex. Samedi 12 juillet)" },
@@ -80,18 +81,146 @@ function fmtDatetime(dt: string | null): string {
   return new Date(dt).toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-// ── Formulaire nouvelle campagne ────────────────────────────────────────────
+// ── Canvas de prévisualisation — Événementiel ───────────────────────────────
+// Rendu fidèle (au pixel près dans la logique, simplifié en React/CSS pour
+// l'écran) du template HTML envoyé par l'edge function send-newsletter.
+// Couleurs : variables admin par défaut, remplacées par la charte du client
+// une fois ACCENT_COLOR/ACCENT_DARK configurés côté secrets (non visibles ici).
+function EventCanvas({ subject, content, imageUrl, restoName }: {
+  subject: string; content: Record<string, string>; imageUrl: string; restoName: string;
+}) {
+  const accent = "var(--admin-accent)";
+  return (
+    <div style={{
+      background: "#ECEAE1", borderRadius: 14, padding: "24px 16px",
+      position: "sticky", top: 90,
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase",
+        color: "var(--ink-soft)", marginBottom: 10, textAlign: "center" }}>
+        Aperçu de l'email
+      </div>
+
+      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(80,100,60,.12)", maxWidth: 380, margin: "0 auto" }}>
+        {/* barre accent */}
+        <div style={{ height: 5, background: accent }} />
+
+        {/* logo / nom resto */}
+        <div style={{ textAlign: "center", padding: "18px 24px 10px", borderBottom: "none" }}>
+          <span style={{ fontFamily: "var(--font-display)", fontSize: 17, color: "var(--ink)" }}>{restoName || "Votre restaurant"}</span>
+        </div>
+
+        {/* bandeau header */}
+        <div style={{ background: accent, padding: "22px 28px 24px", textAlign: "center" }}>
+          {content.eyebrow && (
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 10, letterSpacing: "2px",
+              textTransform: "uppercase", color: "rgba(255,255,255,.75)", marginBottom: 8 }}>
+              {content.eyebrow}
+            </div>
+          )}
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 21, lineHeight: 1.3, color: "#fff", fontWeight: 400 }}>
+            {content.titre || "Titre de l'événement"}
+          </div>
+        </div>
+
+        {/* image */}
+        {imageUrl ? (
+          <img src={imageUrl} alt="" style={{ width: "100%", display: "block", aspectRatio: "600/320", objectFit: "cover" }} />
+        ) : (
+          <div style={{ width: "100%", aspectRatio: "600/320", background: "var(--cream)", display: "flex",
+            alignItems: "center", justifyContent: "center", fontSize: 12, color: "var(--ink-soft)", fontStyle: "italic" }}>
+            Aucune image — l'email s'affichera sans photo
+          </div>
+        )}
+
+        {/* corps */}
+        <div style={{ padding: "22px 26px 4px" }}>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "#3A4A2C", marginBottom: 12 }}>
+            Bonjour [Prénom],
+          </div>
+          {content.date_event && (
+            <div style={{ display: "inline-block", background: "var(--cream)", padding: "5px 12px",
+              borderRadius: 6, fontSize: 12, fontWeight: 700, color: "var(--ink)", marginBottom: 12 }}>
+              📅 {content.date_event}
+            </div>
+          )}
+          <div style={{ fontSize: 13, lineHeight: 1.6, color: "#4A4A45", whiteSpace: "pre-wrap" }}>
+            {content.description || "La description de votre événement apparaîtra ici…"}
+          </div>
+        </div>
+
+        {/* CTA */}
+        {content.cta_label && (
+          <div style={{ textAlign: "center", padding: "16px 26px 6px" }}>
+            <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 13,
+              fontWeight: 700, padding: "10px 26px", borderRadius: 22 }}>
+              {content.cta_label}
+            </span>
+          </div>
+        )}
+
+        {/* signature */}
+        <div style={{ padding: "14px 26px 24px" }}>
+          <div style={{ fontSize: 13, color: "#4A4A45" }}>À très bientôt,</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 14, color: accent, fontStyle: "italic", marginTop: 2 }}>
+            {restoName || "Votre restaurant"}
+          </div>
+        </div>
+
+        {/* footer */}
+        <div style={{ background: "#F4F2EB", borderTop: "1px solid #E4E2D8", padding: "14px 26px", textAlign: "center" }}>
+          <div style={{ fontSize: 10, color: "#9A9A8E" }}>Se désinscrire · Voir en ligne</div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 14, padding: "0 8px" }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-soft)", marginBottom: 4 }}>
+          Dans la boîte de réception
+        </div>
+        <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 8, padding: "10px 12px" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {subject || "Objet de l'email"}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }}>
+            {content.preheader || "Le résumé court apparaîtra ici, juste après l'objet…"}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function NouveauForm({ onSaved }: { onSaved: () => void }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [template, setTemplate] = useState("");
   const [segment, setSegment] = useState("tous");
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState<Record<string, string>>({});
+  const [imageUrl, setImageUrl] = useState("");
+  const [upLoad, setUpLoad] = useState(false);
+  const [upErr, setUpErr] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("09:00");
   const [sendNow, setSendNow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState("");
+
+  const restoName = import.meta.env.VITE_RESTO_NAME || "";
+
+  async function uploadImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUpErr("");
+    if (!file.type.startsWith("image/")) { setUpErr("Choisissez une image (JPG ou PNG)."); return; }
+    if (file.size > 10 * 1024 * 1024) { setUpErr("Image trop lourde (max 10 Mo)."); return; }
+    setUpLoad(true);
+    const path = `newsletter-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+    const { error } = await supabase.storage.from("gallery").upload(path, file);
+    if (error) { setUpErr("Erreur d'upload : " + error.message); setUpLoad(false); return; }
+    const { data } = supabase.storage.from("gallery").getPublicUrl(path);
+    setImageUrl(data.publicUrl);
+    setUpLoad(false);
+  }
 
   const tpl = template ? TEMPLATES[template] : null;
   const reqFields = tpl?.fields.filter((f) => f.required) || [];
@@ -109,9 +238,11 @@ function NouveauForm({ onSaved }: { onSaved: () => void }) {
       scheduled_at = new Date(`${scheduledDate}T${scheduledTime || "09:00"}:00`).toISOString();
     }
 
+    const finalContent = imageUrl ? { ...content, image_url: imageUrl } : content;
+
     const { data: camp, error } = await supabase
       .from("newsletter_campaigns")
-      .insert({ template, segment, subject, content, scheduled_at, status: scheduled_at ? "scheduled" : "draft" })
+      .insert({ template, segment, subject, content: finalContent, scheduled_at, status: scheduled_at ? "scheduled" : "draft" })
       .select()
       .single();
 
@@ -145,43 +276,65 @@ function NouveauForm({ onSaved }: { onSaved: () => void }) {
 
       {/* Étape 1 : Template + contenu */}
       {step === 1 && (
-        <div>
-          <p className="desc">Choisissez un type de newsletter et rédigez le contenu.</p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
-            {Object.entries(TEMPLATES).map(([key, t]) => (
-              <button key={key} onClick={() => setTemplate(key)} style={{
-                padding: "14px 16px", borderRadius: 10, textAlign: "left", cursor: "pointer", fontFamily: "var(--font-body)",
-                border: template === key ? "2px solid var(--admin-accent)" : "1px solid var(--line)",
-                background: template === key ? "var(--a06)" : "#fff",
-              }}>
-                <div style={{ fontSize: 20, marginBottom: 4 }}>{t.icon}</div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>{t.label}</div>
-                <div style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 2 }}>{t.desc}</div>
-              </button>
-            ))}
-          </div>
-
-          {tpl && (
-            <div>
-              <div className="champ">
-                <label>Objet de l'email <span style={{ color: "var(--admin-accent)" }}>*</span></label>
-                <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Ex. Notre nouvelle carte d'été est là 🌿" maxLength={150} />
-              </div>
-              {tpl.fields.map((f) => (
-                <div className="champ" key={f.key}>
-                  <label>{f.label}{f.required && <span style={{ color: "var(--admin-accent)" }}> *</span>}</label>
-                  {f.type === "textarea"
-                    ? <textarea rows={3} value={content[f.key] || ""} onChange={(e) => setContent({ ...content, [f.key]: e.target.value })} maxLength={2000} />
-                    : <input value={content[f.key] || ""} onChange={(e) => setContent({ ...content, [f.key]: e.target.value })} maxLength={200} />
-                  }
-                </div>
+        <div style={{ display: "grid", gridTemplateColumns: template === "evenementiel" ? "1fr 380px" : "1fr", gap: 28 }}>
+          <div>
+            <p className="desc">Choisissez un type de newsletter et rédigez le contenu.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+              {Object.entries(TEMPLATES).map(([key, t]) => (
+                <button key={key} onClick={() => setTemplate(key)} style={{
+                  padding: "14px 16px", borderRadius: 10, textAlign: "left", cursor: "pointer", fontFamily: "var(--font-body)",
+                  border: template === key ? "2px solid var(--admin-accent)" : "1px solid var(--line)",
+                  background: template === key ? "var(--a06)" : "#fff",
+                }}>
+                  <div style={{ fontSize: 20, marginBottom: 4 }}>{t.icon}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>{t.label}</div>
+                  <div style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 2 }}>{t.desc}</div>
+                </button>
               ))}
             </div>
-          )}
 
-          <div className="pan-actions" style={{ marginTop: 20 }}>
-            <button className="btn btn-accent" disabled={!canStep2} onClick={() => setStep(2)}>Suivant →</button>
+            {tpl && (
+              <div>
+                <div className="champ">
+                  <label>Objet de l'email <span style={{ color: "var(--admin-accent)" }}>*</span></label>
+                  <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Ex. Notre nouvelle carte d'été est là 🌿" maxLength={150} />
+                </div>
+
+                {template === "evenementiel" && (
+                  <div className="champ">
+                    <label>Image de l'événement (optionnel)</label>
+                    <input type="file" accept="image/*" onChange={uploadImage} disabled={upLoad} />
+                    {upLoad && <span className="aide" style={{ fontSize: 12, color: "var(--ink-soft)" }}>Envoi en cours…</span>}
+                    {upErr && <div className="alerte" style={{ marginTop: 6 }}>{upErr}</div>}
+                    {imageUrl && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+                        <img src={imageUrl} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 6, border: "1px solid var(--line)" }} />
+                        <button className="btn btn-mini btn-ligne" onClick={() => setImageUrl("")}>Retirer</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {tpl.fields.map((f) => (
+                  <div className="champ" key={f.key}>
+                    <label>{f.label}{f.required && <span style={{ color: "var(--admin-accent)" }}> *</span>}</label>
+                    {f.type === "textarea"
+                      ? <textarea rows={3} value={content[f.key] || ""} onChange={(e) => setContent({ ...content, [f.key]: e.target.value })} maxLength={2000} />
+                      : <input value={content[f.key] || ""} onChange={(e) => setContent({ ...content, [f.key]: e.target.value })} maxLength={f.key === "preheader" ? 150 : 200} />
+                    }
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="pan-actions" style={{ marginTop: 20 }}>
+              <button className="btn btn-accent" disabled={!canStep2} onClick={() => setStep(2)}>Suivant →</button>
+            </div>
           </div>
+
+          {template === "evenementiel" && (
+            <EventCanvas subject={subject} content={content} imageUrl={imageUrl} restoName={restoName} />
+          )}
         </div>
       )}
 
