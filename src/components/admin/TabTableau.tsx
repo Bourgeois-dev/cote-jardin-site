@@ -15,7 +15,8 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
   // Fenêtre glissante J-90/+horizon — évite de charger tout l'historique
   const dateMinTdb = (() => { const d = new Date(); d.setDate(d.getDate() - 90); return d.toISOString().slice(0,10); })();
   const { rows: resa } = useTable<Reservation>("reservations", "date", true, { column: "date", op: "gte", value: dateMinTdb });
-  const { rows: leads } = useTable<Lead>("leads", "created_at");
+  const { rows: allLeads } = useTable<Lead>("leads", "created_at");
+  const leads = allLeads.filter((l) => l.consent === true);
   const { rows: tables } = useTable<RestaurantTable>("restaurant_tables", "label");
   const { rows: hours } = useTable<OpeningHour>("opening_hours", "day_of_week");
   const { rows: settingsRows } = useTable<ReservationSettings>("reservation_settings", "id");

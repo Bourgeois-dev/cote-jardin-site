@@ -20,11 +20,10 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
     setBusy(true); setErreur("");
     const { error } = await supabase
       .from("leads")
-      .insert({ first_name: prenom, last_name: nom, email: email.trim().toLowerCase(), source: "newsletter", consent: true });
+      .upsert({ first_name: prenom, last_name: nom, email: email.trim().toLowerCase(), source: "newsletter", consent: true }, { onConflict: "email" });
     setBusy(false);
     if (error) {
-      if (error.code === "23505") setErreur("Cette adresse e-mail est déjà inscrite à notre newsletter.");
-      else setErreur("Une erreur est survenue. Merci de réessayer dans un instant.");
+      setErreur("Une erreur est survenue. Merci de réessayer dans un instant.");
       return;
     }
     setSent(true);

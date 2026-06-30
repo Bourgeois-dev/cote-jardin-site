@@ -10,7 +10,7 @@ export interface RestaurantTable { id: string; label: string; capacity: number; 
 export interface DiningArea { id: string; name: string; position: number; }
 export interface Reservation { id: string; customer_name: string; email: string; phone: string; date: string; time: string; covers: number; table_id: string | null; table_ids: string[]; status: string; notes: string; source: string; created_at: string; customer_id: string | null; }
 export interface Customer { id: string; name: string; email: string; phone: string; is_vip: boolean; notes: string; bookings_count: number; covers_total: number; no_show_count: number; cancelled_count: number; first_visit: string | null; last_visit: string | null; created_at: string; }
-export interface Lead { id: string; first_name: string; last_name: string; email: string; source: string; created_at: string; }
+export interface Lead { id: string; first_name: string; last_name: string; email: string; source: string; consent: boolean; created_at: string; }
 export interface ReservationSettings { id: string; phone_threshold: number; min_advance_hours: number; slot_duration: number; booking_horizon_days: number; enabled: boolean; newsletter_optin: boolean; }
 export interface AdminUser { id: string; email: string; label: string | null; created_at: string; }
 export interface AdminUser { id: string; email: string; label: string; created_at: string; }
