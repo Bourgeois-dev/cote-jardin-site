@@ -20,7 +20,7 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
     setBusy(true); setErreur("");
     const { error } = await supabase
       .from("leads")
-      .insert({ first_name: prenom, last_name: nom, email: email.trim().toLowerCase(), source: "newsletter" });
+      .insert({ first_name: prenom, last_name: nom, email: email.trim().toLowerCase(), source: "newsletter", consent: true });
     setBusy(false);
     if (error) {
       if (error.code === "23505") setErreur("Cette adresse e-mail est déjà inscrite à notre newsletter.");
@@ -34,7 +34,7 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
       const welcomeUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-newsletter`;
       // Créer une campagne welcome temporaire et l'envoyer
       const { data: camp } = await supabase.from("newsletter_campaigns").insert({
-        template: "welcome", segment: "tous", subject: `Bienvenue chez ${import.meta.env.VITE_RESTO_NAME || "nous"} !`,
+        template: "welcome", segment: "optin", subject: `Bienvenue chez ${import.meta.env.VITE_RESTO_NAME || "nous"} !`,
         content: {}, scheduled_at: new Date().toISOString(), status: "scheduled",
       }).select().single();
       if (camp) {

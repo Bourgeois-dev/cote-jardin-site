@@ -275,7 +275,7 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
     // Opt-in newsletter (si proposé et coché) → alimente leads, sans bloquer si déjà inscrit
     if (proposeNewsletter && newsletterOptin) {
       await supabase.from("leads").insert({
-        first_name: form.p, last_name: form.n, email: form.e.trim().toLowerCase(), source: "reservation",
+        first_name: form.p, last_name: form.n, email: form.e.trim().toLowerCase(), source: "reservation", consent: true,
       });
       syncToMailchimp({ email: form.e.trim().toLowerCase(), first_name: form.p, last_name: form.n, source: "reservation" });
     }
