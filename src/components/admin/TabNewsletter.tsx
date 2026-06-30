@@ -61,11 +61,8 @@ const TEMPLATES: Record<string, { label: string; desc: string; icon: string; fie
 };
 
 const SEGMENTS: Record<string, { label: string; desc: string }> = {
-  tous:              { label: "Tous les contacts", desc: "Inscrits newsletter + clients avec email" },
-  optin_reservation: { label: "Opt-in réservation", desc: "Clients ayant coché la newsletter lors d'une réservation" },
-  clients:           { label: "Clients", desc: "Tous les clients avec un email connu" },
-  fideles:           { label: "Clients fidèles", desc: "Clients avec 3 réservations ou plus" },
-  vip:               { label: "VIP", desc: "Clients marqués VIP dans le CRM" },
+  optin:     { label: "Opt-in newsletter", desc: "Tous les inscrits — via le formulaire newsletter ou l'opt-in proposé à la réservation" },
+  optin_vip: { label: "VIP",               desc: "Inscrits newsletter marqués VIP dans le CRM" },
 };
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
@@ -193,7 +190,7 @@ function EventCanvas({ subject, content, imageUrl, restoName }: {
 function NouveauForm({ onSaved }: { onSaved: () => void }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [template, setTemplate] = useState("");
-  const [segment, setSegment] = useState("tous");
+  const [segment, setSegment] = useState("optin");
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState<Record<string, string>>({});
   const [imageUrl, setImageUrl] = useState("");
