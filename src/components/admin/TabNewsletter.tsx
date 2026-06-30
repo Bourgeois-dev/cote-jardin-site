@@ -19,12 +19,9 @@ interface Campaign {
 }
 
 // ── Constantes ──────────────────────────────────────────────────────────────
+// Welcome n'apparaît pas ici : il est déclenché automatiquement à l'inscription
+// (voir Newsletter.tsx côté site), jamais envoyé manuellement depuis l'admin.
 const TEMPLATES: Record<string, { label: string; desc: string; icon: string; fields: { key: string; label: string; type?: string; required?: boolean }[] }> = {
-  welcome: {
-    label: "Welcome", icon: "👋",
-    desc: "Envoyé automatiquement à l'inscription. Peut aussi être envoyé manuellement.",
-    fields: [{ key: "message", label: "Message personnalisé (optionnel)", type: "textarea" }],
-  },
   evenementiel: {
     label: "Événementiel", icon: "🎉",
     desc: "Annonce d'un événement : soirée thématique, animation, fête…",
