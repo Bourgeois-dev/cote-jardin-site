@@ -91,11 +91,13 @@ Deno.serve(async (req: Request) => {
 
       const w = next?.[0];
       if (w) {
+        // NB : get_next_waitlist ne retourne pas date/time — on utilise le créneau
+        // demandé (body.date / body.time), qui est celui de l'inscription notifiée.
         const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px">
           <h1 style="font-size:20px;color:#1A2238">Une place s'est lib\u00e9r\u00e9e !</h1>
           <p style="color:#4A5066;font-size:15px">Bonjour ${w.customer_name},</p>
           <p style="color:#4A5066;font-size:15px">Bonne nouvelle ! Une place vient de se lib\u00e9rer pour le
-            <b>${formatDate(w.date)}</b> \u00e0 <b>${(w.time as string).replace(":","h")}</b>
+            <b>${formatDate(body.date)}</b> \u00e0 <b>${String(body.time).replace(":","h")}</b>
             chez <b>${RESTO_NAME}</b>.</p>
           <p style="color:#4A5066;font-size:15px">Vous avez <b>2 heures</b> pour r\u00e9server avant que nous
             contactions le prochain inscrit sur la liste.</p>
