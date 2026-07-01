@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 type Status = "loading" | "success" | "already" | "error" | "invalid";
 
 export default function Desinscription() {
   const [status, setStatus] = useState<Status>("loading");
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
+    const token = searchParams.get("token");
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
     if (!token || !UUID_RE.test(token)) {
@@ -31,7 +32,7 @@ export default function Desinscription() {
         else                   setStatus("error");
       })
       .catch(() => setStatus("error"));
-  }, []);
+  }, [searchParams]);
 
   const restoName = import.meta.env.VITE_RESTO_NAME || "le restaurant";
 
