@@ -50,10 +50,11 @@ const TEMPLATES: Record<string, { label: string; desc: string; icon: string; fie
     label: "Vie du restaurant", icon: "📰",
     desc: "Actualité libre : coulisses, producteurs, histoire, news.",
     fields: [
-      { key: "eyebrow", label: "Surtitre (ex. Dans les coulisses)" },
-      { key: "titre", label: "Titre", required: true },
-      { key: "texte", label: "Contenu", type: "textarea", required: true },
-      { key: "cta_label", label: "Bouton — texte (optionnel)" },
+      { key: "eyebrow", label: "Surtitre (défaut : Vie du restaurant)" },
+      { key: "titre", label: "Titre (ex. Des nouvelles de votre table)", required: true },
+      { key: "texte", label: "Contenu (sauts de ligne = paragraphes)", type: "textarea", required: true },
+      { key: "a_retenir", label: "À retenir (encadré — ex. Nouveaux horaires dès le 1er juillet)" },
+      { key: "cta_label", label: "Bouton — texte (optionnel, ex. En savoir plus)" },
       { key: "cta_url", label: "Bouton — lien" },
     ],
   },
@@ -325,6 +326,121 @@ function MenuCanvas({ subject, content, restoName, logoUrl }: {
 }
 
 
+// ── Canvas de prévisualisation — Vie du restaurant ──────────────────────────
+// Structure : bandeau (surtitre + titre) → image large → texte multi-paragraphes
+// → encadré « À retenir » → CTA → signature → footer.
+function VieCanvas({ subject, content, imageUrl, restoName, logoUrl }: {
+  subject: string; content: Record<string, string>; imageUrl: string; restoName: string; logoUrl: string;
+}) {
+  const accent = "var(--accent)";
+  const accentDark = "var(--accent-dark)";
+  const fontDisplay = "var(--font-display)";
+  const paras = (content.texte || "").split(/\n+/).filter((p) => p.trim());
+  return (
+    <div style={{ background: "#ECEAE1", borderRadius: 14, padding: "24px 16px", position: "sticky", top: 90 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase",
+        color: "var(--ink-soft)", marginBottom: 10, textAlign: "center" }}>
+        Aperçu de l'email
+      </div>
+
+      <div style={{ marginBottom: 18, maxWidth: 500, marginLeft: "auto", marginRight: "auto" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-soft)", marginBottom: 6 }}>
+          Dans la boîte de réception
+        </div>
+        <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 8, padding: "14px 16px" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {subject || "Objet de l'email"}
+          </div>
+          <div style={{ fontSize: 13, color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 3 }}>
+            {content.preheader || "Le résumé court apparaîtra ici, juste après l'objet…"}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(80,100,60,.12)", maxWidth: 500, margin: "0 auto" }}>
+        <div style={{ height: 5, background: accent }} />
+
+        <div style={{ textAlign: "center", padding: "22px 30px 12px" }}>
+          {logoUrl
+            ? <img src={logoUrl} alt={restoName} style={{ height: 48, maxWidth: 220, objectFit: "contain", margin: "0 auto", display: "block" }} />
+            : <span style={{ fontFamily: fontDisplay, fontSize: 20, color: "var(--ink)" }}>{restoName || "Votre restaurant"}</span>
+          }
+        </div>
+
+        {/* bandeau header */}
+        <div style={{ background: accent, padding: "28px 34px 30px", textAlign: "center" }}>
+          <div style={{ fontFamily: fontDisplay, fontSize: 12, letterSpacing: "2.5px",
+            textTransform: "uppercase", color: "rgba(255,255,255,.75)", marginBottom: 10 }}>
+            {content.eyebrow || "Vie du restaurant"}
+          </div>
+          <div style={{ fontFamily: fontDisplay, fontSize: 27, lineHeight: 1.3, color: "#fff", fontWeight: 400 }}>
+            {content.titre || "Des nouvelles de votre table"}
+          </div>
+        </div>
+
+        {/* image */}
+        {imageUrl ? (
+          <img src={imageUrl} alt="" style={{ width: "100%", display: "block", aspectRatio: "600/320", objectFit: "cover" }} />
+        ) : (
+          <div style={{ width: "100%", aspectRatio: "600/320", background: "var(--cream)", display: "flex",
+            alignItems: "center", justifyContent: "center", fontSize: 13, color: "var(--ink-soft)", fontStyle: "italic" }}>
+            Aucune image — l'email s'affichera sans photo
+          </div>
+        )}
+
+        {/* corps : texte multi-paragraphes */}
+        <div style={{ padding: "28px 34px 6px" }}>
+          <div style={{ fontFamily: fontDisplay, fontSize: 17, color: "#3A4A2C", marginBottom: 16 }}>
+            Bonjour [Prénom],
+          </div>
+          {paras.length === 0 && (
+            <div style={{ fontSize: 14.5, lineHeight: 1.7, color: "var(--ink-soft)", fontStyle: "italic" }}>
+              Votre actualité apparaîtra ici — chaque saut de ligne crée un paragraphe…
+            </div>
+          )}
+          {paras.map((p, i) => (
+            <div key={i} style={{ fontSize: 14.5, lineHeight: 1.7, color: "#4A4A45", marginBottom: 14 }}>{p}</div>
+          ))}
+        </div>
+
+        {/* encadré À retenir */}
+        {content.a_retenir && (
+          <div style={{ margin: "4px 34px 10px", background: "var(--cream)", borderRadius: 10, borderLeft: `4px solid ${accent}`, padding: "18px 20px" }}>
+            <div style={{ fontSize: 10.5, letterSpacing: "2px", textTransform: "uppercase", color: accentDark, fontWeight: 700, marginBottom: 6 }}>
+              À retenir
+            </div>
+            <div style={{ fontFamily: fontDisplay, fontSize: 15, lineHeight: 1.5, color: "#3A4A2C" }}>{content.a_retenir}</div>
+          </div>
+        )}
+
+        {/* CTA */}
+        {content.cta_label && (
+          <div style={{ textAlign: "center", padding: "16px 34px 8px" }}>
+            <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 14,
+              fontWeight: 700, padding: "12px 30px", borderRadius: 25 }}>
+              {content.cta_label}
+            </span>
+          </div>
+        )}
+
+        {/* signature */}
+        <div style={{ padding: "18px 34px 28px" }}>
+          <div style={{ fontSize: 14, color: "#4A4A45" }}>À très bientôt,</div>
+          <div style={{ fontFamily: fontDisplay, fontSize: 15, color: accentDark, fontStyle: "italic", marginTop: 3 }}>
+            {restoName || "Votre restaurant"}
+          </div>
+        </div>
+
+        {/* footer */}
+        <div style={{ background: "#F4F2EB", borderTop: "1px solid #E4E2D8", padding: "18px 34px", textAlign: "center" }}>
+          <div style={{ fontSize: 11, color: "#9A9A8E" }}>Se désinscrire</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 // initial : pré-remplissage du formulaire.
 // - Dupliquer une campagne : initial SANS id → nouvelle ligne à la sauvegarde.
 // - Reprendre un brouillon : initial AVEC id → la ligne existante est mise à jour.
@@ -470,7 +586,7 @@ function NouveauForm({ onSaved, initial }: {
 
       {/* Étape 1 : Template + contenu */}
       {step === 1 && (
-        <div style={{ display: "grid", gridTemplateColumns: (template === "evenementiel" || template === "nouveau_menu") ? "minmax(0,1fr) 560px" : "1fr", gap: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: (template === "evenementiel" || template === "nouveau_menu" || template === "vie_resto") ? "minmax(0,1fr) 560px" : "1fr", gap: 28 }}>
           <div>
             <p className="desc">Choisissez un type de newsletter et rédigez le contenu.</p>
 
@@ -516,9 +632,9 @@ function NouveauForm({ onSaved, initial }: {
                     placeholder="Ex. Une soirée conviviale à ne pas manquer" maxLength={150} />
                 </div>
 
-                {template === "evenementiel" && (
+                {(template === "evenementiel" || template === "vie_resto") && (
                   <div className="champ">
-                    <label>Image de l'événement (optionnel)</label>
+                    <label>{template === "vie_resto" ? "Image de l'actualité (optionnel)" : "Image de l'événement (optionnel)"}</label>
                     <label className="btn btn-ligne btn-mini" style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: upLoad ? "default" : "pointer", opacity: upLoad ? .6 : 1 }}>
                       📷 {upLoad ? "Envoi en cours…" : "Choisir une image"}
                       <input type="file" accept="image/*" onChange={uploadImage} disabled={upLoad} style={{ display: "none" }} />
@@ -602,6 +718,9 @@ function NouveauForm({ onSaved, initial }: {
           )}
           {template === "nouveau_menu" && (
             <MenuCanvas subject={subject} content={content} restoName={restoName} logoUrl={logoUrl} />
+          )}
+          {template === "vie_resto" && (
+            <VieCanvas subject={subject} content={content} imageUrl={imageUrl} restoName={restoName} logoUrl={logoUrl} />
           )}
         </div>
       )}
