@@ -59,6 +59,13 @@ const TEMPLATES: Record<string, { label: string; desc: string; icon: string; fie
   },
 };
 
+// Welcome n'apparaît pas dans TEMPLATES (pas de formulaire, déclenché
+// automatiquement) mais doit être nommé/filtrable dans la liste des campagnes.
+const TYPE_DISPLAY: Record<string, { label: string; icon: string }> = {
+  welcome: { label: "Bienvenue", icon: "💌" },
+  ...Object.fromEntries(Object.entries(TEMPLATES).map(([k, t]) => [k, { label: t.label, icon: t.icon }])),
+};
+
 const SEGMENTS: Record<string, { label: string; desc: string }> = {
   optin:     { label: "Opt-in newsletter", desc: "Tous les inscrits — via le formulaire newsletter ou l'opt-in proposé à la réservation" },
   optin_vip: { label: "VIP",               desc: "Inscrits newsletter marqués VIP dans le CRM" },
@@ -688,6 +695,9 @@ export default function TabNewsletter() {
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<"liste" | "nouveau">("liste");
   const [filtre, setFiltre] = useState<"toutes" | "draft" | "scheduled" | "sent">("toutes");
+  const [filtreType, setFiltreType] = useState<string>("tous"); // "tous" | clé de TEMPLATES | "welcome"
+  const [dateDebut, setDateDebut] = useState("");
+  const [dateFin, setDateFin] = useState("");
   // Pré-remplissage du formulaire : dupliquer (sans id) ou reprendre un brouillon (avec id)
   const [prefill, setPrefill] = useState<{ id?: string; template: string; segment: string; subject: string; content: Record<string, string> } | undefined>(undefined);
   const confirm = useConfirm();
@@ -752,8 +762,23 @@ export default function TabNewsletter() {
     charger();
   }
 
-  const affichees = campagnes.filter((c) => filtre === "toutes" || c.status === filtre ||
-    (filtre === "scheduled" && c.status === "scheduled"));
+  // Date de référence d'une campagne pour le filtre par période :
+  // envoyée → sent_at, planifiée → scheduled_at, brouillon → created_at.
+  function dateRef(c: Campaign): string {
+    return c.sent_at || c.scheduled_at || c.created_at;
+  }
+
+  const affichees = campagnes.filter((c) => {
+    if (filtre !== "toutes" && c.status !== filtre) return false;
+    if (filtreType !== "tous" && c.template !== filtreType) return false;
+    const ref = dateRef(c);
+    if (dateDebut && ref && ref.slice(0, 10) < dateDebut) return false;
+    if (dateFin && ref && ref.slice(0, 10) > dateFin) return false;
+    return true;
+  });
+
+  const typesPresents = Array.from(new Set(campagnes.map((c) => c.template)));
+  const filtresDateActifs = !!dateDebut || !!dateFin || filtreType !== "tous";
 
   const nbScheduled = campagnes.filter((c) => c.status === "scheduled").length;
   const nbDraft     = campagnes.filter((c) => c.status === "draft").length;
@@ -796,11 +821,37 @@ export default function TabNewsletter() {
               </button>
             </div>
 
+            {/* Filtres secondaires : type de campagne + période d'envoi/planification */}
+            {typesPresents.length > 1 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
+                <select value={filtreType} onChange={(e) => setFiltreType(e.target.value)}
+                  style={{ width: "auto", padding: "8px 12px", fontSize: 13, borderRadius: 8, border: "1px solid var(--line)", background: "#fff", color: "var(--ink)" }}>
+                  <option value="tous">Tous les types</option>
+                  {typesPresents.map((t) => (
+                    <option key={t} value={t}>{TYPE_DISPLAY[t]?.icon || "📧"} {TYPE_DISPLAY[t]?.label || t}</option>
+                  ))}
+                </select>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--ink-soft)" }}>
+                  du
+                  <input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)}
+                    style={{ width: "auto", padding: "7px 10px", fontSize: 13, borderRadius: 8, border: "1px solid var(--line)", background: "#fff", color: "var(--ink)" }} />
+                  au
+                  <input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)}
+                    style={{ width: "auto", padding: "7px 10px", fontSize: 13, borderRadius: 8, border: "1px solid var(--line)", background: "#fff", color: "var(--ink)" }} />
+                </div>
+                {filtresDateActifs && (
+                  <button className="btn btn-mini btn-ligne" onClick={() => { setFiltreType("tous"); setDateDebut(""); setDateFin(""); }}>
+                    ✕ Réinitialiser
+                  </button>
+                )}
+              </div>
+            )}
+
             {loading && <p className="vide">Chargement…</p>}
 
             {!loading && affichees.length === 0 && (
               <div className="bloc" style={{ textAlign: "center", padding: "36px 24px" }}>
-                {filtre === "toutes" ? (
+                {campagnes.length === 0 ? (
                   <>
                     <div style={{ fontSize: 34, marginBottom: 10 }}>📮</div>
                     <p style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 6 }}>Aucune campagne pour l'instant</p>
@@ -810,7 +861,14 @@ export default function TabNewsletter() {
                     </button>
                   </>
                 ) : (
-                  <p className="vide">Aucune campagne dans ce filtre.</p>
+                  <>
+                    <p className="vide" style={{ marginBottom: filtresDateActifs ? 12 : 0 }}>Aucune campagne dans ce filtre.</p>
+                    {filtresDateActifs && (
+                      <button className="btn btn-mini btn-ligne" onClick={() => { setFiltreType("tous"); setDateDebut(""); setDateFin(""); }}>
+                        ✕ Réinitialiser les filtres
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -834,10 +892,10 @@ export default function TabNewsletter() {
                         <tr key={c.id}>
                           <td>
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <span style={{ fontSize: 18 }}>{TEMPLATES[c.template]?.icon || "📧"}</span>
+                              <span style={{ fontSize: 18 }}>{TYPE_DISPLAY[c.template]?.icon || "📧"}</span>
                               <div>
                                 <b style={{ fontSize: 14 }}>{c.subject}</b>
-                                <div className="sub-desc">{TEMPLATES[c.template]?.label || c.template}</div>
+                                <div className="sub-desc">{TYPE_DISPLAY[c.template]?.label || c.template}</div>
                               </div>
                             </div>
                           </td>
