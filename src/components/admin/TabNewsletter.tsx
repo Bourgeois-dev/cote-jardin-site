@@ -192,7 +192,7 @@ function EventCanvas({ subject, content, imageUrl, restoName, logoUrl }: {
 
         {/* footer */}
         <div style={{ background: "#F4F2EB", borderTop: "1px solid #E4E2D8", padding: "18px 34px", textAlign: "center" }}>
-          <div style={{ fontSize: 11, color: "#9A9A8E" }}>Se désinscrire · Voir en ligne</div>
+          <div style={{ fontSize: 11, color: "#9A9A8E" }}>Se désinscrire</div>
         </div>
       </div>
     </div>
@@ -712,9 +712,6 @@ export default function TabNewsletter() {
     setMode("nouveau");
   }
 
-  const mirrorUrl = (c: Campaign) =>
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/newsletter-mirror?id=${c.id}`;
-
   async function charger() {
     setLoading(true);
     const { data } = await supabase
@@ -928,9 +925,6 @@ export default function TabNewsletter() {
                           </td>
                           <td>
                             <div className="actions-ligne">
-                              {c.status === "sent" && (
-                                <a className="btn btn-mini btn-ligne" href={mirrorUrl(c)} target="_blank" rel="noreferrer">👁 Voir</a>
-                              )}
                               {(c.status === "draft") && (
                                 <>
                                   <button className="btn btn-mini btn-ligne" onClick={() => reprendre(c)}>✎ Reprendre</button>
