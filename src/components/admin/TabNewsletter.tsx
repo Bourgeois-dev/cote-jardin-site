@@ -36,14 +36,14 @@ const TEMPLATES: Record<string, { label: string; desc: string; icon: string; fie
   },
   nouveau_menu: {
     label: "Nouveau menu", icon: "🍽️",
-    desc: "Annonce d'un changement de carte ou d'un nouveau plat à l'honneur.",
+    desc: "Annonce d'un changement de carte — 1 à 3 plats mis en avant.",
     fields: [
-      { key: "titre", label: "Titre (ex. Notre nouvelle carte d'été)", required: true },
+      { key: "titre", label: "Titre (ex. Notre menu de saison est arrivé !)", required: true },
+      { key: "sous_titre", label: "Sous-titre (ex. Printemps — Été 2026)" },
       { key: "intro", label: "Introduction", type: "textarea", required: true },
-      { key: "plat_vedette", label: "Plat à l'honneur (optionnel)" },
-      { key: "plat_description", label: "Description du plat" },
-      { key: "cta_label", label: "Bouton — texte (ex. Voir la carte)" },
-      { key: "cta_url", label: "Bouton — lien" },
+      { key: "citation", label: "Citation (ex. Chaque plat raconte une saison…)" },
+      { key: "cta_label", label: "Bouton — texte (défaut : Voir la carte)" },
+      { key: "cta_url", label: "Bouton — lien (défaut : le site)" },
     ],
   },
   vie_resto: {
@@ -193,6 +193,131 @@ function EventCanvas({ subject, content, imageUrl, restoName, logoUrl }: {
 }
 
 
+// ── Canvas de prévisualisation — Nouveau menu ───────────────────────────────
+// Même principe qu'EventCanvas : rendu fidèle du HTML envoyé par send-newsletter.
+// Structure : bandeau → intro → 1 à 3 plats (image pleine largeur + nom +
+// description, empilés) → citation → CTA → signature → footer.
+function MenuCanvas({ subject, content, restoName, logoUrl }: {
+  subject: string; content: Record<string, string>; restoName: string; logoUrl: string;
+}) {
+  const accent = "var(--accent)";
+  const accentDark = "var(--accent-dark)";
+  const fontDisplay = "var(--font-display)";
+  const plats = [1, 2, 3]
+    .map((i) => ({ nom: content[`plat${i}_nom`] || "", desc: content[`plat${i}_desc`] || "", image: content[`plat${i}_image`] || "" }))
+    .filter((p) => p.nom.trim());
+  return (
+    <div style={{ background: "#ECEAE1", borderRadius: 14, padding: "24px 16px", position: "sticky", top: 90 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase",
+        color: "var(--ink-soft)", marginBottom: 10, textAlign: "center" }}>
+        Aperçu de l'email
+      </div>
+
+      <div style={{ marginBottom: 18, maxWidth: 500, marginLeft: "auto", marginRight: "auto" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-soft)", marginBottom: 6 }}>
+          Dans la boîte de réception
+        </div>
+        <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 8, padding: "14px 16px" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {subject || "Objet de l'email"}
+          </div>
+          <div style={{ fontSize: 13, color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 3 }}>
+            {content.preheader || "Le résumé court apparaîtra ici, juste après l'objet…"}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(80,100,60,.12)", maxWidth: 500, margin: "0 auto" }}>
+        <div style={{ height: 5, background: accent }} />
+
+        <div style={{ textAlign: "center", padding: "22px 30px 12px" }}>
+          {logoUrl
+            ? <img src={logoUrl} alt={restoName} style={{ height: 48, maxWidth: 220, objectFit: "contain", margin: "0 auto", display: "block" }} />
+            : <span style={{ fontFamily: fontDisplay, fontSize: 20, color: "var(--ink)" }}>{restoName || "Votre restaurant"}</span>
+          }
+        </div>
+
+        {/* bandeau header */}
+        <div style={{ background: accent, padding: "28px 34px 30px", textAlign: "center" }}>
+          <div style={{ fontFamily: fontDisplay, fontSize: 12, letterSpacing: "2.5px",
+            textTransform: "uppercase", color: "rgba(255,255,255,.75)", marginBottom: 10 }}>
+            Nouvelle carte
+          </div>
+          <div style={{ fontFamily: fontDisplay, fontSize: 27, lineHeight: 1.3, color: "#fff", fontWeight: 400 }}>
+            {content.titre || "Notre menu de saison est arrivé !"}
+          </div>
+          {content.sous_titre && (
+            <div style={{ fontFamily: fontDisplay, fontSize: 14, color: "rgba(255,255,255,.85)", fontStyle: "italic", marginTop: 10 }}>
+              {content.sous_titre}
+            </div>
+          )}
+        </div>
+
+        {/* intro */}
+        <div style={{ padding: "26px 34px 6px" }}>
+          <div style={{ fontFamily: fontDisplay, fontSize: 17, color: "#3A4A2C", marginBottom: 14 }}>
+            Bonjour [Prénom],
+          </div>
+          <div style={{ fontSize: 14.5, lineHeight: 1.7, color: "#4A4A45", whiteSpace: "pre-wrap" }}>
+            {content.intro || "Votre introduction apparaîtra ici…"}
+          </div>
+        </div>
+
+        {/* plats — image pleine largeur + nom + description, empilés */}
+        {plats.length === 0 && (
+          <div style={{ margin: "18px 34px 0", padding: "22px", background: "var(--cream)", borderRadius: 8,
+            textAlign: "center", fontSize: 13, color: "var(--ink-soft)", fontStyle: "italic" }}>
+            Ajoutez 1 à 3 plats ci-contre — ils s'afficheront ici
+          </div>
+        )}
+        {plats.map((p, idx) => (
+          <div key={idx}>
+            {p.image ? (
+              <img src={p.image} alt={p.nom} style={{ width: "100%", display: "block", aspectRatio: "600/300", objectFit: "cover", marginTop: 18 }} />
+            ) : (
+              <div style={{ margin: "22px 34px 0", borderTop: idx > 0 ? "1px solid var(--line)" : "none" }} />
+            )}
+            <div style={{ padding: `${p.image ? "16px" : "14px"} 34px 4px` }}>
+              <div style={{ fontFamily: fontDisplay, fontSize: 19, color: "#3A4A2C" }}>{p.nom}</div>
+              {p.desc && <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "#6A6A60", marginTop: 5 }}>{p.desc}</div>}
+            </div>
+          </div>
+        ))}
+
+        {/* citation */}
+        {content.citation && (
+          <div style={{ margin: "20px 34px 4px", borderLeft: `3px solid ${accent}`, paddingLeft: 18,
+            fontFamily: fontDisplay, fontSize: 14.5, lineHeight: 1.6, color: "#5A6A4A", fontStyle: "italic" }}>
+            « {content.citation} »
+          </div>
+        )}
+
+        {/* CTA */}
+        <div style={{ textAlign: "center", padding: "20px 34px 8px" }}>
+          <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 14,
+            fontWeight: 700, padding: "12px 30px", borderRadius: 25 }}>
+            {content.cta_label || "Voir la carte"}
+          </span>
+        </div>
+
+        {/* signature */}
+        <div style={{ padding: "18px 34px 28px" }}>
+          <div style={{ fontSize: 14, color: "#4A4A45" }}>À très bientôt,</div>
+          <div style={{ fontFamily: fontDisplay, fontSize: 15, color: accentDark, fontStyle: "italic", marginTop: 3 }}>
+            {restoName || "Votre restaurant"}
+          </div>
+        </div>
+
+        {/* footer */}
+        <div style={{ background: "#F4F2EB", borderTop: "1px solid #E4E2D8", padding: "18px 34px", textAlign: "center" }}>
+          <div style={{ fontSize: 11, color: "#9A9A8E" }}>Se désinscrire</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function NouveauForm({ onSaved }: { onSaved: () => void }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [template, setTemplate] = useState("");
@@ -231,6 +356,22 @@ function NouveauForm({ onSaved }: { onSaved: () => void }) {
     setUpLoad(false);
   }
 
+  // Upload d'une image de plat (template Nouveau menu) → content.platN_image
+  async function uploadPlatImage(i: number, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUpErr("");
+    if (!file.type.startsWith("image/")) { setUpErr("Choisissez une image (JPG ou PNG)."); return; }
+    if (file.size > 10 * 1024 * 1024) { setUpErr("Image trop lourde (max 10 Mo)."); return; }
+    setUpLoad(true);
+    const path = `newsletter-plat${i}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+    const { error } = await supabase.storage.from("gallery").upload(path, file);
+    if (error) { setUpErr("Erreur d'upload : " + error.message); setUpLoad(false); return; }
+    const { data } = supabase.storage.from("gallery").getPublicUrl(path);
+    setContent((c) => ({ ...c, [`plat${i}_image`]: data.publicUrl }));
+    setUpLoad(false);
+  }
+
   async function uploadLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -249,7 +390,8 @@ function NouveauForm({ onSaved }: { onSaved: () => void }) {
 
   const tpl = template ? TEMPLATES[template] : null;
   const reqFields = tpl?.fields.filter((f) => f.required) || [];
-  const canStep2 = !!template && !!subject && reqFields.every((f) => !!content[f.key]?.trim());
+  const canStep2 = !!template && !!subject && reqFields.every((f) => !!content[f.key]?.trim())
+    && (template !== "nouveau_menu" || !!content.plat1_nom?.trim());
   const canSend  = sendNow || !!scheduledDate;
 
   async function sauvegarder(lancer: boolean) {
@@ -301,7 +443,7 @@ function NouveauForm({ onSaved }: { onSaved: () => void }) {
 
       {/* Étape 1 : Template + contenu */}
       {step === 1 && (
-        <div style={{ display: "grid", gridTemplateColumns: template === "evenementiel" ? "minmax(0,1fr) 560px" : "1fr", gap: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: (template === "evenementiel" || template === "nouveau_menu") ? "minmax(0,1fr) 560px" : "1fr", gap: 28 }}>
           <div>
             <p className="desc">Choisissez un type de newsletter et rédigez le contenu.</p>
 
@@ -373,6 +515,53 @@ function NouveauForm({ onSaved }: { onSaved: () => void }) {
                     }
                   </div>
                 ))}
+
+                {/* Plats mis en avant — template Nouveau menu (1 obligatoire, 3 max) */}
+                {template === "nouveau_menu" && (
+                  <div style={{ marginTop: 6 }}>
+                    <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: "var(--ink)", marginBottom: 8 }}>
+                      Plats mis en avant <span style={{ color: "var(--admin-accent)" }}>*</span>
+                      <span style={{ fontWeight: 400, color: "var(--ink-soft)", marginLeft: 8, fontSize: 12 }}>1 minimum, 3 maximum — affichés les uns sous les autres</span>
+                    </label>
+                    {[1, 2, 3].map((i) => {
+                      const nom = content[`plat${i}_nom`] || "";
+                      const img = content[`plat${i}_image`] || "";
+                      // N'afficher le bloc i que si le précédent est entamé (saisie progressive)
+                      if (i > 1 && !(content[`plat${i - 1}_nom`] || "").trim() && !nom.trim()) return null;
+                      return (
+                        <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: "14px 16px", marginBottom: 10, background: "#fff" }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-soft)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>
+                            Plat {i}{i === 1 && <span style={{ color: "var(--admin-accent)" }}> *</span>}
+                          </div>
+                          <div className="champ">
+                            <label>Nom du plat</label>
+                            <input value={nom} maxLength={120} placeholder="Ex. Galette forestière"
+                              onChange={(e) => setContent({ ...content, [`plat${i}_nom`]: e.target.value })} />
+                          </div>
+                          <div className="champ">
+                            <label>Description</label>
+                            <input value={content[`plat${i}_desc`] || ""} maxLength={300} placeholder="Ex. Champignons des bois, chèvre frais, noix, roquette"
+                              onChange={(e) => setContent({ ...content, [`plat${i}_desc`]: e.target.value })} />
+                          </div>
+                          <div className="champ" style={{ marginBottom: 0 }}>
+                            <label>Photo (pleine largeur dans l'email — optionnelle)</label>
+                            <label className="btn btn-ligne btn-mini" style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: upLoad ? "default" : "pointer", opacity: upLoad ? .6 : 1 }}>
+                              📷 {upLoad ? "Envoi en cours…" : (img ? "Changer la photo" : "Choisir une photo")}
+                              <input type="file" accept="image/*" onChange={(e) => uploadPlatImage(i, e)} disabled={upLoad} style={{ display: "none" }} />
+                            </label>
+                            {img && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+                                <img src={img} alt="" style={{ width: 64, height: 40, objectFit: "cover", borderRadius: 6, border: "1px solid var(--line)" }} />
+                                <button className="btn btn-mini btn-ligne" onClick={() => setContent((c) => { const n = { ...c }; delete n[`plat${i}_image`]; return n; })}>Retirer</button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {upErr && <div className="alerte" style={{ marginTop: 6 }}>{upErr}</div>}
+                  </div>
+                )}
               </div>
             )}
 
@@ -383,6 +572,9 @@ function NouveauForm({ onSaved }: { onSaved: () => void }) {
 
           {template === "evenementiel" && (
             <EventCanvas subject={subject} content={content} imageUrl={imageUrl} restoName={restoName} logoUrl={logoUrl} />
+          )}
+          {template === "nouveau_menu" && (
+            <MenuCanvas subject={subject} content={content} restoName={restoName} logoUrl={logoUrl} />
           )}
         </div>
       )}
