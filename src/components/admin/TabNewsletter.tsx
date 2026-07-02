@@ -318,13 +318,19 @@ function MenuCanvas({ subject, content, restoName, logoUrl }: {
 }
 
 
-function NouveauForm({ onSaved }: { onSaved: () => void }) {
+// initial : pré-remplissage du formulaire.
+// - Dupliquer une campagne : initial SANS id → nouvelle ligne à la sauvegarde.
+// - Reprendre un brouillon : initial AVEC id → la ligne existante est mise à jour.
+function NouveauForm({ onSaved, initial }: {
+  onSaved: () => void;
+  initial?: { id?: string; template: string; segment: string; subject: string; content: Record<string, string> };
+}) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [template, setTemplate] = useState("");
-  const [segment, setSegment] = useState("optin");
-  const [subject, setSubject] = useState("");
-  const [content, setContent] = useState<Record<string, string>>({});
-  const [imageUrl, setImageUrl] = useState("");
+  const [template, setTemplate] = useState(initial?.template || "");
+  const [segment, setSegment] = useState(initial?.segment || "optin");
+  const [subject, setSubject] = useState(initial?.subject || "");
+  const [content, setContent] = useState<Record<string, string>>(initial?.content || {});
+  const [imageUrl, setImageUrl] = useState(initial?.content?.image_url || "");
   const [upLoad, setUpLoad] = useState(false);
   const [upErr, setUpErr] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
@@ -407,11 +413,25 @@ function NouveauForm({ onSaved }: { onSaved: () => void }) {
 
     const finalContent = imageUrl ? { ...content, image_url: imageUrl } : content;
 
-    const { data: camp, error } = await supabase
-      .from("newsletter_campaigns")
-      .insert({ template, segment, subject, content: finalContent, scheduled_at, status: scheduled_at ? "scheduled" : "draft" })
-      .select()
-      .single();
+    let camp: Campaign | null = null;
+    let error: unknown = null;
+    if (initial?.id) {
+      // Reprise d'un brouillon existant : mise à jour de la ligne
+      const res = await supabase
+        .from("newsletter_campaigns")
+        .update({ template, segment, subject, content: finalContent, scheduled_at, status: scheduled_at ? "scheduled" : "draft" })
+        .eq("id", initial.id)
+        .select()
+        .single();
+      camp = res.data; error = res.error;
+    } else {
+      const res = await supabase
+        .from("newsletter_campaigns")
+        .insert({ template, segment, subject, content: finalContent, scheduled_at, status: scheduled_at ? "scheduled" : "draft" })
+        .select()
+        .single();
+      camp = res.data; error = res.error;
+    }
 
     if (error || !camp) { setBusy(false); setErreur("Erreur lors de la création."); return; }
 
@@ -668,7 +688,22 @@ export default function TabNewsletter() {
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<"liste" | "nouveau">("liste");
   const [filtre, setFiltre] = useState<"toutes" | "draft" | "scheduled" | "sent">("toutes");
+  // Pré-remplissage du formulaire : dupliquer (sans id) ou reprendre un brouillon (avec id)
+  const [prefill, setPrefill] = useState<{ id?: string; template: string; segment: string; subject: string; content: Record<string, string> } | undefined>(undefined);
   const confirm = useConfirm();
+
+  function dupliquer(c: Campaign) {
+    setPrefill({ template: c.template, segment: c.segment, subject: c.subject, content: { ...c.content } });
+    setMode("nouveau");
+  }
+
+  function reprendre(c: Campaign) {
+    setPrefill({ id: c.id, template: c.template, segment: c.segment, subject: c.subject, content: { ...c.content } });
+    setMode("nouveau");
+  }
+
+  const mirrorUrl = (c: Campaign) =>
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/newsletter-mirror?id=${c.id}`;
 
   async function charger() {
     setLoading(true);
@@ -722,6 +757,7 @@ export default function TabNewsletter() {
 
   const nbScheduled = campagnes.filter((c) => c.status === "scheduled").length;
   const nbDraft     = campagnes.filter((c) => c.status === "draft").length;
+  const nbSent      = campagnes.filter((c) => c.status === "sent").length;
 
   return (
     <div className="contenu">
@@ -730,7 +766,7 @@ export default function TabNewsletter() {
           <h1>Newsletter</h1>
           <p className="sous">Campagnes email — {campagnes.length} au total</p>
         </div>
-        <button className="btn btn-accent" onClick={() => setMode(mode === "nouveau" ? "liste" : "nouveau")}>
+        <button className="btn btn-accent" onClick={() => { setPrefill(undefined); setMode(mode === "nouveau" ? "liste" : "nouveau"); }}>
           {mode === "nouveau" ? "← Retour à la liste" : "+ Nouvelle campagne"}
         </button>
       </div>
@@ -738,28 +774,44 @@ export default function TabNewsletter() {
       <div className="contenu" style={{ paddingTop: 20 }}>
 
         {mode === "nouveau" && (
-          <NouveauForm onSaved={() => { setMode("liste"); charger(); }} />
+          <NouveauForm key={prefill?.id || (prefill ? "dup" : "neuf")} initial={prefill}
+            onSaved={() => { setPrefill(undefined); setMode("liste"); charger(); }} />
         )}
 
         {mode === "liste" && (
           <>
             {/* Filtres */}
             <div className="filtres-resa" style={{ marginBottom: 20 }}>
-              <button className={`puce-mini${filtre === "toutes" ? " active" : ""}`} onClick={() => setFiltre("toutes")}>Toutes</button>
+              <button className={`puce-mini${filtre === "toutes" ? " active" : ""}`} onClick={() => setFiltre("toutes")}>
+                Toutes{campagnes.length > 0 ? ` (${campagnes.length})` : ""}
+              </button>
               <button className={`puce-mini${filtre === "scheduled" ? " active" : ""}`} onClick={() => setFiltre("scheduled")}>
                 Planifiées {nbScheduled > 0 && <span className="ps-pip">{nbScheduled}</span>}
               </button>
               <button className={`puce-mini${filtre === "draft" ? " active" : ""}`} onClick={() => setFiltre("draft")}>
                 Brouillons {nbDraft > 0 && <span className="ps-pip">{nbDraft}</span>}
               </button>
-              <button className={`puce-mini${filtre === "sent" ? " active" : ""}`} onClick={() => setFiltre("sent")}>Envoyées</button>
+              <button className={`puce-mini${filtre === "sent" ? " active" : ""}`} onClick={() => setFiltre("sent")}>
+                Envoyées{nbSent > 0 ? ` (${nbSent})` : ""}
+              </button>
             </div>
 
             {loading && <p className="vide">Chargement…</p>}
 
             {!loading && affichees.length === 0 && (
-              <div className="bloc">
-                <p className="vide">Aucune campagne.{filtre === "toutes" ? " Créez votre première newsletter !" : ""}</p>
+              <div className="bloc" style={{ textAlign: "center", padding: "36px 24px" }}>
+                {filtre === "toutes" ? (
+                  <>
+                    <div style={{ fontSize: 34, marginBottom: 10 }}>📮</div>
+                    <p style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 6 }}>Aucune campagne pour l'instant</p>
+                    <p className="vide" style={{ marginBottom: 16 }}>Annoncez un événement, une nouvelle carte ou une actualité à vos inscrits.</p>
+                    <button className="btn btn-accent" onClick={() => { setPrefill(undefined); setMode("nouveau"); }}>
+                      + Créer ma première campagne
+                    </button>
+                  </>
+                ) : (
+                  <p className="vide">Aucune campagne dans ce filtre.</p>
+                )}
               </div>
             )}
 
@@ -770,8 +822,7 @@ export default function TabNewsletter() {
                     <tr>
                       <th>Campagne</th>
                       <th>Segment</th>
-                      <th>Planifiée</th>
-                      <th>Envoyée</th>
+                      <th>Envoi</th>
                       <th>Résultat</th>
                       <th></th>
                     </tr>
@@ -790,14 +841,27 @@ export default function TabNewsletter() {
                               </div>
                             </div>
                           </td>
-                          <td style={{ fontSize: 13 }}>{SEGMENTS[c.segment]?.label || c.segment}</td>
-                          <td style={{ fontSize: 13, color: "var(--ink-soft)" }}>{fmtDatetime(c.scheduled_at)}</td>
-                          <td style={{ fontSize: 13, color: "var(--ink-soft)" }}>{fmtDatetime(c.sent_at)}</td>
+                          <td style={{ fontSize: 13 }}>
+                            {SEGMENTS[c.segment]?.label || c.segment}
+                            {c.status === "sent" && c.recipients_count != null && (
+                              <div className="sub-desc" style={{ fontSize: 11, marginTop: 2 }}>
+                                {c.recipients_count} destinataire{c.recipients_count > 1 ? "s" : ""}
+                              </div>
+                            )}
+                          </td>
+                          {/* Une seule colonne : date d'envoi effective, ou envoi à venir mis en avant */}
+                          <td style={{ fontSize: 13 }}>
+                            {c.status === "scheduled" && c.scheduled_at ? (
+                              <span style={{ color: "var(--admin-accent)", fontWeight: 700 }}>→ {fmtDatetime(c.scheduled_at)}</span>
+                            ) : (
+                              <span style={{ color: "var(--ink-soft)" }}>{fmtDatetime(c.sent_at || c.scheduled_at)}</span>
+                            )}
+                          </td>
                           <td>
                             <span className={`tag ${st.cls}`} style={{ fontSize: 11 }}>{st.label}</span>
-                            {c.status === "sent" && c.sent_count != null && (
-                              <div className="sub-desc" style={{ marginTop: 4, fontSize: 11 }}>
-                                {c.sent_count} / {c.recipients_count ?? "?"} envoyés
+                            {c.status === "sent" && c.sent_count != null && c.recipients_count != null && c.sent_count < c.recipients_count && (
+                              <div style={{ fontSize: 11, color: "var(--annule)", marginTop: 4 }}>
+                                ⚠ {c.sent_count} / {c.recipients_count} envoyés
                               </div>
                             )}
                             {c.error_message && (
@@ -806,11 +870,20 @@ export default function TabNewsletter() {
                           </td>
                           <td>
                             <div className="actions-ligne">
+                              {c.status === "sent" && (
+                                <a className="btn btn-mini btn-ligne" href={mirrorUrl(c)} target="_blank" rel="noreferrer">👁 Voir</a>
+                              )}
                               {(c.status === "draft") && (
-                                <button className="btn btn-mini btn-ok" onClick={() => envoyer(c)}>⚡ Envoyer</button>
+                                <>
+                                  <button className="btn btn-mini btn-ligne" onClick={() => reprendre(c)}>✎ Reprendre</button>
+                                  <button className="btn btn-mini btn-ok" onClick={() => envoyer(c)}>⚡ Envoyer</button>
+                                </>
                               )}
                               {c.status === "scheduled" && (
-                                <button className="btn btn-mini btn-ligne" onClick={() => annuler(c)}>Annuler</button>
+                                <button className="btn btn-mini btn-ligne" onClick={() => annuler(c)}>Annuler l'envoi</button>
+                              )}
+                              {TEMPLATES[c.template] && (
+                                <button className="btn btn-mini btn-ligne" onClick={() => dupliquer(c)}>⧉ Dupliquer</button>
                               )}
                               {(c.status === "draft" || c.status === "failed") && (
                                 <button className="btn btn-mini btn-danger" onClick={() => supprimer(c)}>Supprimer</button>
