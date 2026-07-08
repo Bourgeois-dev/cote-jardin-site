@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTable } from "../../hooks/useTable";
-import { sendReservationEmail } from "../../lib/supabase";
+import { sendReservationEmail, notifyWaitlist } from "../../lib/supabase";
 import type { Reservation, RestaurantTable } from "../../lib/types";
 import PlanService from "./PlanService";
 
@@ -46,7 +46,7 @@ export default function TabReservations({ initialDate }: { initialDate?: string 
       setTimeout(() => setMsg(""), 3000);
     }
   }
-  async function annuler(r: Reservation) { await update(r.id, { status: "annule" }); }
+  async function annuler(r: Reservation) { const ok = await update(r.id, { status: "annule" }); if (ok) notifyWaitlist(r.date, r.time); }
 
   return (
     <>

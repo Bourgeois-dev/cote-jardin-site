@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTable } from "../../hooks/useTable";
-import { supabase, sendReservationEmail } from "../../lib/supabase";
+import { supabase, sendReservationEmail, notifyWaitlist } from "../../lib/supabase";
 import type { Reservation, RestaurantTable, DiningArea, OpeningHour } from "../../lib/types";
 import { useConfirm } from "./Confirm";
 
@@ -115,7 +115,7 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
     const ok = await confirm({ titre: "Annuler cette réservation ?", message: `${r.customer_name} — ${r.covers} cvt, ${r.time}`, confirmer: "Annuler", danger: true });
     if (!ok) return;
     const { error } = await supabase.from("reservations").update({ status: "annule", table_ids: [] }).eq("id", r.id);
-    if (!error) reload();
+    if (!error) { notifyWaitlist(r.date, r.time); reload(); }
   }
   async function enregistrerSaisie() {
     if (!saisie) return;
