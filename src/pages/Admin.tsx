@@ -19,6 +19,12 @@ export default function Admin() {
   const [pwdErr, setPwdErr] = useState("");
 
   useEffect(() => {
+    // Détecte un retour de lien "recovery" directement depuis l'URL (hash ou query),
+    // en complément de l'event PASSWORD_RECOVERY qui peut être émis avant l'abonnement.
+    const hash = window.location.hash;
+    const search = window.location.search;
+    if (hash.includes("type=recovery") || search.includes("type=recovery")) setRecoveryMode(true);
+
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true); });
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
