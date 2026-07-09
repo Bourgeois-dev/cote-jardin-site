@@ -15,12 +15,12 @@ export default function MentionsLegales() {
           {L.capitalSocial ? ` au capital de ${L.capitalSocial}` : ""}.
         </p>
         <ul className="legal-liste">
-          <li>Siège social : {L.siegeSocial}</li>
-          <li>SIRET : {L.siret}</li>
-          <li>RCS : {L.rcs}</li>
-          <li>N° TVA intracommunautaire : {L.tva}</li>
-          <li>Téléphone : {L.telephone}</li>
-          <li>Directeur de la publication : {L.directeurPublication}</li>
+          {L.siegeSocial && <li>Siège social : {L.siegeSocial}</li>}
+          {L.siret && <li>SIRET : {L.siret}</li>}
+          {L.rcs && <li>RCS : {L.rcs}</li>}
+          {L.tva && <li>N° TVA intracommunautaire : {L.tva}</li>}
+          {L.telephone && <li>Téléphone : {L.telephone}</li>}
+          {L.directeurPublication && <li>Directeur de la publication : {L.directeurPublication}</li>}
         </ul>
 
         <h2>Hébergement</h2>
