@@ -1,6 +1,6 @@
 export interface MenuItem { id: string; name: string; category: string; description: string; price: number; position: number; is_active: boolean; }
 export interface GalleryImage { id: string; url: string; alt: string; position: number; is_active: boolean; }
-export interface Partner { id: string; name: string; description: string; image_url: string; category: string; position: number; is_active: boolean; }
+export interface Partner { id: string; name: string; description: string; image_url: string; category: string; website: string; location: string; partner_type: string; featured: boolean; position: number; is_active: boolean; }
 export interface Review { id: string; author: string; rating: number; content: string; position: number; is_active: boolean; }
 export interface SocialLink { id: string; platform: string; url: string; position: number; is_active: boolean; }
 export interface OpeningHour { id: string; day_of_week: number; is_closed: boolean; lunch_open: string | null; lunch_close: string | null; dinner_open: string | null; dinner_close: string | null; }
