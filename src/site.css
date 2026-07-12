@@ -650,7 +650,7 @@ a.pa-card:hover {
    sur le voile sombre du hero. */
 .cj-hero-logo {
   display:block; width:auto;
-  max-width:min(440px, 78vw);
+  max-width:min(378px);
   height:auto; margin:0 0 32px;
   background:rgba(246,243,234,.94);
   padding:clamp(20px,3vw,32px) clamp(28px,4vw,44px);
