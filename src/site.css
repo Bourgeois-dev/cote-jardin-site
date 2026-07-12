@@ -406,16 +406,15 @@ section { padding:clamp(72px,10vw,120px) 0 }
   background:var(--line); cursor:pointer; padding:0; transition:.2s; flex-shrink:0;
 }
 .avis-point.actif { background:var(--accent); width:26px; border-radius:99px }
-.avis-track-wrap {
+.avis-carrousel {
   max-width:1180px; margin:0 auto; padding:0 clamp(20px,5vw,64px); overflow:hidden;
 }
 .avis-piste { display:flex; gap:20px; transition:transform .5s cubic-bezier(.4,0,.2,1) }
-.avis-carte { flex:0 0 calc((100% - 40px) / 3); min-width:0 }
-@media(max-width:900px){ .avis-carte { flex:0 0 calc((100% - 20px) / 2) } }
-@media(max-width:580px){ .avis-carte { flex:0 0 100% } }
-.avis-carte-inner {
+.avis-carte {
+  flex:0 0 100%; min-width:0;
   background:#fff; border:1px solid var(--line);
-  padding:28px 28px 24px; height:100%; display:flex; flex-direction:column;
+  padding:28px 28px 24px; display:flex; flex-direction:column;
+  box-sizing:border-box;
 }
 .avis-etoiles { display:flex; gap:3px; margin-bottom:16px }
 .avis-texte {

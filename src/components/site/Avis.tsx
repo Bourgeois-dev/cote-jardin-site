@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import type { Review } from "../../lib/types";
 
 function Stars({ n }: { n: number }) {
@@ -13,42 +13,33 @@ function Stars({ n }: { n: number }) {
   );
 }
 
-// « Rivière d'avis » : défilement horizontal continu (pas de carrousel).
-// - Pause au survol / focus, reprise au départ du curseur.
-// - La liste est dupliquée pour une boucle sans couture (copie aria-hidden).
-// - Repli en grille statique si prefers-reduced-motion ou moins de 3 avis.
 export default function Avis({ reviews }: { reviews: Review[] }) {
-  const [reduceMotion, setReduceMotion] = useState(false);
-
+  const [idx, setIdx] = useState(0);
+  const total = reviews.length;
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const maj = () => setReduceMotion(mq.matches);
-    maj();
-    mq.addEventListener("change", maj);
-    return () => mq.removeEventListener("change", maj);
-  }, []);
-
-  const defilant = !reduceMotion && reviews.length >= 3;
-  // Vitesse proportionnelle au nombre d'avis (~14s par carte), lente et lisible.
-  const duree = Math.max(30, reviews.length * 14);
-  const liste = defilant ? [...reviews, ...reviews] : reviews;
-
+    if (total <= 1) return;
+    const t = setInterval(() => setIdx((i) => (i + 1) % total), 5500);
+    return () => clearInterval(t);
+  }, [total]);
   return (
     <section className="avis" id="avis">
-      <div className="avis-tete">
-        <div>
-          <span className="eyebrow">Ils ont aimé</span>
-          <h2>Ce qu'ils en disent</h2>
+      <div className="wrap avis-inner">
+        <span className="eyebrow">Ils ont aimé</span>
+        <h2>Avis de nos clients</h2>
+        <div className="avis-carrousel">
+          <div className="avis-piste" style={{ transform: `translateX(-${idx * 100}%)` }}>
+            {reviews.map((r) => (
+              <div className="avis-carte" key={r.id}>
+                <Stars n={r.rating} />
+                <p className="avis-texte">« {r.content} »</p>
+                <div className="avis-auteur">{r.author}</div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-      <div className={`avis-riviere${defilant ? " defilant" : ""}`}>
-        <div className="avis-flux" style={defilant ? { animationDuration: `${duree}s` } : undefined}>
-          {liste.map((r, i) => (
-            <article className="avis-carte" key={`${r.id}-${i}`} aria-hidden={defilant && i >= reviews.length ? true : undefined}>
-              <Stars n={r.rating} />
-              <p className="avis-texte">« {r.content} »</p>
-              <div className="avis-auteur">{r.author}</div>
-            </article>
+        <div className="avis-nav">
+          {reviews.map((_, i) => (
+            <button key={i} className={`avis-point${i === idx ? " actif" : ""}`} onClick={() => setIdx(i)} aria-label={`Avis ${i + 1}`} />
           ))}
         </div>
       </div>
