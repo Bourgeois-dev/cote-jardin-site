@@ -395,7 +395,7 @@ section { padding:clamp(72px,10vw,120px) 0 }
 .avis-carrousel {
   max-width:760px; margin:0 auto; overflow:hidden;
 }
-.avis-piste { display:flex; gap:20px; transition:transform .5s cubic-bezier(.4,0,.2,1) }
+.avis-piste { display:flex; transition:transform .5s cubic-bezier(.4,0,.2,1) }
 .avis-carte {
   flex:0 0 100%; min-width:0;
   background:#fff; border:1px solid var(--line);
