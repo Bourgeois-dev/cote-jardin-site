@@ -12,7 +12,11 @@ export default function Navbar({ onReserve, reserveLabel = "Réserver", flags }:
   return (
     <header className="nav-header">
       <div className="wrap nav">
-        <a className="brand" href="#" onClick={close}>{import.meta.env.VITE_RESTO_NAME || "Restaurant"}</a>
+        <a className="brand" href="#" onClick={close}>
+          {import.meta.env.VITE_RESTO_LOGO
+            ? <img className="brand-logo" src={import.meta.env.VITE_RESTO_LOGO} alt={import.meta.env.VITE_RESTO_NAME || "Restaurant"} />
+            : (import.meta.env.VITE_RESTO_NAME || "Restaurant")}
+        </a>
 
         {/* Desktop */}
         <ul className="nav-links">

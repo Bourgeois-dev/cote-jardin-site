@@ -63,8 +63,14 @@ export default function Hero({
             <span className="cj-hero-trait" />
           </p>
         )}
-        <h1 className="cj-hero-titre">{name}</h1>
-        {tagline && <p className="cj-hero-tagline">{tagline}</p>}
+        {import.meta.env.VITE_RESTO_LOGO ? (
+          <img className="cj-hero-logo" src={import.meta.env.VITE_RESTO_LOGO} alt={name} />
+        ) : (
+          <>
+            <h1 className="cj-hero-titre">{name}</h1>
+            {tagline && <p className="cj-hero-tagline">{tagline}</p>}
+          </>
+        )}
         <div className="cj-hero-cta">
           <button className="btn btn-accent" onClick={onReserve}>
             {reserveLabel}
