@@ -48,10 +48,11 @@ function Carte({ p }: { p: Partner }) {
 }
 
 export default function Partenaires({ partners }: { partners: Partner[] }) {
-  // Actifs uniquement, mis en avant d'abord, puis position croissante
+  // Actifs uniquement, dans l'ordre manuel défini en admin (position).
+  // "featured" ne joue que sur le style visuel, pas sur le placement.
   const liste = partners
     .filter((p) => p.is_active)
-    .sort((a, b) => (Number(b.featured) - Number(a.featured)) || (a.position - b.position));
+    .sort((a, b) => a.position - b.position);
 
   if (!liste.length) return null;
 
