@@ -63,10 +63,10 @@ export default function TabParametres() {
   );
   return (
     <>
-      <div className="topbar"><div><h1>Réservations & site</h1><div className="sous">Paramètres de réservation en ligne</div></div></div>
+      <div className="topbar"><div><h1>Réservations & site</h1><div className="sous">Ce que voient vos clients sur le site public</div></div></div>
       <div className="contenu"><div className="bloc">
         <label className="ligne-toggle" style={{ paddingTop: 0 }}>
-          <span className="lib"><b>Activer la réservation en ligne</b><span>Si désactivé, seul le bouton d'appel est affiché.</span></span>
+          <span className="lib"><b>Réservation en ligne sur le site</b><span>Affiche le widget de réservation aux visiteurs. Si désactivé, seul le bouton d'appel apparaît.</span></span>
           <span className="toggle"><input type="checkbox" checked={s.enabled} onChange={(e) => setS({ ...s, enabled: e.target.checked })} /><span className="piste" /></span>
         </label>
         {s.enabled && (
@@ -76,7 +76,7 @@ export default function TabParametres() {
           </label>
         )}
         <label className="ligne-toggle">
-          <span className="lib"><b>Afficher le bloc « Newsletter / actualités »</b><span>Le formulaire d'inscription en bas du site.</span></span>
+          <span className="lib"><b>Bloc « Newsletter / actualités » sur le site</b><span>Affiche le formulaire d'inscription en bas du site public.</span></span>
           <span className="toggle"><input type="checkbox" checked={newsletterOn} onChange={(e) => toggleNewsletter(e.target.checked)} /><span className="piste" /></span>
         </label>
         <div className="grid2" style={{ marginTop: 18 }}>

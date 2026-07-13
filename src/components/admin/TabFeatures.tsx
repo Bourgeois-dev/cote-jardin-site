@@ -27,8 +27,10 @@ export default function TabFeatures() {
             <div>
               <h2>Modules actifs</h2>
               <div className="desc">
-                Les modifications sont prises en compte au prochain chargement de l'interface
-                par le restaurateur. Un module désactivé masque l'onglet correspondant.
+                Ces réglages contrôlent quels <b>onglets sont visibles dans l'administration</b> du
+                restaurateur — ils n'affectent pas l'affichage du site public (géré depuis
+                « Réservations &amp; site »). Un module désactivé masque l'onglet correspondant,
+                au prochain chargement de l'interface.
               </div>
             </div>
           </div>
