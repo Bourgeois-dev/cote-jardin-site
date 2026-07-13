@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../../lib/supabase";
-import { useTable } from "../../hooks/useTable";
 import type { Customer, Reservation } from "../../lib/types";
 import { useConfirm } from "./Confirm";
 
@@ -23,9 +22,14 @@ function badgeClient(c: Customer) {
   return null;
 }
 
+const PAGE = 50; // fiches chargées par défaut / par recherche
+
 export default function TabClients() {
-  const { rows: clients, loading, update, remove } = useTable<Customer>("customers", "name", true);
   const confirm = useConfirm();
+  const [clients, setClients] = useState<Customer[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [premier, setPremier] = useState(true);
   const [recherche, setRecherche] = useState("");
   const [tri, setTri] = useState<"last_visit" | "bookings_count" | "name">("last_visit");
   const [selId, setSelId] = useState<string | null>(null);
@@ -35,18 +39,45 @@ export default function TabClients() {
   const [noteSaved, setNoteSaved] = useState(false);
   const [prefInput, setPrefInput] = useState("");
 
-  const liste = useMemo(() => {
-    const q = recherche.trim().toLowerCase();
-    let r = clients.filter((c) =>
-      !q || c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q)
-    );
-    return [...r].sort((a, b) => {
-      if (tri === "name") return (a.name || "").localeCompare(b.name || "");
-      if (tri === "bookings_count") return b.bookings_count - a.bookings_count;
-      return (b.last_visit || "").localeCompare(a.last_visit || "");
-    });
-  }, [clients, recherche, tri]);
+  const ordreCol = tri === "name" ? "name" : tri === "bookings_count" ? "bookings_count" : "last_visit";
+  const ordreAsc = tri === "name";
 
+  // Chargement serveur : recherche (ilike) + tri + limite. Debounce sur la saisie.
+  const chargerListe = useCallback(async (q: string) => {
+    setLoading(true);
+    let req = supabase.from("customers").select("*", { count: "exact" });
+    const terme = q.trim();
+    if (terme) {
+      const like = `%${terme}%`;
+      req = req.or(`name.ilike.${like},email.ilike.${like},phone.ilike.${like}`);
+    }
+    const { data, count } = await req.order(ordreCol, { ascending: ordreAsc, nullsFirst: false }).limit(PAGE);
+    setClients((data as Customer[]) || []);
+    setTotal(count ?? null);
+    setLoading(false);
+    setPremier(false);
+  }, [ordreCol, ordreAsc]);
+
+  useEffect(() => {
+    const t = setTimeout(() => chargerListe(recherche), recherche ? 300 : 0);
+    return () => clearTimeout(t);
+  }, [recherche, chargerListe]);
+
+  // Rafraîchit la liste + la fiche sélectionnée après une mutation
+  async function refresh() { await chargerListe(recherche); }
+  async function update(id: string, vals: Partial<Customer>) {
+    const { error } = await supabase.from("customers").update(vals).eq("id", id);
+    if (error) { console.error(error); return; }
+    setClients((cs) => cs.map((c) => c.id === id ? { ...c, ...vals } as Customer : c));
+  }
+  async function remove(id: string) {
+    const { error } = await supabase.from("customers").delete().eq("id", id);
+    if (error) { console.error(error); return; }
+    await refresh();
+  }
+
+  // La liste est déjà triée et filtrée côté serveur.
+  const liste = clients;
   const sel = clients.find((c) => c.id === selId) || null;
 
   useEffect(() => {
@@ -95,14 +126,14 @@ export default function TabClients() {
     setSelId(null);
   }
 
-  if (loading) return <div className="contenu"><p className="sub-desc">Chargement…</p></div>;
+  if (premier) return <div className="contenu"><p className="sub-desc">Chargement…</p></div>;
 
   const prefs = sel?.notes ? sel.notes.split("\n").filter(Boolean) : [];
 
   return (
     <>
       <div className="topbar">
-        <div><h1>Clients</h1><div className="sous">Historique et fiches — {clients.length} client(s)</div></div>
+        <div><h1>Clients</h1><div className="sous">Historique et fiches — {total ?? clients.length} client(s)</div></div>
       </div>
       <div className="contenu cli-contenu">
         <div className="cli-layout">
@@ -134,6 +165,11 @@ export default function TabClients() {
                 );
               })}
             </ul>
+            {!loading && total !== null && total > clients.length && (
+              <p className="sub-desc" style={{ marginTop: 10, fontSize: 12 }}>
+                {clients.length} sur {total} affichés — précisez votre recherche pour trouver un client.
+              </p>
+            )}
           </div>
 
           {/* ── Colonne fiche ── */}
