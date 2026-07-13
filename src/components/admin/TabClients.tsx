@@ -32,6 +32,8 @@ export default function TabClients() {
   const [premier, setPremier] = useState(true);
   const [recherche, setRecherche] = useState("");
   const [tri, setTri] = useState<"last_visit" | "bookings_count" | "name">("last_visit");
+  const [vipOnly, setVipOnly] = useState(false);
+  const [limite, setLimite] = useState(PAGE);
   const [selId, setSelId] = useState<string | null>(null);
   const [histo, setHisto] = useState<Reservation[]>([]);
   const [histoLoad, setHistoLoad] = useState(false);
@@ -42,8 +44,8 @@ export default function TabClients() {
   const ordreCol = tri === "name" ? "name" : tri === "bookings_count" ? "bookings_count" : "last_visit";
   const ordreAsc = tri === "name";
 
-  // Chargement serveur : recherche (ilike) + tri + limite. Debounce sur la saisie.
-  const chargerListe = useCallback(async (q: string) => {
+  // Chargement serveur : recherche (ilike) + filtre VIP + tri + limite paginée.
+  const chargerListe = useCallback(async (q: string, lim: number) => {
     setLoading(true);
     let req = supabase.from("customers").select("*", { count: "exact" });
     const terme = q.trim();
@@ -51,20 +53,30 @@ export default function TabClients() {
       const like = `%${terme}%`;
       req = req.or(`name.ilike.${like},email.ilike.${like},phone.ilike.${like}`);
     }
-    const { data, count } = await req.order(ordreCol, { ascending: ordreAsc, nullsFirst: false }).limit(PAGE);
+    if (vipOnly) req = req.eq("is_vip", true);
+    const { data, count } = await req.order(ordreCol, { ascending: ordreAsc, nullsFirst: false }).limit(lim);
     setClients((data as Customer[]) || []);
     setTotal(count ?? null);
     setLoading(false);
     setPremier(false);
-  }, [ordreCol, ordreAsc]);
+  }, [ordreCol, ordreAsc, vipOnly]);
 
+  // Recherche / tri / filtre VIP : on repart à la première page.
   useEffect(() => {
-    const t = setTimeout(() => chargerListe(recherche), recherche ? 300 : 0);
+    setLimite(PAGE);
+    const t = setTimeout(() => chargerListe(recherche, PAGE), recherche ? 300 : 0);
     return () => clearTimeout(t);
   }, [recherche, chargerListe]);
 
+  // "Charger plus" : recharge avec une limite plus grande.
+  function chargerPlus() {
+    const nouvelle = limite + PAGE;
+    setLimite(nouvelle);
+    chargerListe(recherche, nouvelle);
+  }
+
   // Rafraîchit la liste + la fiche sélectionnée après une mutation
-  async function refresh() { await chargerListe(recherche); }
+  async function refresh() { await chargerListe(recherche, limite); }
   async function update(id: string, vals: Partial<Customer>) {
     const { error } = await supabase.from("customers").update(vals).eq("id", id);
     if (error) { console.error(error); return; }
@@ -146,6 +158,7 @@ export default function TabClients() {
               <button className={`puce-mini${tri === "last_visit" ? " active" : ""}`} onClick={() => setTri("last_visit")}>Récents</button>
               <button className={`puce-mini${tri === "bookings_count" ? " active" : ""}`} onClick={() => setTri("bookings_count")}>Fidèles</button>
               <button className={`puce-mini${tri === "name" ? " active" : ""}`} onClick={() => setTri("name")}>A→Z</button>
+              <button className={`puce-mini${vipOnly ? " active" : ""}`} onClick={() => setVipOnly((v) => !v)}>★ VIP</button>
             </div>
             {liste.length === 0 && <p className="sub-desc" style={{ marginTop: 14 }}>Aucun client.</p>}
             <ul className="cli-items">
@@ -166,10 +179,12 @@ export default function TabClients() {
               })}
             </ul>
             {!loading && total !== null && total > clients.length && (
-              <p className="sub-desc" style={{ marginTop: 10, fontSize: 12 }}>
-                {clients.length} sur {total} affichés — précisez votre recherche pour trouver un client.
-              </p>
+              <div className="cli-plus">
+                <button className="btn btn-ligne btn-mini" onClick={chargerPlus}>Charger plus</button>
+                <span className="sub-desc" style={{ fontSize: 12 }}>{clients.length} sur {total}</span>
+              </div>
             )}
+            {loading && !premier && <p className="sub-desc" style={{ marginTop: 10, fontSize: 12 }}>Chargement…</p>}
           </div>
 
           {/* ── Colonne fiche ── */}

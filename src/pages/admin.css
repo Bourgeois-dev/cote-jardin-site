@@ -764,3 +764,6 @@ a.cli-coord-val:hover { text-decoration:underline }
   background:linear-gradient(to top, rgba(0,0,0,.72), transparent);
   pointer-events:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
+
+/* Bouton "Charger plus" sous la liste clients */
+.cli-plus { display:flex; align-items:center; gap:12px; margin-top:12px; padding:0 2px }
