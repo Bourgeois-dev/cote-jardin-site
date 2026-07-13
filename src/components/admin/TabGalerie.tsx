@@ -82,8 +82,8 @@ export default function TabGalerie() {
       </div></div>
 
       {edit && (
-        <div className="modal-fond" onClick={() => setEdit(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop" onClick={() => setEdit(null)}>
+          <div className="modal-in" onClick={(e) => e.stopPropagation()}>
             <h2>Texte de la photo</h2>
             <img src={edit.url} alt="" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 8, margin: "12px 0" }} />
             <div className="champ"><label>Légende (affichée sur le site)</label><input value={edit.caption || ""} onChange={(e) => setEdit({ ...edit, caption: e.target.value })} placeholder="Ex. Notre terrasse en été" /></div>
