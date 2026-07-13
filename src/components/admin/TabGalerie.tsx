@@ -67,8 +67,10 @@ export default function TabGalerie() {
                  onDragOver={(e) => e.preventDefault()}
                  onDrop={() => onDrop(g.id)}
                  style={{ opacity: g.is_active ? 1 : 0.45, cursor: "grab" }}>
-              <img src={g.url} alt={g.alt || ""} />
-              {g.caption && <div className="ga-legende">{g.caption}</div>}
+              <div className="ga-visuel">
+                <img src={g.url} alt={g.alt || ""} />
+                {g.caption && <div className="ga-legende">{g.caption}</div>}
+              </div>
               <div className="ga-actions">
                 <label className="toggle"><input type="checkbox" checked={g.is_active} onChange={(e) => update(g.id, { is_active: e.target.checked })} /><span className="piste" /></label>
                 <button className="btn btn-mini btn-ligne" onClick={() => setEdit(g)}>Texte</button>
