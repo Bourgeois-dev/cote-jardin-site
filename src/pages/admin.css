@@ -802,3 +802,14 @@ tr:hover .drag-poignee { color:var(--ink-soft) }
 }
 .prix-btn:hover { border-color:var(--line); background:var(--cream) }
 .prix-inline { width:80px; border:1px solid var(--accent); border-radius:6px; padding:4px 8px; font:inherit }
+
+/* Onglets de zones dans le plan de service (Salle / Terrasse…) */
+.zones-barre { display:flex; align-items:center; gap:6px; flex-wrap:wrap }
+.zone-onglet {
+  padding:6px 14px; border-radius:99px;
+  border:1.5px solid var(--line); background:#fff; color:var(--ink-soft);
+  font-family:inherit; font-size:13px; font-weight:600;
+  cursor:pointer; transition:.15s;
+}
+.zone-onglet:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
+.zone-onglet.active { background:var(--admin-accent); border-color:var(--admin-accent); color:#fff }
