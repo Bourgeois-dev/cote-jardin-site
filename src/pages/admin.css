@@ -773,3 +773,32 @@ a.cli-coord-val:hover { text-decoration:underline }
 
 /* Barre de filtres statut (Toutes / En attente / Confirmées) dans le plan de service */
 .ps-filtres { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px }
+
+/* ============ Onglet La carte — groupes, drag & drop, prix inline ============ */
+.carte-outils { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:14px }
+.carte-outils .carnet-search { max-width:260px }
+.carte-cats-filtre { display:flex; gap:6px; flex-wrap:wrap }
+.carte-cat-row td { padding:0 !important; border-bottom:none !important }
+.carte-cat-tete {
+  display:flex; align-items:center; gap:10px;
+  background:var(--cream); border-radius:8px;
+  padding:9px 12px; margin:16px 0 6px;
+  font-size:14px;
+}
+.carte-cat-nb { font-size:12px; color:var(--ink-soft) }
+.carte-cat-fleches { margin-left:auto; display:flex; gap:4px }
+.carte-cat-fleches button {
+  width:24px; height:24px; border:1px solid var(--line); background:#fff;
+  border-radius:6px; cursor:pointer; font-size:10px; line-height:1; color:var(--ink-soft);
+}
+.carte-cat-fleches button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent) }
+.carte-cat-fleches button:disabled { opacity:.35; cursor:default }
+.carte-plat-masque { opacity:.5 }
+.drag-poignee { color:var(--line); font-size:14px; user-select:none }
+tr:hover .drag-poignee { color:var(--ink-soft) }
+.prix-btn {
+  background:none; border:1px dashed transparent; border-radius:6px;
+  padding:4px 8px; cursor:pointer; font:inherit; color:var(--ink);
+}
+.prix-btn:hover { border-color:var(--line); background:var(--cream) }
+.prix-inline { width:80px; border:1px solid var(--accent); border-radius:6px; padding:4px 8px; font:inherit }

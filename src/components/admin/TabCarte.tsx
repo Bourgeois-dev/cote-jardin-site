@@ -9,7 +9,7 @@ const TYPES_OK = ["application/pdf", "image/png", "image/jpeg"];
 
 export default function TabCarte() {
   const confirm = useConfirm();
-  const { rows, insert, update, remove } = useTable<MenuItem>("menu_items");
+  const { rows, reload, insert, update, remove } = useTable<MenuItem>("menu_items");
 
   // Carte téléchargeable (fichier PDF/PNG/JPG) — stockée dans le bucket "menu",
   // son URL est mémorisée dans site_content (clé "menu_file").
@@ -52,13 +52,89 @@ export default function TabCarte() {
   async function supprimer(m: MenuItem) {
     if (await confirm({ titre: "Supprimer ce plat ?", message: `« ${m.name} » sera retiré de la carte.`, confirmer: "Supprimer", danger: true })) remove(m.id);
   }
+
   const [edit, setEdit] = useState<Partial<MenuItem> | null>(null);
   const [newCat, setNewCat] = useState(false);
   const [catText, setCatText] = useState("");
+  const [q, setQ] = useState("");                       // recherche
+  const [catFiltre, setCatFiltre] = useState("");       // filtre catégorie ("" = toutes)
+  const [prixEdit, setPrixEdit] = useState<{ id: string; val: string } | null>(null); // prix inline
+  const dragId = useRef<string | null>(null);
 
-  const cats = Array.from(new Set([...CAT_BASE, ...rows.map((r) => r.category).filter(Boolean)]));
+  // Ordre global : plats triés par position ; catégories dans l'ordre de 1re apparition.
+  const ordered = [...rows].sort((a, b) => a.position - b.position);
+  const catsOrdre: string[] = [];
+  ordered.forEach((m) => { if (m.category && !catsOrdre.includes(m.category)) catsOrdre.push(m.category); });
+  const cats = Array.from(new Set([...catsOrdre, ...CAT_BASE]));
 
-  function nouveau() { setEdit({ name: "", category: "Plats", description: "", price: 0, is_active: true }); setNewCat(false); setCatText(""); }
+  // Recherche/filtre : simple filtrage client (la carte reste petite).
+  const terme = q.trim().toLowerCase();
+  const visible = (m: MenuItem) =>
+    (!terme || m.name.toLowerCase().includes(terme) || (m.description || "").toLowerCase().includes(terme))
+    && (!catFiltre || m.category === catFiltre);
+  const enRecherche = !!terme || !!catFiltre;
+
+  // Persiste un nouvel ordre global (blocs de catégories contigus).
+  async function persisterOrdre(catOrder: string[], groupes: Record<string, MenuItem[]>) {
+    let i = 0;
+    const maj: { id: string; pos: number }[] = [];
+    catOrder.forEach((cat) => (groupes[cat] || []).forEach((m) => { if (m.position !== i) maj.push({ id: m.id, pos: i }); i++; }));
+    await Promise.all(maj.map((u) => supabase.from("menu_items").update({ position: u.pos }).eq("id", u.id)));
+    reload();
+  }
+  function groupesActuels(): Record<string, MenuItem[]> {
+    const g: Record<string, MenuItem[]> = {};
+    catsOrdre.forEach((c) => { g[c] = ordered.filter((m) => m.category === c); });
+    return g;
+  }
+
+  // Drag & drop d'un plat au sein de sa catégorie.
+  async function onDropPlat(cible: MenuItem) {
+    const src = dragId.current; dragId.current = null;
+    if (!src || src === cible.id) return;
+    const srcItem = ordered.find((m) => m.id === src);
+    if (!srcItem || srcItem.category !== cible.category) return; // même catégorie uniquement
+    const g = groupesActuels();
+    const bloc = g[cible.category];
+    const from = bloc.findIndex((m) => m.id === src);
+    const to = bloc.findIndex((m) => m.id === cible.id);
+    const [dep] = bloc.splice(from, 1);
+    bloc.splice(to, 0, dep);
+    await persisterOrdre(catsOrdre, g);
+  }
+
+  // Monter/descendre une catégorie entière.
+  async function bougerCat(cat: string, dir: -1 | 1) {
+    const idx = catsOrdre.indexOf(cat);
+    const cible = idx + dir;
+    if (cible < 0 || cible >= catsOrdre.length) return;
+    const nouvelOrdre = [...catsOrdre];
+    [nouvelOrdre[idx], nouvelOrdre[cible]] = [nouvelOrdre[cible], nouvelOrdre[idx]];
+    await persisterOrdre(nouvelOrdre, groupesActuels());
+  }
+
+  // Prix inline : Entrée ou blur enregistre.
+  async function validerPrix() {
+    if (!prixEdit) return;
+    const val = parseFloat(prixEdit.val.replace(",", "."));
+    if (!isNaN(val) && val >= 0) await update(prixEdit.id, { price: val });
+    setPrixEdit(null);
+  }
+
+  // Dupliquer un plat (ajouté à la suite dans sa catégorie).
+  async function dupliquer(m: MenuItem) {
+    const { data } = await supabase.from("menu_items")
+      .insert({ name: `${m.name} (copie)`, category: m.category, description: m.description, price: m.price, is_active: false, position: 9999 })
+      .select("id").single();
+    if (data) {
+      const g = groupesActuels();
+      const copie = { ...m, id: data.id, name: `${m.name} (copie)`, is_active: false, position: 9999 };
+      g[m.category] = [...g[m.category], copie];
+      await persisterOrdre(catsOrdre, g);
+    }
+  }
+
+  function nouveau() { setEdit({ name: "", category: catsOrdre[0] || "Plats", description: "", price: 0, is_active: true }); setNewCat(false); setCatText(""); }
   function modifier(m: MenuItem) { setEdit({ ...m }); setNewCat(false); setCatText(""); }
 
   async function save() {
@@ -66,7 +142,18 @@ export default function TabCarte() {
     let category = edit.category;
     if (newCat) { if (!catText.trim()) return; category = catText.trim(); }
     const vals = { name: edit.name, category, description: edit.description || "", price: edit.price || 0, is_active: edit.is_active !== false };
-    if (edit.id) await update(edit.id, vals); else await insert({ ...vals, position: 99 });
+    if (edit.id) {
+      await update(edit.id, vals);
+    } else {
+      const { data } = await supabase.from("menu_items").insert({ ...vals, position: 9999 }).select("id").single();
+      if (data) {
+        const g = groupesActuels();
+        const item = { ...(vals as MenuItem), id: data.id, position: 9999 };
+        const ordre = catsOrdre.includes(category!) ? catsOrdre : [...catsOrdre, category!];
+        g[category!] = [...(g[category!] || []), item];
+        await persisterOrdre(ordre, g);
+      }
+    }
     setEdit(null);
   }
 
@@ -100,20 +187,71 @@ export default function TabCarte() {
 
   return (
     <>
-      <div className="topbar"><div><h1>La carte</h1><div className="sous">Vos plats, regroupés par catégorie</div></div></div>
+      <div className="topbar"><div><h1>La carte</h1><div className="sous">Vos plats, dans l'ordre du site — glissez-déposez pour réordonner</div></div></div>
       <div className="contenu"><div className="bloc">
         <div className="bloc-tete"><div><h2>Vos plats</h2></div><button className="btn btn-accent" onClick={nouveau}>+ Ajouter un plat</button></div>
-        <table><thead><tr><th style={{ width: 56 }}>Visible</th><th>Plat</th><th>Catégorie</th><th>Prix</th><th></th></tr></thead><tbody>
-          {rows.length ? rows.map((m) => (
-            <tr key={m.id}>
-              <td><label className="toggle"><input type="checkbox" checked={m.is_active} onChange={(e) => update(m.id, { is_active: e.target.checked })} /><span className="piste" /></label></td>
-              <td><b style={m.is_active ? {} : { color: "var(--gris)" }}>{m.name}</b>{m.description && <div className="sub-desc">{m.description}</div>}</td>
-              <td>{m.category}</td>
-              <td>{m.price ? `${m.price} €` : "—"}</td>
-              <td><div className="actions-ligne"><button className="btn btn-mini btn-ligne" onClick={() => modifier(m)}>Modifier</button><button className="btn btn-mini btn-danger" onClick={() => supprimer(m)}>Supprimer</button></div></td>
-            </tr>
-          )) : <tr><td colSpan={5} className="vide">Aucun plat. Ajoutez-en un.</td></tr>}
-        </tbody></table>
+
+        <div className="carte-outils">
+          <input className="carnet-search" placeholder="Rechercher un plat…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <div className="carte-cats-filtre">
+            <button className={`puce-mini${!catFiltre ? " active" : ""}`} onClick={() => setCatFiltre("")}>Toutes</button>
+            {catsOrdre.map((c) => <button key={c} className={`puce-mini${catFiltre === c ? " active" : ""}`} onClick={() => setCatFiltre(catFiltre === c ? "" : c)}>{c}</button>)}
+          </div>
+        </div>
+
+        {ordered.length ? (
+          <table><thead><tr><th style={{ width: 30 }}></th><th style={{ width: 56 }}>Visible</th><th>Plat</th><th style={{ width: 110 }}>Prix</th><th></th></tr></thead>
+            {catsOrdre.filter((cat) => !catFiltre || cat === catFiltre).map((cat) => {
+              const plats = ordered.filter((m) => m.category === cat && visible(m));
+              if (enRecherche && !plats.length) return null;
+              return (
+                <tbody key={cat}>
+                  <tr className="carte-cat-row"><td colSpan={5}>
+                    <div className="carte-cat-tete">
+                      <b>{cat}</b><span className="carte-cat-nb">{ordered.filter((m) => m.category === cat).length} plat(s)</span>
+                      {!enRecherche && (
+                        <span className="carte-cat-fleches">
+                          <button onClick={() => bougerCat(cat, -1)} disabled={catsOrdre.indexOf(cat) === 0} aria-label="Monter la catégorie">▲</button>
+                          <button onClick={() => bougerCat(cat, 1)} disabled={catsOrdre.indexOf(cat) === catsOrdre.length - 1} aria-label="Descendre la catégorie">▼</button>
+                        </span>
+                      )}
+                    </div>
+                  </td></tr>
+                  {plats.map((m) => (
+                    <tr key={m.id}
+                        className={m.is_active ? "" : "carte-plat-masque"}
+                        draggable={!enRecherche}
+                        onDragStart={() => { dragId.current = m.id; }}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => onDropPlat(m)}
+                        style={enRecherche ? {} : { cursor: "grab" }}>
+                      <td className="drag-poignee" aria-hidden="true">{enRecherche ? "" : "⠿"}</td>
+                      <td><label className="toggle"><input type="checkbox" checked={m.is_active} onChange={(e) => update(m.id, { is_active: e.target.checked })} /><span className="piste" /></label></td>
+                      <td><b>{m.name}</b>{m.description && <div className="sub-desc">{m.description}</div>}</td>
+                      <td>
+                        {prixEdit?.id === m.id ? (
+                          <input className="prix-inline" autoFocus value={prixEdit.val}
+                                 onChange={(e) => setPrixEdit({ id: m.id, val: e.target.value })}
+                                 onBlur={validerPrix}
+                                 onKeyDown={(e) => { if (e.key === "Enter") validerPrix(); if (e.key === "Escape") setPrixEdit(null); }} />
+                        ) : (
+                          <button className="prix-btn" onClick={() => setPrixEdit({ id: m.id, val: String(m.price ?? "") })} title="Modifier le prix">
+                            {m.price ? `${m.price} €` : "—"}
+                          </button>
+                        )}
+                      </td>
+                      <td><div className="actions-ligne">
+                        <button className="btn btn-mini btn-ligne" onClick={() => modifier(m)}>Modifier</button>
+                        <button className="btn btn-mini btn-ligne" onClick={() => dupliquer(m)} title="Dupliquer">⧉</button>
+                        <button className="btn btn-mini btn-danger" onClick={() => supprimer(m)}>Supprimer</button>
+                      </div></td>
+                    </tr>
+                  ))}
+                </tbody>
+              );
+            })}
+          </table>
+        ) : <div className="vide">Aucun plat. Ajoutez-en un.</div>}
       </div>
 
       <div className="bloc">
