@@ -813,3 +813,10 @@ tr:hover .drag-poignee { color:var(--ink-soft) }
 }
 .zone-onglet:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
 .zone-onglet.active { background:var(--admin-accent); border-color:var(--admin-accent); color:#fff }
+
+/* Compteur de destinataires sur les cartes de segment (newsletter) */
+.seg-compteur {
+  font-family:var(--font-mono, monospace); font-size:11.5px; font-weight:600;
+  color:var(--ink-soft); background:var(--cream); border:1px solid var(--line);
+  border-radius:99px; padding:3px 10px; white-space:nowrap;
+}

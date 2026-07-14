@@ -68,8 +68,12 @@ const TYPE_DISPLAY: Record<string, { label: string; icon: string }> = {
 };
 
 const SEGMENTS: Record<string, { label: string; desc: string }> = {
-  optin:     { label: "Opt-in newsletter", desc: "Tous les inscrits — via le formulaire newsletter ou l'opt-in proposé à la réservation" },
-  optin_vip: { label: "VIP",               desc: "Inscrits newsletter marqués VIP dans le CRM" },
+  optin:      { label: "Opt-in newsletter", desc: "Tous les inscrits — via le formulaire newsletter ou l'opt-in proposé à la réservation" },
+  optin_vip:  { label: "VIP",               desc: "Inscrits newsletter marqués VIP dans le CRM" },
+  inactif_1m: { label: "Pas venus depuis 1 mois",  desc: "Inscrits dont la dernière venue remonte à plus d'un mois" },
+  inactif_2m: { label: "Pas venus depuis 2 mois",  desc: "Inscrits dont la dernière venue remonte à plus de deux mois" },
+  inactif_6m: { label: "Pas venus depuis 6 mois",  desc: "Inscrits dont la dernière venue remonte à plus de six mois" },
+  jamais_venu:{ label: "Jamais venus",             desc: "Inscrits newsletter sans aucune venue enregistrée" },
 };
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
@@ -451,6 +455,14 @@ function NouveauForm({ onSaved, initial }: {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [template, setTemplate] = useState(initial?.template || "");
   const [segment, setSegment] = useState(initial?.segment || "optin");
+  const [counts, setCounts] = useState<Record<string, number> | null>(null);
+
+  // Nombre de destinataires par segment (RPC : même logique que l'envoi réel)
+  useEffect(() => {
+    supabase.rpc("newsletter_segment_counts").then(({ data }) => {
+      if (data) setCounts(data as Record<string, number>);
+    });
+  }, []);
   const [subject, setSubject] = useState(initial?.subject || "");
   const [content, setContent] = useState<Record<string, string>>(initial?.content || {});
   const [imageUrl, setImageUrl] = useState(initial?.content?.image_url || "");
@@ -741,7 +753,12 @@ function NouveauForm({ onSaved, initial }: {
                   <span style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>{s.label}</span>
                   <span style={{ fontSize: 12, color: "var(--ink-soft)", marginLeft: 10 }}>{s.desc}</span>
                 </div>
-                {segment === key && <span style={{ color: "var(--admin-accent)", fontWeight: 700 }}>✓</span>}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+                  <span className="seg-compteur">
+                    {counts ? `${counts[key] ?? 0} contact${(counts[key] ?? 0) > 1 ? "s" : ""}` : "…"}
+                  </span>
+                  {segment === key && <span style={{ color: "var(--admin-accent)", fontWeight: 700 }}>✓</span>}
+                </div>
               </button>
             ))}
           </div>
@@ -790,7 +807,7 @@ function NouveauForm({ onSaved, initial }: {
           )}
 
           <div style={{ background: "var(--cream)", borderRadius: 8, padding: "12px 16px", fontSize: 13, marginBottom: 20 }}>
-            <b>Récap</b> — Template : {TEMPLATES[template]?.label} · Segment : {SEGMENTS[segment]?.label} · Objet : {subject}
+            <b>Récap</b> — Template : {TEMPLATES[template]?.label} · Segment : {SEGMENTS[segment]?.label}{counts ? ` (${counts[segment] ?? 0} destinataire${(counts[segment] ?? 0) > 1 ? "s" : ""})` : ""} · Objet : {subject}
           </div>
 
           {erreur && <div className="alerte">{erreur}</div>}
