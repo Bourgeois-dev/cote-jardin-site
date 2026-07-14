@@ -68,12 +68,12 @@ const TYPE_DISPLAY: Record<string, { label: string; icon: string }> = {
 };
 
 const SEGMENTS: Record<string, { label: string; desc: string }> = {
-  optin:      { label: "Opt-in newsletter", desc: "Tous les inscrits — via le formulaire newsletter ou l'opt-in proposé à la réservation" },
-  optin_vip:  { label: "VIP",               desc: "Inscrits newsletter marqués VIP dans le CRM" },
-  inactif_1m: { label: "Pas venus depuis 1 mois",  desc: "Inscrits dont la dernière venue remonte à plus d'un mois" },
-  inactif_2m: { label: "Pas venus depuis 2 mois",  desc: "Inscrits dont la dernière venue remonte à plus de deux mois" },
-  inactif_6m: { label: "Pas venus depuis 6 mois",  desc: "Inscrits dont la dernière venue remonte à plus de six mois" },
-  jamais_venu:{ label: "Jamais venus",             desc: "Inscrits newsletter sans aucune venue enregistrée" },
+  optin:       { label: "Opt-in newsletter", desc: "Tous les inscrits — via le formulaire newsletter ou l'opt-in proposé à la réservation" },
+  optin_vip:   { label: "VIP",               desc: "Inscrits newsletter marqués VIP dans le CRM" },
+  inactif_1_2: { label: "Pas venus depuis 1 à 2 mois", desc: "Inscrits dont la dernière venue remonte à 1 ou 2 mois" },
+  inactif_3_4: { label: "Pas venus depuis 3 à 4 mois", desc: "Inscrits dont la dernière venue remonte à 3 ou 4 mois" },
+  inactif_5_6: { label: "Pas venus depuis 5 à 6 mois", desc: "Inscrits dont la dernière venue remonte à 5 ou 6 mois" },
+  jamais_venu: { label: "Jamais venus",                desc: "Inscrits newsletter sans aucune venue enregistrée" },
 };
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
