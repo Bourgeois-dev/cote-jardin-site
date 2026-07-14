@@ -36,6 +36,14 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
       .reduce((s, r) => s + (r.covers || 0), 0);
 
   const att = resa.filter((r) => r.status === "attente").length;
+
+  // « À placer » : réservation active dont aucune table n'est assignée, ou dont les tables
+  // assignées ne couvrent pas les couverts. Même règle que le plan de service (estPlacee).
+  const capaciteResa = (r: Reservation) =>
+    (r.table_ids || []).reduce((s, tid) => s + (tables.find((t) => t.id === tid)?.capacity || 0), 0);
+  const aPlacer = resa.filter(
+    (r) => r.status !== "annule" && r.status !== "no_show" && !((r.table_ids?.length || 0) > 0 && capaciteResa(r) >= r.covers)
+  ).length;
   const couvAujTotal = resa.filter((r) => r.date === todayStr && r.status !== "annule").reduce((s, r) => s + (r.covers || 0), 0);
   const nbResaAuj = resa.filter((r) => r.date === todayStr && r.status !== "annule").length;
 
@@ -175,6 +183,7 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
           <div className="stat"><div className="lib">Disponibles ce midi</div><div className="val" style={{ color: jours[0].midiDispo === 0 ? "var(--annule)" : "var(--ok)" }}>{jours[0].sertMidi ? jours[0].midiDispo : "—"}</div><div className="det">{jours[0].sertMidi ? `sur ${capacite} couverts` : "pas de service midi"}</div></div>
           <div className="stat"><div className="lib">Disponibles ce soir</div><div className="val" style={{ color: jours[0].soirDispo === 0 ? "var(--annule)" : "var(--ok)" }}>{jours[0].sertSoir ? jours[0].soirDispo : "—"}</div><div className="det">{jours[0].sertSoir ? `sur ${capacite} couverts` : "pas de service soir"}</div></div>
           <div className="stat"><div className="lib">À confirmer</div><div className="val" style={{ color: att > 0 ? "var(--attente)" : "var(--ink)" }}>{att}</div><div className="det">demandes en attente</div></div>
+          <div className="stat"><div className="lib">À placer</div><div className="val" style={{ color: aPlacer > 0 ? "var(--attente)" : "var(--ink)" }}>{aPlacer}</div><div className="det">sans table attribuée</div></div>
           <div className="stat"><div className="lib">Contacts récoltés</div><div className="val">{leads.length}</div><div className="det">newsletter + réservations</div></div>
         </div>
 

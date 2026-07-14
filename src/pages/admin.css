@@ -92,8 +92,8 @@
 /* ── 03. COMPOSANTS PARTAGÉS ───────────────────────────────────────────── */
 /* Blocs cartes */
 .cartes-stat { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:26px }
-.cartes-stat-kpi { grid-template-columns:repeat(5,1fr) }
-@media(max-width:1100px) { .cartes-stat-kpi { grid-template-columns:repeat(3,1fr) } }
+.cartes-stat-kpi { grid-template-columns:repeat(6,1fr) }
+@media(max-width:1300px) { .cartes-stat-kpi { grid-template-columns:repeat(3,1fr) } }
 @media(max-width:680px)  { .cartes-stat-kpi { grid-template-columns:repeat(2,1fr) } }
 .stat { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px }
 .stat .lib { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); font-weight:700 }
