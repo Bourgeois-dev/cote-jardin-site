@@ -298,10 +298,6 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
                   <button type="button" className="ps-saisie-nav" onClick={() => decalerJour(-1)} aria-label="Jour précédent">‹</button>
                   <input type="date" min={dateMin} value={date} onChange={(e) => setDate(e.target.value)} className="ps-saisie-datefield" />
                   <button type="button" className="ps-saisie-nav" onClick={() => decalerJour(1)} aria-label="Jour suivant">›</button>
-                  <div className="ps-saisie-svc">
-                    <button type="button" className={service === "midi" ? "active" : ""} onClick={() => setService("midi")}>Midi</button>
-                    <button type="button" className={service === "soir" ? "active" : ""} onClick={() => setService("soir")}>Soir</button>
-                  </div>
                 </div>
                 <div className="ps-saisie-row">
                   <div className="champ"><label>Prénom *</label><input value={saisie.p} onChange={(e) => setSaisie({ ...saisie, p: e.target.value })} /></div>

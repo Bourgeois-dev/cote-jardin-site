@@ -419,9 +419,6 @@ tr:last-child td { border-bottom:none }
 .ps-saisie-nav { width:26px; height:26px; border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer; font-size:15px; line-height:1; color:var(--ink) }
 .ps-saisie-nav:hover { border-color:var(--accent); color:var(--accent) }
 .ps-saisie-datefield { border:1px solid var(--line); border-radius:6px; padding:4px 8px; font-size:12px; font-family:inherit }
-.ps-saisie-svc { display:flex; gap:4px; margin-left:auto }
-.ps-saisie-svc button { border:1px solid var(--line); background:#fff; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; color:var(--ink-soft) }
-.ps-saisie-svc button.active { background:var(--accent); color:#fff; border-color:var(--accent) }
 .ps-saisie-row { display:grid; grid-template-columns:1fr 1fr; gap:10px }
 
 
