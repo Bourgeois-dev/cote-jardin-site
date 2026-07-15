@@ -629,6 +629,10 @@ footer a:hover { color:var(--cream) }
 .cj-hero-accroche { font-family:var(--font-display); font-style:italic; font-weight:400; font-size:clamp(21px,2.3vw,28px); line-height:1.28; color:var(--cream); margin:0 0 14px }
 .cj-hero-texte { font-family:var(--font-body); font-weight:300; font-size:clamp(14.5px,1.15vw,16px); line-height:1.68; color:rgba(246,243,234,.84); margin:0 0 28px; max-width:46ch }
 .cj-hero-cta { display:flex; gap:14px; flex-wrap:wrap; align-items:center }
+.cj-hero-adresse { display:inline-flex; align-items:center; gap:9px; margin-top:22px; font-family:var(--font-body); font-weight:400; font-size:13.5px; letter-spacing:.02em; color:rgba(246,243,234,.78); text-decoration:none; transition:color .18s }
+.cj-hero-adresse:hover { color:var(--cream) }
+.cj-hero-adresse:hover .cj-hero-adresse-ico { color:var(--gold) }
+.cj-hero-adresse-ico { font-size:10px; color:var(--gold); opacity:.85; transition:color .18s }
 .cj-btn-horaires { display:inline-block; font-family:var(--font-body); font-weight:600; font-size:14px; letter-spacing:.04em; padding:13px 28px; border-radius:3px; background:rgba(246,243,234,.10); color:var(--cream); border:1px solid rgba(246,243,234,.45); cursor:pointer; transition:.18s; backdrop-filter:blur(3px) }
 .cj-btn-horaires:hover { background:rgba(246,243,234,.20); border-color:var(--cream) }
 /* Mobile : plus de colonne latérale — le dégradé bascule en vertical */

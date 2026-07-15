@@ -18,6 +18,7 @@ export default function Hero({
   const name    = import.meta.env.VITE_RESTO_NAME    || "Côté Jardin";
   const tagline = import.meta.env.VITE_RESTO_TAGLINE || "";
   const city    = import.meta.env.VITE_RESTO_CITY    || "";
+  const address = import.meta.env.VITE_RESTO_ADDRESS || "";
   const image   = import.meta.env.VITE_HERO_IMAGE    || "";
 
   const heroRef = useRef<HTMLElement>(null);
@@ -85,6 +86,18 @@ export default function Hero({
               Voir les horaires
             </button>
           </div>
+
+          {address && (
+            <a
+              className="cj-hero-adresse"
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span className="cj-hero-adresse-ico" aria-hidden="true">◈</span>
+              {address}
+            </a>
+          )}
         </div>
       </div>
     </section>
