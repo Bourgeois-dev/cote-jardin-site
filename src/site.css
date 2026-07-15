@@ -621,13 +621,13 @@ footer a:hover { color:var(--cream) }
 .cj-hero-lisere { position:absolute; left:0; right:0; bottom:0; height:3px; background:linear-gradient(90deg,var(--gold) 0%,var(--gold) 42%,transparent 88%); opacity:.88; z-index:4 }
 .cj-hero-inner { position:relative; z-index:3; width:100%; max-width:1200px; margin:0 auto; padding:clamp(36px,6vw,72px) clamp(24px,6vw,80px) }
 .cj-hero-col { max-width:min(560px,52%) }
-.cj-hero-eyebrow { display:inline-flex; align-items:center; gap:14px; font-family:var(--font-body); font-size:11px; font-weight:500; letter-spacing:.38em; text-transform:uppercase; color:var(--gold); margin:0 0 20px }
+.cj-hero-eyebrow { display:inline-flex; align-items:center; gap:14px; font-family:var(--font-body); font-size:11px; font-weight:500; letter-spacing:.38em; text-transform:uppercase; color:var(--gold); margin:0 0 8px }
 .cj-hero-trait { display:inline-block; width:28px; height:1px; background:var(--gold); opacity:.7 }
 .cj-hero-titre { font-family:var(--font-display); font-weight:400; font-size:clamp(52px,8.5vw,108px); line-height:.95; color:var(--cream); margin:0 0 18px; letter-spacing:-.01em }
 .cj-hero-tagline { font-family:var(--font-body); font-weight:300; font-style:italic; font-size:clamp(15px,1.8vw,19px); color:rgba(246,243,234,.78); margin:0 0 12px; max-width:52ch; line-height:1.5 }
-.cj-hero-filet { width:54px; height:2px; background:var(--gold); margin:0 0 22px; opacity:.9 }
+.cj-hero-filet { width:54px; height:2px; background:var(--gold); margin:14px 0 18px; opacity:.9 }
 .cj-hero-accroche { font-family:var(--font-display); font-style:italic; font-weight:400; font-size:clamp(21px,2.3vw,28px); line-height:1.28; color:var(--cream); margin:0 0 14px }
-.cj-hero-texte { font-family:var(--font-body); font-weight:300; font-size:clamp(14.5px,1.15vw,16px); line-height:1.68; color:rgba(246,243,234,.84); margin:0 0 34px; max-width:46ch }
+.cj-hero-texte { font-family:var(--font-body); font-weight:300; font-size:clamp(14.5px,1.15vw,16px); line-height:1.68; color:rgba(246,243,234,.84); margin:0 0 28px; max-width:46ch }
 .cj-hero-cta { display:flex; gap:14px; flex-wrap:wrap; align-items:center }
 .cj-btn-horaires { display:inline-block; font-family:var(--font-body); font-weight:600; font-size:14px; letter-spacing:.04em; padding:13px 28px; border-radius:3px; background:rgba(246,243,234,.10); color:var(--cream); border:1px solid rgba(246,243,234,.45); cursor:pointer; transition:.18s; backdrop-filter:blur(3px) }
 .cj-btn-horaires:hover { background:rgba(246,243,234,.20); border-color:var(--cream) }
@@ -719,7 +719,11 @@ a.pa-card:hover {
 .cj-hero-logo {
   display:block; width:auto; height:auto;
   max-width:min(378px, 74vw);
-  margin:0 0 26px;
+  /* Le PNG (2717x2717) contient du vide transparent : 12,2% en haut, 22,5% en bas,
+     5,2% à gauche. On le rogne visuellement — le CSS ne peut pas le deviner.
+     Valeurs en % (= % de la largeur du bloc ; image carrée donc conversion directe).
+     Un peu moins que le vide réel, pour garder une respiration. */
+  margin:-10% 0 -19% -4%;
   filter:drop-shadow(0 6px 22px rgba(0,0,0,.38));
 }
-@media(max-width:600px){ .cj-hero-logo { max-width:82vw; margin-bottom:22px } }
+@media(max-width:600px){ .cj-hero-logo { max-width:82vw } }
