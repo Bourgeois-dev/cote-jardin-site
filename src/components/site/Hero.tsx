@@ -2,9 +2,9 @@ import { useEffect, useRef } from "react";
 
 /**
  * Hero — Côté Jardin (sur mesure)
- * Bandeau panoramique pleine largeur, texte ancré en bas à gauche.
- * Structure : 1 seule image (VITE_HERO_IMAGE), voile dégradé encre, liseré or.
- * Boutons : Réserver (accent) + Voir les horaires (ghost crème).
+ * Composition éditoriale : colonne de contenu ancrée à gauche sur dégradé latéral,
+ * la photo respire à droite. Le logo se pose directement sur le dégradé (pas de cartouche).
+ * Structure : 1 image (VITE_HERO_IMAGE), dégradé latéral encre, liseré or.
  */
 export default function Hero({
   onReserve,
@@ -15,10 +15,10 @@ export default function Hero({
   onHours: () => void;
   reserveLabel?: string;
 }) {
-  const name     = import.meta.env.VITE_RESTO_NAME    || "Côté Jardin";
-  const tagline  = import.meta.env.VITE_RESTO_TAGLINE || "";
-  const city     = import.meta.env.VITE_RESTO_CITY    || "";
-  const image    = import.meta.env.VITE_HERO_IMAGE    || "";
+  const name    = import.meta.env.VITE_RESTO_NAME    || "Côté Jardin";
+  const tagline = import.meta.env.VITE_RESTO_TAGLINE || "";
+  const city    = import.meta.env.VITE_RESTO_CITY    || "";
+  const image   = import.meta.env.VITE_HERO_IMAGE    || "";
 
   const heroRef = useRef<HTMLElement>(null);
 
@@ -38,7 +38,6 @@ export default function Hero({
 
   return (
     <section className="cj-hero" ref={heroRef}>
-      {/* Image de fond */}
       {image && (
         <div
           className="cj-hero-bg"
@@ -48,36 +47,44 @@ export default function Hero({
       )}
       {!image && <div className="cj-hero-bg cj-hero-bg--placeholder" aria-hidden="true" />}
 
-      {/* Voile dégradé */}
+      {/* Dégradé latéral : dense à gauche (lisibilité du logo vert), transparent à droite (la photo respire) */}
       <div className="cj-hero-voile" aria-hidden="true" />
-
-      {/* Liseré or en bas */}
       <div className="cj-hero-lisere" aria-hidden="true" />
 
-      {/* Contenu texte */}
       <div className="cj-hero-inner">
-        {city && (
-          <p className="cj-hero-eyebrow">
-            <span className="cj-hero-trait" />
-            {city}
-            <span className="cj-hero-trait" />
+        <div className="cj-hero-col">
+          {city && (
+            <p className="cj-hero-eyebrow">
+              <span className="cj-hero-trait" />
+              {city}
+            </p>
+          )}
+
+          {import.meta.env.VITE_RESTO_LOGO ? (
+            <img className="cj-hero-logo" src={import.meta.env.VITE_RESTO_LOGO} alt={name} />
+          ) : (
+            <>
+              <h1 className="cj-hero-titre">{name}</h1>
+              {tagline && <p className="cj-hero-tagline">{tagline}</p>}
+            </>
+          )}
+
+          <div className="cj-hero-filet" aria-hidden="true" />
+
+          <p className="cj-hero-accroche">Crêperie et saladerie, mais pas que…</p>
+          <p className="cj-hero-texte">
+            Amateur d'une cuisine de saison, Jean-Noël vous concocte tous les jours un plat
+            du jour élaboré à partir de produits frais pour le plus grand bonheur de vos papilles !
           </p>
-        )}
-        {import.meta.env.VITE_RESTO_LOGO ? (
-          <img className="cj-hero-logo" src={import.meta.env.VITE_RESTO_LOGO} alt={name} />
-        ) : (
-          <>
-            <h1 className="cj-hero-titre">{name}</h1>
-            {tagline && <p className="cj-hero-tagline">{tagline}</p>}
-          </>
-        )}
-        <div className="cj-hero-cta">
-          <button className="btn btn-accent" onClick={onReserve}>
-            {reserveLabel}
-          </button>
-          <button className="cj-btn-horaires" onClick={onHours}>
-            Voir les horaires
-          </button>
+
+          <div className="cj-hero-cta">
+            <button className="btn btn-accent" onClick={onReserve}>
+              {reserveLabel}
+            </button>
+            <button className="cj-btn-horaires" onClick={onHours}>
+              Voir les horaires
+            </button>
+          </div>
         </div>
       </div>
     </section>

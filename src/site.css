@@ -611,19 +611,32 @@ footer a:hover { color:var(--cream) }
 /* ============================================================
    HERO — Côté Jardin (bandeau panoramique sur mesure)
    ============================================================ */
-.cj-hero { position:relative; overflow:hidden; min-height:min(90vh,680px); display:flex; align-items:flex-end }
+.cj-hero { position:relative; overflow:hidden; min-height:clamp(560px,84vh,760px); display:flex; align-items:center }
 .cj-hero-bg { position:absolute; inset:-8% 0; background-size:cover; background-position:center 40%; transform:translateY(var(--hero-parallax,0)); will-change:transform; transition:transform .05s linear }
 .cj-hero-bg--placeholder { background-color:var(--accent-dark); background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.03) 0,rgba(255,255,255,.03) 1px,transparent 0,transparent 50%); background-size:20px 20px }
-.cj-hero-voile { position:absolute; inset:0; background:linear-gradient(to bottom, rgba(22,48,58,.06) 0%, rgba(22,48,58,.08) 42%, rgba(22,48,58,.70) 76%, rgba(22,48,58,.92) 100%) }
-.cj-hero-lisere { position:absolute; left:0; right:0; bottom:0; height:3px; background:linear-gradient(90deg,transparent 0%,var(--gold) 18%,var(--gold) 82%,transparent 100%); opacity:.88; z-index:4 }
-.cj-hero-inner { position:relative; z-index:3; width:100%; max-width:1200px; margin:0 auto; padding:clamp(36px,6vw,72px) clamp(24px,6vw,80px) clamp(52px,7vw,80px) }
-.cj-hero-eyebrow { display:inline-flex; align-items:center; gap:14px; font-family:var(--font-body); font-size:11px; font-weight:500; letter-spacing:.38em; text-transform:uppercase; color:var(--gold); margin:0 0 18px }
+/* Dégradé LATÉRAL : dense à gauche pour porter le logo vert, dégagé à droite pour la photo */
+.cj-hero-voile { position:absolute; inset:0; background:
+  linear-gradient(100deg, rgba(22,48,58,.93) 0%, rgba(22,48,58,.88) 26%, rgba(22,48,58,.58) 50%, rgba(22,48,58,.14) 72%, rgba(22,48,58,.04) 100%),
+  linear-gradient(to top, rgba(22,48,58,.42), transparent 38%) }
+.cj-hero-lisere { position:absolute; left:0; right:0; bottom:0; height:3px; background:linear-gradient(90deg,var(--gold) 0%,var(--gold) 42%,transparent 88%); opacity:.88; z-index:4 }
+.cj-hero-inner { position:relative; z-index:3; width:100%; max-width:1200px; margin:0 auto; padding:clamp(36px,6vw,72px) clamp(24px,6vw,80px) }
+.cj-hero-col { max-width:min(560px,52%) }
+.cj-hero-eyebrow { display:inline-flex; align-items:center; gap:14px; font-family:var(--font-body); font-size:11px; font-weight:500; letter-spacing:.38em; text-transform:uppercase; color:var(--gold); margin:0 0 20px }
 .cj-hero-trait { display:inline-block; width:28px; height:1px; background:var(--gold); opacity:.7 }
 .cj-hero-titre { font-family:var(--font-display); font-weight:400; font-size:clamp(52px,8.5vw,108px); line-height:.95; color:var(--cream); margin:0 0 18px; letter-spacing:-.01em }
-.cj-hero-tagline { font-family:var(--font-body); font-weight:300; font-style:italic; font-size:clamp(15px,1.8vw,19px); color:rgba(246,243,234,.78); margin:0 0 36px; max-width:52ch; line-height:1.5 }
+.cj-hero-tagline { font-family:var(--font-body); font-weight:300; font-style:italic; font-size:clamp(15px,1.8vw,19px); color:rgba(246,243,234,.78); margin:0 0 12px; max-width:52ch; line-height:1.5 }
+.cj-hero-filet { width:54px; height:2px; background:var(--gold); margin:0 0 22px; opacity:.9 }
+.cj-hero-accroche { font-family:var(--font-display); font-style:italic; font-weight:400; font-size:clamp(21px,2.3vw,28px); line-height:1.28; color:var(--cream); margin:0 0 14px }
+.cj-hero-texte { font-family:var(--font-body); font-weight:300; font-size:clamp(14.5px,1.15vw,16px); line-height:1.68; color:rgba(246,243,234,.84); margin:0 0 34px; max-width:46ch }
 .cj-hero-cta { display:flex; gap:14px; flex-wrap:wrap; align-items:center }
-.cj-btn-horaires { display:inline-block; font-family:var(--font-body); font-weight:600; font-size:14px; letter-spacing:.04em; padding:13px 28px; border-radius:3px; background:transparent; color:var(--cream); border:1px solid rgba(246,243,234,.45); cursor:pointer; transition:.18s }
-.cj-btn-horaires:hover { background:rgba(246,243,234,.12); border-color:var(--cream) }
+.cj-btn-horaires { display:inline-block; font-family:var(--font-body); font-weight:600; font-size:14px; letter-spacing:.04em; padding:13px 28px; border-radius:3px; background:rgba(246,243,234,.10); color:var(--cream); border:1px solid rgba(246,243,234,.45); cursor:pointer; transition:.18s; backdrop-filter:blur(3px) }
+.cj-btn-horaires:hover { background:rgba(246,243,234,.20); border-color:var(--cream) }
+/* Mobile : plus de colonne latérale — le dégradé bascule en vertical */
+@media(max-width:900px) {
+  .cj-hero-col { max-width:none }
+  .cj-hero-voile { background:linear-gradient(to top, rgba(22,48,58,.94) 34%, rgba(22,48,58,.66) 64%, rgba(22,48,58,.34) 100%) }
+  .cj-hero { align-items:flex-end }
+}
 @media(max-width:680px) { .cj-hero { min-height:min(80vh,560px) } .cj-hero-cta .btn,.cj-btn-horaires { flex:1; text-align:center } }
 @media(prefers-reduced-motion:reduce) { .cj-hero-bg { transform:none!important; transition:none } }
 
@@ -704,12 +717,9 @@ a.pa-card:hover {
 /* Hero : le logo est vert sur transparent → cartouche crème clair pour lisibilité
    sur le voile sombre du hero. */
 .cj-hero-logo {
-  display:block; width:auto;
-  max-width:min(378px);
-  height:auto; margin:0 0 32px;
-  background:rgba(246,243,234,.94);
-  padding:clamp(20px,3vw,32px) clamp(28px,4vw,44px);
-  border-radius:8px;
-  box-shadow:0 16px 40px rgba(22,48,58,.28);
+  display:block; width:auto; height:auto;
+  max-width:min(378px, 74vw);
+  margin:0 0 26px;
+  filter:drop-shadow(0 6px 22px rgba(0,0,0,.38));
 }
-@media(max-width:600px){ .cj-hero-logo { max-width:82vw; margin-bottom:26px } }
+@media(max-width:600px){ .cj-hero-logo { max-width:82vw; margin-bottom:22px } }
