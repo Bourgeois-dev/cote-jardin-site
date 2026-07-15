@@ -218,19 +218,25 @@ function colonne(col: any): string {
   </tbody></table>`;
 }
 
-// Bloc 2 colonnes : côte à côte desktop, empilées en mobile (via width MSO + max-width)
+// Bloc 2 colonnes — structure du template maison :
+// deux <td> côte à côte + class="stack-column" qui les empile sous 475px
+// (media query définie dans layoutBlocs). Approche "hybride", contrôle explicite
+// du point de bascule, plutôt qu'un stacking implicite par inline-block.
 function blocDeuxColonnes(b: any): string {
   const g = b.colonnes?.[0] || {};
   const d = b.colonnes?.[1] || {};
-  return `<table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="max-width:600px; width:100%;"><tbody><tr>
-    <td align="center" style="font-size:0; padding:10px 0;">
-      <!--[if (gte mso 9)|(IE)]><table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr><td width="300" valign="top"><![endif]-->
-      <div style="display:inline-block; max-width:300px; width:100%; vertical-align:top;">${colonne(g)}</div>
-      <!--[if (gte mso 9)|(IE)]></td><td width="300" valign="top"><![endif]-->
-      <div style="display:inline-block; max-width:300px; width:100%; vertical-align:top;">${colonne(d)}</div>
-      <!--[if (gte mso 9)|(IE)]></td></tr></table><![endif]-->
-    </td>
-  </tr></tbody></table>`;
+  return `<table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="max-width:600px; width:100%;">
+    <tbody><tr>
+      <td align="center" style="padding:20px 0;">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" align="center" style="max-width:600px; width:100%;">
+          <tbody><tr>
+            <td width="300" align="center" valign="top" class="stack-column" style="padding:0;">${colonne(g)}</td>
+            <td width="300" align="center" valign="top" class="stack-column" style="padding:0;">${colonne(d)}</td>
+          </tr></tbody>
+        </table>
+      </td>
+    </tr></tbody>
+  </table>`;
 }
 
 // Assemble une campagne "blocs" complète
@@ -268,7 +274,15 @@ function layoutBlocs({ preheader, title, contenu, logoUrl, token }: { preheader:
   body { margin:0; padding:0; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
   img { border:0; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
   table { border-collapse:collapse !important; }
-  @media screen and (max-width:600px) { .col-100 { width:100% !important; display:block !important; max-width:100% !important; } }
+  /* Empilement des colonnes sous 475px — seuil du template maison.
+     Les deux <td class="stack-column"> passent en pleine largeur, l'un sous l'autre. */
+  @media only screen and (max-width:475px) {
+    .stack-column {
+      display: inline-block !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+  }
 </style>
 </head>
 <body style="margin:0; padding:0; background-color:#f4f2ec;">
