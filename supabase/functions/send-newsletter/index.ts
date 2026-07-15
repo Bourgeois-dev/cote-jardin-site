@@ -158,8 +158,9 @@ function blocPleineLargeur(b: any): string {
 
 // Une colonne d'un bloc 2 colonnes
 function colonne(col: any): string {
+  // padding 10px autour de l'image (demande client) — l'image ne colle ni au bord ni à sa voisine
   const img = col.image ? `<tr><td align="center" style="font-size:0; padding:10px;">
-    <img width="250" alt="${esc(col.titre || "")}" style="display:block; line-height:0; max-width:100%; width:250px; height:auto;" border="0" src="${esc(col.image)}" /></td></tr>` : "";
+    <img width="280" alt="${esc(col.titre || "")}" style="display:block; line-height:0; max-width:100%; width:100%; height:auto;" border="0" src="${esc(col.image)}" /></td></tr>` : "";
   const titre = col.titre ? `<div style="display:block; max-width:300px; text-align:left; width:100%; line-height:initial;">
     <font style="font-family:Arial,sans-serif; font-size:16px; color:${INK}"><strong>${esc(col.titre)}</strong></font></div>` : "";
   const corps = (titre || col.texte) ? `<tr><td style="font-size:0; padding:20px 30px 20px 30px;" align="center">
@@ -189,7 +190,6 @@ function blocDeuxColonnes(b: any): string {
 
 // Assemble une campagne "blocs" complète
 function renderBlocs(c: any, name: string, logoUrl: string, token: string): string {
-  const prenom = name.split(" ")[0] || "";
   const blocs: any[] = Array.isArray(c.blocs) ? c.blocs : [];
 
   const heroImg = c.hero_image ? `<table border="0" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;"><tbody><tr>
@@ -197,19 +197,12 @@ function renderBlocs(c: any, name: string, logoUrl: string, token: string): stri
       <img width="600" alt="${esc(c.titre || RESTO_NAME)}" style="display:block; line-height:0; max-width:100%; width:600px; height:auto;" border="0" src="${esc(c.hero_image)}" />
     </td></tr></tbody></table>` : "";
 
-  const salutation = prenom ? `<table border="0" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;"><tbody><tr>
-    <td style="font-size:0; padding:30px 30px 0 30px;" align="center">
-      <div style="display:block; max-width:560px; text-align:left; width:100%; line-height:initial;">
-        <font style="font-family:Arial,sans-serif; font-size:16px; color:${INK}"><strong>Bonjour ${esc(prenom)},</strong></font>
-      </div>
-    </td></tr></tbody></table>` : "";
-
   const corps = blocs.map((b) => b?.type === "deux_colonnes" ? blocDeuxColonnes(b) : blocPleineLargeur(b)).join("");
 
   return layoutBlocs({
     preheader: c.preheader || c.titre || RESTO_NAME,
     title: c.titre || RESTO_NAME,
-    contenu: heroImg + salutation + corps,
+    contenu: heroImg + corps,
     logoUrl,
     token,
   });

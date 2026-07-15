@@ -80,7 +80,9 @@ function fmtDatetime(dt: string | null): string {
 function BlocsCanvas({ subject, content, restoName, logoUrl }: {
   subject: string; content: any; restoName: string; logoUrl: string;
 }) {
-  const accent = "var(--admin-accent)";
+  // L'aperçu doit refléter l'email réel : charte du SITE (secret ACCENT_COLOR côté edge),
+  // et NON la charte de l'admin (--admin-accent, bordeaux) qui n'apparaît jamais dans un email.
+  const accent = "var(--accent, #5a7d4f)";
   const INK = "#333333";
   const blocs: any[] = Array.isArray(content.blocs) ? content.blocs : [];
 
@@ -94,7 +96,12 @@ function BlocsCanvas({ subject, content, restoName, logoUrl }: {
 
   const Corps = ({ v, petit }: { v: any; petit?: boolean }) => (
     <>
-      {v.image && <img src={v.image} alt="" style={{ width: "100%", display: "block" }} />}
+      {/* padding 10px autour de l'image en 2 colonnes — reflète l'email réel */}
+      {v.image && (
+        <div style={{ padding: petit ? 10 : 0 }}>
+          <img src={v.image} alt="" style={{ width: "100%", display: "block" }} />
+        </div>
+      )}
       <div style={{ padding: petit ? "12px 14px" : "18px 24px" }}>
         {v.titre && <div style={{ fontSize: petit ? 13 : 15, fontWeight: 700, color: INK, marginBottom: 6 }}>{v.titre}</div>}
         {String(v.texte || "").split(/\n+/).filter(Boolean).map((t: string, i: number) => (
@@ -134,8 +141,6 @@ function BlocsCanvas({ subject, content, restoName, logoUrl }: {
         </div>
 
         {content.hero_image && <img src={content.hero_image} alt="" style={{ width: "100%", display: "block" }} />}
-
-        <div style={{ padding: "16px 24px 0", fontSize: 13, fontWeight: 700, color: INK }}>Bonjour Prénom,</div>
 
         {!blocs.length && (
           <div style={{ padding: "28px 24px", textAlign: "center", fontSize: 12, color: "var(--ink-soft)", fontStyle: "italic" }}>
