@@ -7,6 +7,9 @@ const RESTO_NAME       = Deno.env.get("RESTO_NAME") || "Le restaurant";
 const SITE_URL         = Deno.env.get("SITE_URL") || "#";
 const ACCENT_COLOR     = Deno.env.get("ACCENT_COLOR") || "#84B266";
 const ACCENT_DARK      = Deno.env.get("ACCENT_DARK") || "#84B266";
+const INK              = "#333333";
+const RESTO_ADDRESS    = Deno.env.get("RESTO_ADDRESS") || "";
+
 const HERO_IMAGE_URL   = Deno.env.get("HERO_IMAGE_URL") || "";
 const TAGLINE          = Deno.env.get("TAGLINE") || "";
 const SUPABASE_URL     = Deno.env.get("SUPABASE_URL")!;
@@ -106,7 +109,181 @@ function signoff(): string {
   return `<tr><td class="px" style="padding:20px 44px 40px 44px;background-color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;"><p style="margin:0 0 4px 0;font-size:16px;color:#4A4A45;">\u00c0 tr\u00e8s bient\u00f4t,</p><p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:18px;color:${ACCENT_DARK};font-style:italic;">${esc(RESTO_NAME)}</p></td></tr>`;
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════
+   MOTEUR DE BLOCS — campagnes libres (template "blocs")
+   Le restaurateur empile des blocs 1 ou 2 colonnes. Structure HTML email
+   reprise du template maison : tables imbriquées + conditionnels MSO.
+   ══════════════════════════════════════════════════════════════════════ */
+
+// Bouton CTA (table imbriquée : seul rendu fiable sur Outlook)
+function blocCta(label: string, url: string, largeur = 200): string {
+  if (!label || !url) return "";
+  return `<tr><td align="center" style="font-size:0; padding:14px 30px 4px 30px;">
+    <table cellspacing="0" cellpadding="0"><tr>
+      <td align="center" height="38" bgcolor="${ACCENT_COLOR}" style="border-radius:5px; display:block;">
+        <table cellspacing="0" cellpadding="0" height="38" width="${largeur}" bgcolor="${ACCENT_COLOR}" style="width:${largeur}px;border-radius:5px;display:block;mso-cellspacing:0px;mso-padding-alt:0px 0px 0px 0px;"><tr>
+          <td align="center" valign="middle" width="20" style="width:20px;"></td>
+          <td align="center" valign="middle" width="100%" height="38" style="width:100%;height:38px;font-size:16px;font-family:Arial,Sans-Serif;color:#ffffff;text-decoration:none;text-align:center;">
+            <a title="${esc(label)}" target="_blank" style="font-size:16px;font-family:Arial,Sans-Serif;color:#ffffff;text-decoration:none;display:block;" href="${esc(url)}"><strong>${esc(label)}</strong></a>
+          </td>
+        </tr></table>
+      </td>
+    </tr></table>
+  </td></tr>`;
+}
+
+// Paragraphes : chaque saut de ligne devient un bloc de texte
+function blocParas(texte: string, largeur: number): string {
+  return String(texte || "").split(/\n+/).filter((t: string) => t.trim())
+    .map((t: string) => `<div style="display:block; max-width:${largeur}px; text-align:left; width:100%; line-height:initial; padding:14px 0 0 0;">
+      <font style="font-family:Arial,sans-serif; font-size:14px; line-height:22px; color:${INK}">${esc(t)}</font></div>`).join("");
+}
+
+// Bloc pleine largeur : image ? titre ? texte ? CTA ?
+function blocPleineLargeur(b: any): string {
+  const img = b.image ? `<tr><td align="center" style="font-size:0; padding:0;">
+    <img width="600" alt="${esc(b.titre || "")}" style="display:block; line-height:0; max-width:100%; width:600px; height:auto;" border="0" src="${esc(b.image)}" /></td></tr>` : "";
+  const titre = b.titre ? `<div style="display:block; max-width:560px; text-align:left; width:100%; line-height:initial;">
+    <font style="font-family:Arial,sans-serif; font-size:16px; color:${INK}"><strong>${esc(b.titre)}</strong></font></div>` : "";
+  const corps = (titre || b.texte) ? `<tr><td style="font-size:0; padding:30px 30px 20px 30px;" align="center">
+    <!--[if (gte mso 9)|(IE)]><table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr><td width="560" align="center" style="text-align:left;"><![endif]-->
+    ${titre}${blocParas(b.texte, 560)}
+    <!--[if mso]></td></tr></table><![endif]-->
+  </td></tr>` : "";
+  return `<table border="0" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;"><tbody>
+    ${img}${corps}${blocCta(b.cta_label, b.cta_url, 200)}
+  </tbody></table>`;
+}
+
+// Une colonne d'un bloc 2 colonnes
+function colonne(col: any): string {
+  const img = col.image ? `<tr><td align="center" style="font-size:0; padding:10px;">
+    <img width="250" alt="${esc(col.titre || "")}" style="display:block; line-height:0; max-width:100%; width:250px; height:auto;" border="0" src="${esc(col.image)}" /></td></tr>` : "";
+  const titre = col.titre ? `<div style="display:block; max-width:300px; text-align:left; width:100%; line-height:initial;">
+    <font style="font-family:Arial,sans-serif; font-size:16px; color:${INK}"><strong>${esc(col.titre)}</strong></font></div>` : "";
+  const corps = (titre || col.texte) ? `<tr><td style="font-size:0; padding:20px 30px 20px 30px;" align="center">
+    <!--[if (gte mso 9)|(IE)]><table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr><td width="300" align="center" style="text-align:left;"><![endif]-->
+    ${titre}${blocParas(col.texte, 300)}
+    <!--[if mso]></td></tr></table><![endif]-->
+  </td></tr>` : "";
+  return `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody>
+    ${img}${corps}${blocCta(col.cta_label, col.cta_url, 180)}
+  </tbody></table>`;
+}
+
+// Bloc 2 colonnes : côte à côte desktop, empilées en mobile (via width MSO + max-width)
+function blocDeuxColonnes(b: any): string {
+  const g = b.colonnes?.[0] || {};
+  const d = b.colonnes?.[1] || {};
+  return `<table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="max-width:600px; width:100%;"><tbody><tr>
+    <td align="center" style="font-size:0; padding:10px 0;">
+      <!--[if (gte mso 9)|(IE)]><table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr><td width="300" valign="top"><![endif]-->
+      <div style="display:inline-block; max-width:300px; width:100%; vertical-align:top;">${colonne(g)}</div>
+      <!--[if (gte mso 9)|(IE)]></td><td width="300" valign="top"><![endif]-->
+      <div style="display:inline-block; max-width:300px; width:100%; vertical-align:top;">${colonne(d)}</div>
+      <!--[if (gte mso 9)|(IE)]></td></tr></table><![endif]-->
+    </td>
+  </tr></tbody></table>`;
+}
+
+// Assemble une campagne "blocs" complète
+function renderBlocs(c: any, name: string, logoUrl: string, token: string): string {
+  const prenom = name.split(" ")[0] || "";
+  const blocs: any[] = Array.isArray(c.blocs) ? c.blocs : [];
+
+  const heroImg = c.hero_image ? `<table border="0" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;"><tbody><tr>
+    <td align="center" style="font-size:0; padding:0;">
+      <img width="600" alt="${esc(c.titre || RESTO_NAME)}" style="display:block; line-height:0; max-width:100%; width:600px; height:auto;" border="0" src="${esc(c.hero_image)}" />
+    </td></tr></tbody></table>` : "";
+
+  const salutation = prenom ? `<table border="0" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;"><tbody><tr>
+    <td style="font-size:0; padding:30px 30px 0 30px;" align="center">
+      <div style="display:block; max-width:560px; text-align:left; width:100%; line-height:initial;">
+        <font style="font-family:Arial,sans-serif; font-size:16px; color:${INK}"><strong>Bonjour ${esc(prenom)},</strong></font>
+      </div>
+    </td></tr></tbody></table>` : "";
+
+  const corps = blocs.map((b) => b?.type === "deux_colonnes" ? blocDeuxColonnes(b) : blocPleineLargeur(b)).join("");
+
+  return layoutBlocs({
+    preheader: c.preheader || c.titre || RESTO_NAME,
+    title: c.titre || RESTO_NAME,
+    contenu: heroImg + salutation + corps,
+    logoUrl,
+    token,
+  });
+}
+
+// Enveloppe : logo, contenu, footer. Structure du template maison.
+function layoutBlocs({ preheader, title, contenu, logoUrl, token }: { preheader: string; title: string; contenu: string; logoUrl: string; token: string }): string {
+  const logo = logoUrl ? `<table border="0" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;"><tbody><tr>
+    <td align="center" style="font-size:0; padding:0;">
+      <img width="200" alt="${esc(RESTO_NAME)}" style="display:block; line-height:0; max-width:100%; width:200px; height:auto;" border="0" src="${esc(logoUrl)}" />
+    </td></tr></tbody></table>` : "";
+
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>${esc(title)}</title>
+<!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->
+<style type="text/css">
+  body { margin:0; padding:0; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
+  img { border:0; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
+  table { border-collapse:collapse !important; }
+  @media screen and (max-width:600px) { .col-100 { width:100% !important; display:block !important; max-width:100% !important; } }
+</style>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f2ec;">
+<div style="display:none; font-size:1px; color:#f4f2ec; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">${esc(preheader)}</div>
+<div style="background-color:#f4f2ec; padding:0;">
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f4f2ec;"><tbody><tr>
+<td align="center" style="padding:20px 10px;">
+  <table width="600" border="0" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; background-color:#ffffff;"><tbody><tr>
+    <td align="center" style="font-size:0; padding:10px 0;">
+      ${logo}
+      ${contenu}
+      ${footerBlocs(token)}
+    </td>
+  </tr></tbody></table>
+</td>
+</tr></tbody></table>
+</div>
+</body></html>`;
+}
+
+// Footer — structure du template maison + mentions légales obligatoires
+function footerBlocs(token: string): string {
+  // La page /desinscription du site fait le POST vers l'edge function.
+  // NE PAS pointer l'edge directement : elle attend un POST JSON, pas un GET.
+  const unsubUrl = token
+    ? `${SITE_URL}/desinscription?token=${esc(token)}`
+    : `${esc(SITE_URL)}/desinscription`;
+  return `<table border="0" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; margin-top:20px;"><tbody>
+    <tr><td align="center" style="font-size:0; padding:0 30px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #e4e2d8; font-size:0; line-height:0;">&nbsp;</td></tr></table>
+    </td></tr>
+    <tr><td align="center" style="padding:22px 30px 8px 30px;">
+      <font style="font-family:Arial,sans-serif; font-size:15px; color:${INK}"><strong>${esc(RESTO_NAME)}</strong></font>
+    </td></tr>
+    <tr><td align="center" style="padding:0 30px 18px 30px;">
+      <font style="font-family:Arial,sans-serif; font-size:13px; line-height:20px; color:#6b6358;">${esc(RESTO_ADDRESS)}</font>
+    </td></tr>
+    ${blocCta("Voir le site", SITE_URL, 200)}
+    <tr><td align="center" style="padding:22px 30px 24px 30px;">
+      <font style="font-family:Arial,sans-serif; font-size:11px; line-height:18px; color:#9a9189;">
+        Vous recevez cet e-mail car vous êtes inscrit à notre newsletter.<br/>
+        <a href="${unsubUrl}" style="color:#9a9189; text-decoration:underline;">Se désinscrire</a>
+      </font>
+    </td></tr>
+  </tbody></table>`;
+}
+
+
 function renderTemplate(template: string, c: any, name: string, logoUrl: string, token: string): string {
+  // Campagnes libres (nouveau système de blocs)
+  if (template === "blocs") return renderBlocs(c, name, logoUrl, token);
   const ft = footer(token);
   const prenom = name.split(" ")[0] || "";
 

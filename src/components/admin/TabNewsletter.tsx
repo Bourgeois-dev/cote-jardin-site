@@ -21,44 +21,25 @@ interface Campaign {
 // ── Constantes ──────────────────────────────────────────────────────────────
 // Welcome n'apparaît pas ici : il est déclenché automatiquement à l'inscription
 // (voir Newsletter.tsx côté site), jamais envoyé manuellement depuis l'admin.
-const TEMPLATES: Record<string, { label: string; desc: string; icon: string; fields: { key: string; label: string; type?: string; required?: boolean }[] }> = {
-  evenementiel: {
-    label: "Événementiel", icon: "🎉",
-    desc: "Annonce d'un événement : soirée thématique, animation, fête…",
-    fields: [
-      { key: "eyebrow", label: "Surtitre (ex. Soirée spéciale)" },
-      { key: "titre", label: "Titre de l'événement", required: true },
-      { key: "date_event", label: "Date de l'événement (ex. Samedi 12 juillet)" },
-      { key: "description", label: "Description", type: "textarea", required: true },
-      { key: "cta_label", label: "Bouton — texte (ex. Réserver ma table)" },
-      { key: "cta_url", label: "Bouton — lien" },
-    ],
-  },
-  nouveau_menu: {
-    label: "Nouveau menu", icon: "🍽️",
-    desc: "Annonce d'un changement de carte — 1 à 3 plats mis en avant.",
-    fields: [
-      { key: "titre", label: "Titre (ex. Notre menu de saison est arrivé !)", required: true },
-      { key: "sous_titre", label: "Sous-titre (ex. Printemps — Été 2026)" },
-      { key: "intro", label: "Introduction", type: "textarea", required: true },
-      { key: "citation", label: "Citation (ex. Chaque plat raconte une saison…)" },
-      { key: "cta_label", label: "Bouton — texte (défaut : Voir la carte)" },
-      { key: "cta_url", label: "Bouton — lien (défaut : le site)" },
-    ],
-  },
-  vie_resto: {
-    label: "Vie du restaurant", icon: "📰",
-    desc: "Actualité libre : coulisses, producteurs, histoire, news.",
-    fields: [
-      { key: "eyebrow", label: "Surtitre (défaut : Vie du restaurant)" },
-      { key: "titre", label: "Titre (ex. Des nouvelles de votre table)", required: true },
-      { key: "texte", label: "Contenu (sauts de ligne = paragraphes)", type: "textarea", required: true },
-      { key: "a_retenir", label: "À retenir (encadré — ex. Nouveaux horaires dès le 1er juillet)" },
-      { key: "cta_label", label: "Bouton — texte (optionnel, ex. En savoir plus)" },
-      { key: "cta_url", label: "Bouton — lien" },
-    ],
-  },
+// Un seul type de campagne : le restaurateur compose librement avec des blocs.
+// (Les anciens templates figés — evenementiel, nouveau_menu, vie_resto — ont été retirés :
+//  ils n'étaient que des cas particuliers de ce système. Leur rendu reste dans l'edge
+//  function pour que les campagnes archivées restent lisibles.)
+const TEMPLATES: Record<string, { label: string; icon: string; desc: string }> = {
+  blocs: { label: "Campagne libre", icon: "✍️", desc: "Composez votre message avec des blocs" },
 };
+
+// Types de blocs disponibles
+type Colonne = { titre?: string; texte?: string; image?: string; cta_label?: string; cta_url?: string };
+type Bloc =
+  | { type: "pleine_largeur"; titre?: string; texte?: string; image?: string; cta_label?: string; cta_url?: string }
+  | { type: "deux_colonnes"; colonnes: [Colonne, Colonne] };
+
+function blocVide(type: "pleine_largeur" | "deux_colonnes"): Bloc {
+  return type === "deux_colonnes"
+    ? { type, colonnes: [{}, {}] }
+    : { type };
+}
 
 // Welcome n'apparaît pas dans TEMPLATES (pas de formulaire, déclenché
 // automatiquement) mais doit être nommé/filtrable dans la liste des campagnes.
@@ -94,252 +75,36 @@ function fmtDatetime(dt: string | null): string {
 // l'écran) du template HTML envoyé par l'edge function send-newsletter.
 // Couleurs : variables admin par défaut, remplacées par la charte du client
 // une fois ACCENT_COLOR/ACCENT_DARK configurés côté secrets (non visibles ici).
-function EventCanvas({ subject, content, imageUrl, restoName, logoUrl }: {
-  subject: string; content: Record<string, string>; imageUrl: string; restoName: string; logoUrl: string;
+// Aperçu unique : rend n'importe quelle composition de blocs.
+// Reflète la structure réelle de l'email (600px, logo, blocs, footer).
+function BlocsCanvas({ subject, content, restoName, logoUrl }: {
+  subject: string; content: any; restoName: string; logoUrl: string;
 }) {
-  // Charte du SITE du restaurant (pas la charte admin) : c'est l'email que
-  // recevra le client, il doit refléter l'identité visuelle du restaurant.
-  const accent = "var(--accent)";
-  const accentDark = "var(--accent-dark)";
-  const fontDisplay = "var(--font-display)";
-  return (
-    <div style={{
-      background: "#ECEAE1", borderRadius: 14, padding: "24px 16px",
-      position: "sticky", top: 90,
-    }}>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase",
-        color: "var(--ink-soft)", marginBottom: 10, textAlign: "center" }}>
-        Aperçu de l'email
+  const accent = "var(--admin-accent)";
+  const INK = "#333333";
+  const blocs: any[] = Array.isArray(content.blocs) ? content.blocs : [];
+
+  const Cta = ({ label }: { label?: string }) =>
+    label ? (
+      <div style={{ textAlign: "center", padding: "10px 0 2px" }}>
+        <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 12,
+          fontWeight: 700, padding: "9px 22px", borderRadius: 5 }}>{label}</span>
       </div>
+    ) : null;
 
-      <div style={{ marginBottom: 18, maxWidth: 500, marginLeft: "auto", marginRight: "auto" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-soft)", marginBottom: 6 }}>
-          Dans la boîte de réception
-        </div>
-        <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 8, padding: "14px 16px" }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {subject || "Objet de l'email"}
-          </div>
-          <div style={{ fontSize: 13, color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 3 }}>
-            {content.preheader || "Le résumé court apparaîtra ici, juste après l'objet…"}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(80,100,60,.12)", maxWidth: 500, margin: "0 auto" }}>
-        {/* barre accent */}
-        <div style={{ height: 5, background: accent }} />
-
-        {/* logo / nom resto */}
-        <div style={{ textAlign: "center", padding: "22px 30px 12px", borderBottom: "none" }}>
-          {logoUrl
-            ? <img src={logoUrl} alt={restoName} style={{ height: 48, maxWidth: 220, objectFit: "contain", margin: "0 auto", display: "block" }} />
-            : <span style={{ fontFamily: fontDisplay, fontSize: 20, color: "var(--ink)" }}>{restoName || "Votre restaurant"}</span>
-          }
-        </div>
-
-        {/* bandeau header */}
-        <div style={{ background: accent, padding: "28px 34px 30px", textAlign: "center" }}>
-          {content.eyebrow && (
-            <div style={{ fontFamily: fontDisplay, fontSize: 12, letterSpacing: "2.5px",
-              textTransform: "uppercase", color: "rgba(255,255,255,.75)", marginBottom: 10 }}>
-              {content.eyebrow}
-            </div>
-          )}
-          <div style={{ fontFamily: fontDisplay, fontSize: 27, lineHeight: 1.3, color: "#fff", fontWeight: 400 }}>
-            {content.titre || "Titre de l'événement"}
-          </div>
-        </div>
-
-        {/* image */}
-        {imageUrl ? (
-          <img src={imageUrl} alt="" style={{ width: "100%", display: "block", aspectRatio: "600/320", objectFit: "cover" }} />
-        ) : (
-          <div style={{ width: "100%", aspectRatio: "600/320", background: "var(--cream)", display: "flex",
-            alignItems: "center", justifyContent: "center", fontSize: 13, color: "var(--ink-soft)", fontStyle: "italic" }}>
-            Aucune image — l'email s'affichera sans photo
-          </div>
-        )}
-
-        {/* corps */}
-        <div style={{ padding: "28px 34px 6px" }}>
-          <div style={{ fontFamily: fontDisplay, fontSize: 17, color: "#3A4A2C", marginBottom: 16 }}>
-            Bonjour [Prénom],
-          </div>
-          {content.date_event && (
-            <div style={{ display: "inline-block", background: "var(--cream)", padding: "7px 16px",
-              borderRadius: 6, fontSize: 13, fontWeight: 700, color: "var(--ink)", marginBottom: 16 }}>
-              📅 {content.date_event}
-            </div>
-          )}
-          <div style={{ fontSize: 14.5, lineHeight: 1.7, color: "#4A4A45", whiteSpace: "pre-wrap" }}>
-            {content.description || "La description de votre événement apparaîtra ici…"}
-          </div>
-        </div>
-
-        {/* CTA */}
-        {content.cta_label && (
-          <div style={{ textAlign: "center", padding: "20px 34px 8px" }}>
-            <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 14,
-              fontWeight: 700, padding: "12px 30px", borderRadius: 25 }}>
-              {content.cta_label}
-            </span>
-          </div>
-        )}
-
-        {/* signature */}
-        <div style={{ padding: "18px 34px 28px" }}>
-          <div style={{ fontSize: 14, color: "#4A4A45" }}>À très bientôt,</div>
-          <div style={{ fontFamily: fontDisplay, fontSize: 15, color: accentDark, fontStyle: "italic", marginTop: 3 }}>
-            {restoName || "Votre restaurant"}
-          </div>
-        </div>
-
-        {/* footer */}
-        <div style={{ background: "#F4F2EB", borderTop: "1px solid #E4E2D8", padding: "18px 34px", textAlign: "center" }}>
-          <div style={{ fontSize: 11, color: "#9A9A8E" }}>Se désinscrire</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-// ── Canvas de prévisualisation — Nouveau menu ───────────────────────────────
-// Même principe qu'EventCanvas : rendu fidèle du HTML envoyé par send-newsletter.
-// Structure : bandeau → intro → 1 à 3 plats (image pleine largeur + nom +
-// description, empilés) → citation → CTA → signature → footer.
-function MenuCanvas({ subject, content, restoName, logoUrl }: {
-  subject: string; content: Record<string, string>; restoName: string; logoUrl: string;
-}) {
-  const accent = "var(--accent)";
-  const accentDark = "var(--accent-dark)";
-  const fontDisplay = "var(--font-display)";
-  const plats = [1, 2, 3]
-    .map((i) => ({ nom: content[`plat${i}_nom`] || "", desc: content[`plat${i}_desc`] || "", image: content[`plat${i}_image`] || "" }))
-    .filter((p) => p.nom.trim());
-  return (
-    <div style={{ background: "#ECEAE1", borderRadius: 14, padding: "24px 16px", position: "sticky", top: 90 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase",
-        color: "var(--ink-soft)", marginBottom: 10, textAlign: "center" }}>
-        Aperçu de l'email
-      </div>
-
-      <div style={{ marginBottom: 18, maxWidth: 500, marginLeft: "auto", marginRight: "auto" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-soft)", marginBottom: 6 }}>
-          Dans la boîte de réception
-        </div>
-        <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 8, padding: "14px 16px" }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {subject || "Objet de l'email"}
-          </div>
-          <div style={{ fontSize: 13, color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 3 }}>
-            {content.preheader || "Le résumé court apparaîtra ici, juste après l'objet…"}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(80,100,60,.12)", maxWidth: 500, margin: "0 auto" }}>
-        <div style={{ height: 5, background: accent }} />
-
-        <div style={{ textAlign: "center", padding: "22px 30px 12px" }}>
-          {logoUrl
-            ? <img src={logoUrl} alt={restoName} style={{ height: 48, maxWidth: 220, objectFit: "contain", margin: "0 auto", display: "block" }} />
-            : <span style={{ fontFamily: fontDisplay, fontSize: 20, color: "var(--ink)" }}>{restoName || "Votre restaurant"}</span>
-          }
-        </div>
-
-        {/* bandeau header */}
-        <div style={{ background: accent, padding: "28px 34px 30px", textAlign: "center" }}>
-          <div style={{ fontFamily: fontDisplay, fontSize: 12, letterSpacing: "2.5px",
-            textTransform: "uppercase", color: "rgba(255,255,255,.75)", marginBottom: 10 }}>
-            Nouvelle carte
-          </div>
-          <div style={{ fontFamily: fontDisplay, fontSize: 27, lineHeight: 1.3, color: "#fff", fontWeight: 400 }}>
-            {content.titre || "Notre menu de saison est arrivé !"}
-          </div>
-          {content.sous_titre && (
-            <div style={{ fontFamily: fontDisplay, fontSize: 14, color: "rgba(255,255,255,.85)", fontStyle: "italic", marginTop: 10 }}>
-              {content.sous_titre}
-            </div>
-          )}
-        </div>
-
-        {/* intro */}
-        <div style={{ padding: "26px 34px 6px" }}>
-          <div style={{ fontFamily: fontDisplay, fontSize: 17, color: "#3A4A2C", marginBottom: 14 }}>
-            Bonjour [Prénom],
-          </div>
-          <div style={{ fontSize: 14.5, lineHeight: 1.7, color: "#4A4A45", whiteSpace: "pre-wrap" }}>
-            {content.intro || "Votre introduction apparaîtra ici…"}
-          </div>
-        </div>
-
-        {/* plats — image pleine largeur + nom + description, empilés */}
-        {plats.length === 0 && (
-          <div style={{ margin: "18px 34px 0", padding: "22px", background: "var(--cream)", borderRadius: 8,
-            textAlign: "center", fontSize: 13, color: "var(--ink-soft)", fontStyle: "italic" }}>
-            Ajoutez 1 à 3 plats ci-contre — ils s'afficheront ici
-          </div>
-        )}
-        {plats.map((p, idx) => (
-          <div key={idx}>
-            {p.image ? (
-              <img src={p.image} alt={p.nom} style={{ width: "100%", display: "block", aspectRatio: "600/300", objectFit: "cover", marginTop: 18 }} />
-            ) : (
-              <div style={{ margin: "22px 34px 0", borderTop: idx > 0 ? "1px solid var(--line)" : "none" }} />
-            )}
-            <div style={{ padding: `${p.image ? "16px" : "14px"} 34px 4px` }}>
-              <div style={{ fontFamily: fontDisplay, fontSize: 19, color: "#3A4A2C" }}>{p.nom}</div>
-              {p.desc && <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "#6A6A60", marginTop: 5 }}>{p.desc}</div>}
-            </div>
-          </div>
+  const Corps = ({ v, petit }: { v: any; petit?: boolean }) => (
+    <>
+      {v.image && <img src={v.image} alt="" style={{ width: "100%", display: "block" }} />}
+      <div style={{ padding: petit ? "12px 14px" : "18px 24px" }}>
+        {v.titre && <div style={{ fontSize: petit ? 13 : 15, fontWeight: 700, color: INK, marginBottom: 6 }}>{v.titre}</div>}
+        {String(v.texte || "").split(/\n+/).filter(Boolean).map((t: string, i: number) => (
+          <div key={i} style={{ fontSize: petit ? 11.5 : 13, lineHeight: 1.6, color: INK, marginBottom: 8 }}>{t}</div>
         ))}
-
-        {/* citation */}
-        {content.citation && (
-          <div style={{ margin: "20px 34px 4px", borderLeft: `3px solid ${accent}`, paddingLeft: 18,
-            fontFamily: fontDisplay, fontSize: 14.5, lineHeight: 1.6, color: "#5A6A4A", fontStyle: "italic" }}>
-            « {content.citation} »
-          </div>
-        )}
-
-        {/* CTA */}
-        <div style={{ textAlign: "center", padding: "20px 34px 8px" }}>
-          <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 14,
-            fontWeight: 700, padding: "12px 30px", borderRadius: 25 }}>
-            {content.cta_label || "Voir la carte"}
-          </span>
-        </div>
-
-        {/* signature */}
-        <div style={{ padding: "18px 34px 28px" }}>
-          <div style={{ fontSize: 14, color: "#4A4A45" }}>À très bientôt,</div>
-          <div style={{ fontFamily: fontDisplay, fontSize: 15, color: accentDark, fontStyle: "italic", marginTop: 3 }}>
-            {restoName || "Votre restaurant"}
-          </div>
-        </div>
-
-        {/* footer */}
-        <div style={{ background: "#F4F2EB", borderTop: "1px solid #E4E2D8", padding: "18px 34px", textAlign: "center" }}>
-          <div style={{ fontSize: 11, color: "#9A9A8E" }}>Se désinscrire</div>
-        </div>
+        <Cta label={v.cta_label} />
       </div>
-    </div>
+    </>
   );
-}
 
-
-// ── Canvas de prévisualisation — Vie du restaurant ──────────────────────────
-// Structure : bandeau (surtitre + titre) → image large → texte multi-paragraphes
-// → encadré « À retenir » → CTA → signature → footer.
-function VieCanvas({ subject, content, imageUrl, restoName, logoUrl }: {
-  subject: string; content: Record<string, string>; imageUrl: string; restoName: string; logoUrl: string;
-}) {
-  const accent = "var(--accent)";
-  const accentDark = "var(--accent-dark)";
-  const fontDisplay = "var(--font-display)";
-  const paras = (content.texte || "").split(/\n+/).filter((p) => p.trim());
   return (
     <div style={{ background: "#ECEAE1", borderRadius: 14, padding: "24px 16px", position: "sticky", top: 90 }}>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase",
@@ -347,7 +112,7 @@ function VieCanvas({ subject, content, imageUrl, restoName, logoUrl }: {
         Aperçu de l'email
       </div>
 
-      <div style={{ marginBottom: 18, maxWidth: 500, marginLeft: "auto", marginRight: "auto" }}>
+      <div style={{ marginBottom: 18, maxWidth: 500, margin: "0 auto 18px" }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-soft)", marginBottom: 6 }}>
           Dans la boîte de réception
         </div>
@@ -362,98 +127,58 @@ function VieCanvas({ subject, content, imageUrl, restoName, logoUrl }: {
       </div>
 
       <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(80,100,60,.12)", maxWidth: 500, margin: "0 auto" }}>
-        <div style={{ height: 5, background: accent }} />
-
-        <div style={{ textAlign: "center", padding: "22px 30px 12px" }}>
+        <div style={{ textAlign: "center", padding: "20px 30px 10px" }}>
           {logoUrl
-            ? <img src={logoUrl} alt={restoName} style={{ height: 48, maxWidth: 220, objectFit: "contain", margin: "0 auto", display: "block" }} />
-            : <span style={{ fontFamily: fontDisplay, fontSize: 20, color: "var(--ink)" }}>{restoName || "Votre restaurant"}</span>
-          }
+            ? <img src={logoUrl} alt={restoName} style={{ height: 44, maxWidth: 200, objectFit: "contain", margin: "0 auto", display: "block" }} />
+            : <span style={{ fontFamily: "var(--font-display)", fontSize: 19, color: "var(--ink)" }}>{restoName || "Votre restaurant"}</span>}
         </div>
 
-        {/* bandeau header */}
-        <div style={{ background: accent, padding: "28px 34px 30px", textAlign: "center" }}>
-          <div style={{ fontFamily: fontDisplay, fontSize: 12, letterSpacing: "2.5px",
-            textTransform: "uppercase", color: "rgba(255,255,255,.75)", marginBottom: 10 }}>
-            {content.eyebrow || "Vie du restaurant"}
-          </div>
-          <div style={{ fontFamily: fontDisplay, fontSize: 27, lineHeight: 1.3, color: "#fff", fontWeight: 400 }}>
-            {content.titre || "Des nouvelles de votre table"}
-          </div>
-        </div>
+        {content.hero_image && <img src={content.hero_image} alt="" style={{ width: "100%", display: "block" }} />}
 
-        {/* image */}
-        {imageUrl ? (
-          <img src={imageUrl} alt="" style={{ width: "100%", display: "block", aspectRatio: "600/320", objectFit: "cover" }} />
-        ) : (
-          <div style={{ width: "100%", aspectRatio: "600/320", background: "var(--cream)", display: "flex",
-            alignItems: "center", justifyContent: "center", fontSize: 13, color: "var(--ink-soft)", fontStyle: "italic" }}>
-            Aucune image — l'email s'affichera sans photo
+        <div style={{ padding: "16px 24px 0", fontSize: 13, fontWeight: 700, color: INK }}>Bonjour Prénom,</div>
+
+        {!blocs.length && (
+          <div style={{ padding: "28px 24px", textAlign: "center", fontSize: 12, color: "var(--ink-soft)", fontStyle: "italic" }}>
+            Ajoutez un bloc pour voir l'aperçu.
           </div>
         )}
 
-        {/* corps : texte multi-paragraphes */}
-        <div style={{ padding: "28px 34px 6px" }}>
-          <div style={{ fontFamily: fontDisplay, fontSize: 17, color: "#3A4A2C", marginBottom: 16 }}>
-            Bonjour [Prénom],
-          </div>
-          {paras.length === 0 && (
-            <div style={{ fontSize: 14.5, lineHeight: 1.7, color: "var(--ink-soft)", fontStyle: "italic" }}>
-              Votre actualité apparaîtra ici — chaque saut de ligne crée un paragraphe…
+        {blocs.map((b, i) =>
+          b?.type === "deux_colonnes" ? (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: "#eee", margin: "10px 0" }}>
+              {[0, 1].map((n) => (
+                <div key={n} style={{ background: "#fff" }}><Corps v={b.colonnes?.[n] || {}} petit /></div>
+              ))}
             </div>
-          )}
-          {paras.map((p, i) => (
-            <div key={i} style={{ fontSize: 14.5, lineHeight: 1.7, color: "#4A4A45", marginBottom: 14 }}>{p}</div>
-          ))}
-        </div>
-
-        {/* encadré À retenir */}
-        {content.a_retenir && (
-          <div style={{ margin: "4px 34px 10px", background: "var(--cream)", borderRadius: 10, borderLeft: `4px solid ${accent}`, padding: "18px 20px" }}>
-            <div style={{ fontSize: 10.5, letterSpacing: "2px", textTransform: "uppercase", color: accentDark, fontWeight: 700, marginBottom: 6 }}>
-              À retenir
-            </div>
-            <div style={{ fontFamily: fontDisplay, fontSize: 15, lineHeight: 1.5, color: "#3A4A2C" }}>{content.a_retenir}</div>
-          </div>
+          ) : (
+            <div key={i}><Corps v={b} /></div>
+          )
         )}
 
-        {/* CTA */}
-        {content.cta_label && (
-          <div style={{ textAlign: "center", padding: "16px 34px 8px" }}>
-            <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 14,
-              fontWeight: 700, padding: "12px 30px", borderRadius: 25 }}>
-              {content.cta_label}
-            </span>
+        {/* Footer */}
+        <div style={{ borderTop: "1px solid #E4E2D8", margin: "14px 24px 0" }} />
+        <div style={{ textAlign: "center", padding: "16px 24px 20px" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: INK }}>{restoName || "Votre restaurant"}</div>
+          <div style={{ fontSize: 11, color: "#6b6358", marginTop: 4 }}>Adresse du restaurant</div>
+          <div style={{ marginTop: 12 }}>
+            <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 12, fontWeight: 700, padding: "9px 22px", borderRadius: 5 }}>Voir le site</span>
           </div>
-        )}
-
-        {/* signature */}
-        <div style={{ padding: "18px 34px 28px" }}>
-          <div style={{ fontSize: 14, color: "#4A4A45" }}>À très bientôt,</div>
-          <div style={{ fontFamily: fontDisplay, fontSize: 15, color: accentDark, fontStyle: "italic", marginTop: 3 }}>
-            {restoName || "Votre restaurant"}
+          <div style={{ fontSize: 10, color: "#9a9189", marginTop: 14, lineHeight: 1.6 }}>
+            Vous recevez cet e-mail car vous êtes inscrit à notre newsletter.<br />
+            <span style={{ textDecoration: "underline" }}>Se désinscrire</span>
           </div>
-        </div>
-
-        {/* footer */}
-        <div style={{ background: "#F4F2EB", borderTop: "1px solid #E4E2D8", padding: "18px 34px", textAlign: "center" }}>
-          <div style={{ fontSize: 11, color: "#9A9A8E" }}>Se désinscrire</div>
         </div>
       </div>
     </div>
   );
 }
 
-
-// initial : pré-remplissage du formulaire.
-// - Dupliquer une campagne : initial SANS id → nouvelle ligne à la sauvegarde.
-// - Reprendre un brouillon : initial AVEC id → la ligne existante est mise à jour.
 function NouveauForm({ onSaved, initial }: {
   onSaved: () => void;
   initial?: { id?: string; template: string; segment: string; subject: string; content: Record<string, string> };
 }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [template, setTemplate] = useState(initial?.template || "");
+  const [template] = useState(initial?.template || "blocs");
   const [segment, setSegment] = useState(initial?.segment || "optin");
   const [counts, setCounts] = useState<Record<string, number> | null>(null);
 
@@ -464,8 +189,36 @@ function NouveauForm({ onSaved, initial }: {
     });
   }, []);
   const [subject, setSubject] = useState(initial?.subject || "");
-  const [content, setContent] = useState<Record<string, string>>(initial?.content || {});
-  const [imageUrl, setImageUrl] = useState(initial?.content?.image_url || "");
+  const [content, setContent] = useState<Record<string, any>>(initial?.content || {});
+
+  // ── Blocs de la campagne ────────────────────────────────────────────────
+  const blocs: Bloc[] = Array.isArray(content.blocs) ? content.blocs : [];
+  const setBlocs = (b: Bloc[]) => setContent((c: any) => ({ ...c, blocs: b }));
+
+  function ajouterBloc(type: "pleine_largeur" | "deux_colonnes") {
+    setBlocs([...blocs, blocVide(type)]);
+  }
+  function supprimerBloc(i: number) {
+    setBlocs(blocs.filter((_, n) => n !== i));
+  }
+  function deplacerBloc(i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= blocs.length) return;
+    const copie = [...blocs];
+    [copie[i], copie[j]] = [copie[j], copie[i]];
+    setBlocs(copie);
+  }
+  function majBloc(i: number, champs: Record<string, any>) {
+    setBlocs(blocs.map((b, n) => n === i ? { ...b, ...champs } as Bloc : b));
+  }
+  function majColonne(i: number, col: 0 | 1, champs: Record<string, any>) {
+    setBlocs(blocs.map((b, n) => {
+      if (n !== i || b.type !== "deux_colonnes") return b;
+      const colonnes = [...b.colonnes] as [Colonne, Colonne];
+      colonnes[col] = { ...colonnes[col], ...champs };
+      return { ...b, colonnes };
+    }));
+  }
   const [upLoad, setUpLoad] = useState(false);
   const [upErr, setUpErr] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
@@ -498,20 +251,20 @@ function NouveauForm({ onSaved, initial }: {
   }
 
   // Upload d'une image de plat (template Nouveau menu) → content.platN_image
-  async function uploadPlatImage(i: number, e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Upload générique : retourne l'URL publique (ou null). Utilisable par n'importe quel bloc.
+  async function uploadImage(file: File): Promise<string | null> {
     setUpErr("");
-    if (!file.type.startsWith("image/")) { setUpErr("Choisissez une image (JPG ou PNG)."); return; }
-    if (file.size > 10 * 1024 * 1024) { setUpErr("Image trop lourde (max 10 Mo)."); return; }
+    if (!file.type.startsWith("image/")) { setUpErr("Choisissez une image (JPG ou PNG)."); return null; }
+    if (file.size > 10 * 1024 * 1024) { setUpErr("Image trop lourde (max 10 Mo)."); return null; }
     setUpLoad(true);
-    const path = `newsletter-plat${i}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+    const path = `newsletter-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
     const { error } = await supabase.storage.from("gallery").upload(path, file);
-    if (error) { setUpErr("Erreur d'upload : " + error.message); setUpLoad(false); return; }
+    if (error) { setUpErr("Erreur d'upload : " + error.message); setUpLoad(false); return null; }
     const { data } = supabase.storage.from("gallery").getPublicUrl(path);
-    setContent((c) => ({ ...c, [`plat${i}_image`]: data.publicUrl }));
     setUpLoad(false);
+    return data.publicUrl;
   }
+
 
   async function uploadLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -529,10 +282,8 @@ function NouveauForm({ onSaved, initial }: {
     setUpLoad(false);
   }
 
-  const tpl = template ? TEMPLATES[template] : null;
-  const reqFields = tpl?.fields.filter((f) => f.required) || [];
-  const canStep2 = !!template && !!subject && reqFields.every((f) => !!content[f.key]?.trim())
-    && (template !== "nouveau_menu" || !!content.plat1_nom?.trim());
+  // Une campagne est valide si elle a un objet et au moins un bloc.
+  const canStep2 = !!subject.trim() && blocs.length > 0;
   const canSend  = sendNow || !!scheduledDate;
 
   async function sauvegarder(lancer: boolean) {
@@ -546,7 +297,7 @@ function NouveauForm({ onSaved, initial }: {
       scheduled_at = new Date(`${scheduledDate}T${scheduledTime || "09:00"}:00`).toISOString();
     }
 
-    const finalContent = imageUrl ? { ...content, image_url: imageUrl } : content;
+    const finalContent = content;
 
     let camp: Campaign | null = null;
     let error: unknown = null;
@@ -596,12 +347,13 @@ function NouveauForm({ onSaved, initial }: {
         </div>
       </div>
 
-      {/* Étape 1 : Template + contenu */}
+      {/* Étape 1 : Composition libre par blocs */}
       {step === 1 && (
-        <div style={{ display: "grid", gridTemplateColumns: (template === "evenementiel" || template === "nouveau_menu" || template === "vie_resto") ? "minmax(0,1fr) 560px" : "1fr", gap: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 560px", gap: 28 }}>
           <div>
-            <p className="desc">Choisissez un type de newsletter et rédigez le contenu.</p>
+            <p className="desc">Composez votre campagne avec des blocs. Aucun format imposé : ajoutez, réordonnez, supprimez.</p>
 
+            {/* Logo (une fois pour toutes les campagnes) */}
             <div style={{ display: "flex", alignItems: "center", gap: 14, background: "var(--cream)",
               border: "1px solid var(--line)", borderRadius: 10, padding: "12px 16px", marginBottom: 18 }}>
               {logoUrl
@@ -617,123 +369,99 @@ function NouveauForm({ onSaved, initial }: {
                 <input type="file" accept="image/*" onChange={uploadLogo} disabled={upLoad} style={{ display: "none" }} />
               </label>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
-              {Object.entries(TEMPLATES).map(([key, t]) => (
-                <button key={key} onClick={() => setTemplate(key)} style={{
-                  padding: "14px 16px", borderRadius: 10, textAlign: "left", cursor: "pointer", fontFamily: "var(--font-body)",
-                  border: template === key ? "2px solid var(--admin-accent)" : "1px solid var(--line)",
-                  background: template === key ? "var(--a06)" : "#fff",
-                }}>
-                  <div style={{ fontSize: 20, marginBottom: 4 }}>{t.icon}</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>{t.label}</div>
-                  <div style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 2 }}>{t.desc}</div>
-                </button>
+
+            <div className="champ">
+              <label>Objet de l'email <span style={{ color: "var(--admin-accent)" }}>*</span></label>
+              <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Ex. Notre nouvelle carte d'été est là 🌿" maxLength={150} />
+            </div>
+            <div className="champ">
+              <label>Aperçu (preheader)</label>
+              <input value={content.preheader || ""} onChange={(e) => setContent({ ...content, preheader: e.target.value })}
+                placeholder="Le texte gris affiché après l'objet dans la boîte de réception" maxLength={150} />
+            </div>
+            <div className="champ">
+              <label>Image d'en-tête (optionnelle)</label>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                {content.hero_image
+                  ? <img src={content.hero_image} alt="" style={{ width: 72, height: 48, objectFit: "cover", borderRadius: 6 }} />
+                  : <div style={{ width: 72, height: 48, borderRadius: 6, background: "var(--cream)", display: "grid", placeItems: "center", fontSize: 11, color: "var(--ink-soft)" }}>—</div>}
+                <label className="btn btn-ligne btn-mini" style={{ cursor: "pointer" }}>
+                  {content.hero_image ? "Remplacer" : "Ajouter"}
+                  <input type="file" accept="image/*" style={{ display: "none" }}
+                    onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const u = await uploadImage(f); if (u) setContent({ ...content, hero_image: u }); }} />
+                </label>
+                {content.hero_image && <button className="btn btn-mini btn-danger" onClick={() => setContent({ ...content, hero_image: "" })}>Retirer</button>}
+              </div>
+            </div>
+
+            {/* ── Éditeur de blocs ── */}
+            <div style={{ marginTop: 22 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <b style={{ fontSize: 14, color: "var(--ink)" }}>Contenu ({blocs.length} bloc{blocs.length > 1 ? "s" : ""})</b>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button className="btn btn-ligne btn-mini" onClick={() => ajouterBloc("pleine_largeur")}>+ Pleine largeur</button>
+                  <button className="btn btn-ligne btn-mini" onClick={() => ajouterBloc("deux_colonnes")}>+ 2 colonnes</button>
+                </div>
+              </div>
+
+              {!blocs.length && (
+                <div className="vide" style={{ padding: "24px 0" }}>
+                  Aucun bloc. Ajoutez-en un pour commencer votre campagne.
+                </div>
+              )}
+
+              {blocs.map((b, i) => (
+                <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 14, marginBottom: 12, background: "#fff" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                    <b style={{ fontSize: 13, color: "var(--ink)" }}>
+                      {b.type === "deux_colonnes" ? "▭▭ Deux colonnes" : "▬ Pleine largeur"}
+                    </b>
+                    <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+                      <button className="btn btn-mini btn-ligne" onClick={() => deplacerBloc(i, -1)} disabled={i === 0} title="Monter">▲</button>
+                      <button className="btn btn-mini btn-ligne" onClick={() => deplacerBloc(i, 1)} disabled={i === blocs.length - 1} title="Descendre">▼</button>
+                      <button className="btn btn-mini btn-danger" onClick={() => supprimerBloc(i)} title="Supprimer">×</button>
+                    </span>
+                  </div>
+
+                  {b.type === "pleine_largeur" ? (
+                    <ChampsBloc
+                      val={b}
+                      onChange={(champs) => majBloc(i, champs)}
+                      onUpload={uploadImage}
+                    />
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      {[0, 1].map((n) => (
+                        <div key={n} style={{ background: "var(--cream)", borderRadius: 8, padding: 10 }}>
+                          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink-soft)", marginBottom: 8 }}>
+                            Colonne {n + 1}
+                          </div>
+                          <ChampsBloc
+                            val={b.colonnes[n as 0 | 1]}
+                            onChange={(champs) => majColonne(i, n as 0 | 1, champs)}
+                            onUpload={uploadImage}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
 
-            {tpl && (
-              <div>
-                <div className="champ">
-                  <label>Objet de l'email <span style={{ color: "var(--admin-accent)" }}>*</span></label>
-                  <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Ex. Notre nouvelle carte d'été est là 🌿" maxLength={150} />
-                </div>
+            {upErr && <div className="login-err" style={{ marginTop: 10 }}>{upErr}</div>}
 
-                <div className="champ">
-                  <label>Résumé court (aperçu dans la boîte mail)</label>
-                  <input value={content.preheader || ""} onChange={(e) => setContent({ ...content, preheader: e.target.value })}
-                    placeholder="Ex. Une soirée conviviale à ne pas manquer" maxLength={150} />
-                </div>
-
-                {(template === "evenementiel" || template === "vie_resto") && (
-                  <div className="champ">
-                    <label>{template === "vie_resto" ? "Image de l'actualité (optionnel)" : "Image de l'événement (optionnel)"}</label>
-                    <label className="btn btn-ligne btn-mini" style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: upLoad ? "default" : "pointer", opacity: upLoad ? .6 : 1 }}>
-                      📷 {upLoad ? "Envoi en cours…" : "Choisir une image"}
-                      <input type="file" accept="image/*" onChange={uploadImage} disabled={upLoad} style={{ display: "none" }} />
-                    </label>
-                    {upErr && <div className="alerte" style={{ marginTop: 6 }}>{upErr}</div>}
-                    {imageUrl && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
-                        <img src={imageUrl} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 6, border: "1px solid var(--line)" }} />
-                        <button className="btn btn-mini btn-ligne" onClick={() => setImageUrl("")}>Retirer</button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {tpl.fields.map((f) => (
-                  <div className="champ" key={f.key}>
-                    <label>{f.label}{f.required && <span style={{ color: "var(--admin-accent)" }}> *</span>}</label>
-                    {f.type === "textarea"
-                      ? <textarea rows={3} value={content[f.key] || ""} onChange={(e) => setContent({ ...content, [f.key]: e.target.value })} maxLength={2000} />
-                      : <input value={content[f.key] || ""} onChange={(e) => setContent({ ...content, [f.key]: e.target.value })} maxLength={200} />
-                    }
-                  </div>
-                ))}
-
-                {/* Plats mis en avant — template Nouveau menu (1 obligatoire, 3 max) */}
-                {template === "nouveau_menu" && (
-                  <div style={{ marginTop: 6 }}>
-                    <label style={{ display: "block", fontWeight: 700, fontSize: 13, color: "var(--ink)", marginBottom: 8 }}>
-                      Plats mis en avant <span style={{ color: "var(--admin-accent)" }}>*</span>
-                      <span style={{ fontWeight: 400, color: "var(--ink-soft)", marginLeft: 8, fontSize: 12 }}>1 minimum, 3 maximum — affichés les uns sous les autres</span>
-                    </label>
-                    {[1, 2, 3].map((i) => {
-                      const nom = content[`plat${i}_nom`] || "";
-                      const img = content[`plat${i}_image`] || "";
-                      // N'afficher le bloc i que si le précédent est entamé (saisie progressive)
-                      if (i > 1 && !(content[`plat${i - 1}_nom`] || "").trim() && !nom.trim()) return null;
-                      return (
-                        <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: "14px 16px", marginBottom: 10, background: "#fff" }}>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-soft)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>
-                            Plat {i}{i === 1 && <span style={{ color: "var(--admin-accent)" }}> *</span>}
-                          </div>
-                          <div className="champ">
-                            <label>Nom du plat</label>
-                            <input value={nom} maxLength={120} placeholder="Ex. Galette forestière"
-                              onChange={(e) => setContent({ ...content, [`plat${i}_nom`]: e.target.value })} />
-                          </div>
-                          <div className="champ">
-                            <label>Description</label>
-                            <input value={content[`plat${i}_desc`] || ""} maxLength={300} placeholder="Ex. Champignons des bois, chèvre frais, noix, roquette"
-                              onChange={(e) => setContent({ ...content, [`plat${i}_desc`]: e.target.value })} />
-                          </div>
-                          <div className="champ" style={{ marginBottom: 0 }}>
-                            <label>Photo (pleine largeur dans l'email — optionnelle)</label>
-                            <label className="btn btn-ligne btn-mini" style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: upLoad ? "default" : "pointer", opacity: upLoad ? .6 : 1 }}>
-                              📷 {upLoad ? "Envoi en cours…" : (img ? "Changer la photo" : "Choisir une photo")}
-                              <input type="file" accept="image/*" onChange={(e) => uploadPlatImage(i, e)} disabled={upLoad} style={{ display: "none" }} />
-                            </label>
-                            {img && (
-                              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
-                                <img src={img} alt="" style={{ width: 64, height: 40, objectFit: "cover", borderRadius: 6, border: "1px solid var(--line)" }} />
-                                <button className="btn btn-mini btn-ligne" onClick={() => setContent((c) => { const n = { ...c }; delete n[`plat${i}_image`]; return n; })}>Retirer</button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {upErr && <div className="alerte" style={{ marginTop: 6 }}>{upErr}</div>}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="pan-actions" style={{ marginTop: 20 }}>
-              <button className="btn btn-accent" disabled={!canStep2} onClick={() => setStep(2)}>Suivant →</button>
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button className="btn btn-accent" disabled={!subject.trim() || !blocs.length} onClick={() => setStep(2)}>
+                Suivant →
+              </button>
+              <button className="btn btn-ligne" onClick={onClose}>Annuler</button>
             </div>
           </div>
 
-          {template === "evenementiel" && (
-            <EventCanvas subject={subject} content={content} imageUrl={imageUrl} restoName={restoName} logoUrl={logoUrl} />
-          )}
-          {template === "nouveau_menu" && (
-            <MenuCanvas subject={subject} content={content} restoName={restoName} logoUrl={logoUrl} />
-          )}
-          {template === "vie_resto" && (
-            <VieCanvas subject={subject} content={content} imageUrl={imageUrl} restoName={restoName} logoUrl={logoUrl} />
-          )}
+          <div>
+            <BlocsCanvas subject={subject} content={content} restoName={restoName} logoUrl={logoUrl} />
+          </div>
         </div>
       )}
 
@@ -897,7 +625,54 @@ export default function TabNewsletter() {
 
   // Date de référence d'une campagne pour le filtre par période :
   // envoyée → sent_at, planifiée → scheduled_at, brouillon → created_at.
-  function dateRef(c: Campaign): string {
+  
+/* Champs d'un bloc (ou d'une colonne) : titre, texte, image, CTA.
+   Tout est optionnel — le restaurateur ne remplit que ce dont il a besoin. */
+function ChampsBloc({ val, onChange, onUpload }: {
+  val: { titre?: string; texte?: string; image?: string; cta_label?: string; cta_url?: string };
+  onChange: (champs: Record<string, any>) => void;
+  onUpload: (f: File) => Promise<string | null>;
+}) {
+  return (
+    <>
+      <div className="champ">
+        <label>Titre</label>
+        <input value={val.titre || ""} onChange={(e) => onChange({ titre: e.target.value })} maxLength={120} placeholder="Optionnel" />
+      </div>
+      <div className="champ">
+        <label>Texte</label>
+        <textarea rows={3} value={val.texte || ""} onChange={(e) => onChange({ texte: e.target.value })} maxLength={2000}
+          placeholder="Un paragraphe par ligne" />
+      </div>
+      <div className="champ">
+        <label>Image</label>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {val.image
+            ? <img src={val.image} alt="" style={{ width: 56, height: 38, objectFit: "cover", borderRadius: 5 }} />
+            : <div style={{ width: 56, height: 38, borderRadius: 5, background: "#eee", display: "grid", placeItems: "center", fontSize: 10, color: "#999" }}>—</div>}
+          <label className="btn btn-ligne btn-mini" style={{ cursor: "pointer" }}>
+            {val.image ? "Changer" : "Ajouter"}
+            <input type="file" accept="image/*" style={{ display: "none" }}
+              onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const u = await onUpload(f); if (u) onChange({ image: u }); }} />
+          </label>
+          {val.image && <button className="btn btn-mini btn-danger" onClick={() => onChange({ image: "" })}>×</button>}
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div className="champ">
+          <label>Bouton — libellé</label>
+          <input value={val.cta_label || ""} onChange={(e) => onChange({ cta_label: e.target.value })} maxLength={40} placeholder="Ex. Réserver" />
+        </div>
+        <div className="champ">
+          <label>Bouton — lien</label>
+          <input value={val.cta_url || ""} onChange={(e) => onChange({ cta_url: e.target.value })} placeholder="https://…" />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function dateRef(c: Campaign): string {
     return c.sent_at || c.scheduled_at || c.created_at;
   }
 
