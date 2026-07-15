@@ -24,6 +24,7 @@ export default function ProtectionDonnees() {
         <ul className="legal-liste">
           <li><b>Réservation</b> : nom, e-mail, téléphone et nombre de couverts, utilisés uniquement pour gérer votre réservation.</li>
           <li><b>Newsletter</b> : prénom, nom et e-mail, utilisés pour vous envoyer nos actualités, avec votre consentement explicite.</li>
+          <li><b>Clics dans nos e-mails</b> : lorsqu'un lien de nos newsletters est cliqué, l'information est enregistrée par notre prestataire d'envoi. Elle nous sert uniquement à savoir quels contenus vous intéressent. Les ouvertures, elles, ne sont pas mesurées.</li>
         </ul>
 
         <h2>Base légale</h2>
@@ -40,6 +41,23 @@ export default function ProtectionDonnees() {
           jusqu'à votre désinscription.
         </p>
 
+        <h2>Destinataires et sous-traitants</h2>
+        <p>
+          Vos données ne sont jamais vendues ni cédées à des fins publicitaires. Elles sont
+          hébergées et traitées par les prestataires techniques suivants, agissant pour notre
+          compte :
+        </p>
+        <ul className="legal-liste">
+          <li><b>Supabase</b> — hébergement de la base de données (réservations, contacts). Serveurs situés à Paris (région eu-west-3).</li>
+          <li><b>Netlify</b> — hébergement des pages du site web. Aucune donnée personnelle n'y est stockée.</li>
+          <li><b>Resend</b> — envoi de nos e-mails (confirmations de réservation, newsletters) et mesure des clics. Serveurs situés en Irlande (région eu-west-1).</li>
+        </ul>
+        <p>
+          Vos données personnelles (réservations, contacts, e-mails) sont hébergées et traitées
+          au sein de l'Union européenne — France pour la base de données, Irlande pour l'envoi
+          des e-mails — et ne font l'objet d'aucun transfert hors UE.
+        </p>
+
         <h2>Vos droits</h2>
         <p>
           Vous disposez d'un droit d'accès, de rectification, d'effacement, d'opposition et de
@@ -51,6 +69,24 @@ export default function ProtectionDonnees() {
         <p>
           Chaque e-mail contient un lien de désinscription. Vous pouvez aussi nous contacter
           directement pour être retiré de notre liste.
+        </p>
+
+        <h2>Mesure d'audience de nos e-mails</h2>
+        <p>
+          C'est un choix délibéré : nos newsletters <b>ne contiennent aucun pixel espion</b> et
+          nous <b>ne mesurons pas les ouvertures</b>. Nous ne savons pas si vous avez lu un
+          e-mail, à quel moment, ni depuis quel appareil.
+        </p>
+        <p>
+          En revanche, les liens présents dans nos e-mails sont suivis : nous savons qu'un lien a
+          été cliqué, ce qui nous permet de comprendre quels contenus vous intéressent. Ce suivi
+          est assuré par notre prestataire d'envoi, Resend. Techniquement, les liens passent par
+          une adresse de redirection avant de vous amener à destination.
+        </p>
+        <p>
+          Nous n'utilisons aucun autre outil de traçage, et ces données ne sont jamais revendues
+          ni transmises à des tiers à des fins publicitaires. Au-delà des clics, la seule mesure
+          qui nous intéresse, c'est votre présence à table.
         </p>
 
         <p className="legal-maj">Dernière mise à jour : {L.lastUpdate}</p>
