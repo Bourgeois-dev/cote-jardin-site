@@ -723,7 +723,7 @@ a.pa-card:hover {
      5,2% à gauche. On le rogne visuellement — le CSS ne peut pas le deviner.
      Valeurs en % (= % de la largeur du bloc ; image carrée donc conversion directe).
      Un peu moins que le vide réel, pour garder une respiration. */
-  margin:-10% 0 -19% -4%;
+  margin:-5% 0 -10% -4%;
   filter:drop-shadow(0 6px 22px rgba(0,0,0,.38));
 }
 @media(max-width:600px){ .cj-hero-logo { max-width:82vw } }
