@@ -185,8 +185,10 @@ function blocParas(texte: string, largeur: number): string {
 
 // Bloc pleine largeur : image ? titre ? texte ? CTA ?
 function blocPleineLargeur(b: any): string {
+  // alt : champ dédié, repli sur le titre. Crucial en email — beaucoup de clients
+  // bloquent les images par défaut, l'alt est alors tout ce que le lecteur voit.
   const img = b.image ? `<tr><td align="center" style="font-size:0; padding:0;">
-    <img width="600" alt="${esc(b.titre || "")}" style="display:block; line-height:0; max-width:100%; width:600px; height:auto;" border="0" src="${esc(b.image)}" /></td></tr>` : "";
+    <img width="600" alt="${esc(b.image_alt || b.titre || "")}" style="display:block; line-height:0; max-width:100%; width:600px; height:auto;" border="0" src="${esc(b.image)}" /></td></tr>` : "";
   const titre = b.titre ? `<div style="display:block; max-width:560px; text-align:left; width:100%; line-height:initial;">
     <font style="font-family:Arial,sans-serif; font-size:16px; color:${INK}"><strong>${esc(b.titre)}</strong></font></div>` : "";
   const corps = (titre || b.texte) ? `<tr><td style="font-size:0; padding:30px 30px 20px 30px;" align="center">
@@ -203,7 +205,7 @@ function blocPleineLargeur(b: any): string {
 function colonne(col: any): string {
   // padding 10px autour de l'image (demande client) — l'image ne colle ni au bord ni à sa voisine
   const img = col.image ? `<tr><td align="center" style="font-size:0; padding:10px;">
-    <img width="280" alt="${esc(col.titre || "")}" style="display:block; line-height:0; max-width:100%; width:100%; height:auto;" border="0" src="${esc(col.image)}" /></td></tr>` : "";
+    <img width="280" alt="${esc(col.image_alt || col.titre || "")}" style="display:block; line-height:0; max-width:100%; width:100%; height:auto;" border="0" src="${esc(col.image)}" /></td></tr>` : "";
   const titre = col.titre ? `<div style="display:block; max-width:300px; text-align:left; width:100%; line-height:initial;">
     <font style="font-family:Arial,sans-serif; font-size:16px; color:${INK}"><strong>${esc(col.titre)}</strong></font></div>` : "";
   const corps = (titre || col.texte) ? `<tr><td style="font-size:0; padding:20px 30px 20px 30px;" align="center">

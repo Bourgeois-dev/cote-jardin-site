@@ -30,9 +30,9 @@ const TEMPLATES: Record<string, { label: string; icon: string; desc: string }> =
 };
 
 // Types de blocs disponibles
-type Colonne = { titre?: string; texte?: string; image?: string; cta_label?: string; cta_url?: string };
+type Colonne = { titre?: string; texte?: string; image?: string; image_alt?: string; cta_label?: string; cta_url?: string };
 type Bloc =
-  | { type: "pleine_largeur"; titre?: string; texte?: string; image?: string; cta_label?: string; cta_url?: string }
+  | { type: "pleine_largeur"; titre?: string; texte?: string; image?: string; image_alt?: string; cta_label?: string; cta_url?: string }
   | { type: "deux_colonnes"; colonnes: [Colonne, Colonne] };
 
 function blocVide(type: "pleine_largeur" | "deux_colonnes"): Bloc {
@@ -99,7 +99,7 @@ function BlocsCanvas({ subject, content, restoName, logoUrl }: {
       {/* padding 10px autour de l'image en 2 colonnes — reflète l'email réel */}
       {v.image && (
         <div style={{ padding: petit ? 10 : 0 }}>
-          <img src={v.image} alt="" style={{ width: "100%", display: "block" }} />
+          <img src={v.image} alt={v.image_alt || v.titre || ""} style={{ width: "100%", display: "block" }} />
         </div>
       )}
       <div style={{ padding: petit ? "12px 14px" : "18px 24px" }}>
@@ -176,7 +176,7 @@ function BlocsCanvas({ subject, content, restoName, logoUrl }: {
 /* Champs d'un bloc (ou d'une colonne) : titre, texte, image, CTA.
    Tout est optionnel — le restaurateur ne remplit que ce dont il a besoin. */
 function ChampsBloc({ val, onChange, onUpload }: {
-  val: { titre?: string; texte?: string; image?: string; cta_label?: string; cta_url?: string };
+  val: { titre?: string; texte?: string; image?: string; image_alt?: string; cta_label?: string; cta_url?: string };
   onChange: (champs: Record<string, any>) => void;
   onUpload: (f: File) => Promise<string | null>;
 }) {
@@ -202,9 +202,21 @@ function ChampsBloc({ val, onChange, onUpload }: {
             <input type="file" accept="image/*" style={{ display: "none" }}
               onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const u = await onUpload(f); if (u) onChange({ image: u }); }} />
           </label>
-          {val.image && <button className="btn btn-mini btn-danger" onClick={() => onChange({ image: "" })}>×</button>}
+          {val.image && <button className="btn btn-mini btn-danger" onClick={() => onChange({ image: "", image_alt: "" })}>×</button>}
         </div>
       </div>
+      {/* Texte alternatif : seulement si une image est chargée.
+          Essentiel en email — de nombreux clients bloquent les images par défaut. */}
+      {val.image && (
+        <div className="champ">
+          <label>Texte alternatif de l'image</label>
+          <input value={val.image_alt || ""} onChange={(e) => onChange({ image_alt: e.target.value })} maxLength={125}
+            placeholder="Ex. Planche de tapas maison" />
+          <span className="aide" style={{ fontSize: 11.5 }}>
+            Affiché si l'image ne se charge pas, et lu par les lecteurs d'écran. À défaut, le titre du bloc est utilisé.
+          </span>
+        </div>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         <div className="champ">
           <label>Bouton — libellé</label>
