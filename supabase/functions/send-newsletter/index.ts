@@ -57,10 +57,53 @@ async function getVipEmails(): Promise<Set<string>> {
   return set;
 }
 
+// Emails des clients dont la dernière venue tombe dans une TRANCHE fermée [minMois, maxMois].
+// Ex. (1,2) = venus il y a 1 ou 2 mois. Les tranches ne se chevauchent pas : un contact
+// ne peut recevoir qu'une seule relance. Cohérent avec newsletter_segment_counts().
+async function getInactifTrancheEmails(minMois: number, maxMois: number): Promise<Set<string>> {
+  const borneRecente = new Date();          // last_visit <= aujourd'hui - minMois
+  borneRecente.setMonth(borneRecente.getMonth() - minMois);
+  const borneAncienne = new Date();         // last_visit >  aujourd'hui - (maxMois + 1)
+  borneAncienne.setMonth(borneAncienne.getMonth() - (maxMois + 1));
+  const { data } = await db.from("customers")
+    .select("email,last_visit")
+    .not("last_visit", "is", null)
+    .lte("last_visit", borneRecente.toISOString().slice(0, 10))
+    .gt("last_visit", borneAncienne.toISOString().slice(0, 10));
+  const set = new Set<string>();
+  (data || []).forEach((r: any) => { const e = (r.email||"").trim().toLowerCase(); if (e) set.add(e); });
+  return set;
+}
+
+// Emails des inscrits jamais venus (aucune réservation honorée).
+async function getJamaisVenuEmails(): Promise<Set<string>> {
+  const { data } = await db.from("customers").select("email,last_visit");
+  const avecVisite = new Set<string>();
+  (data || []).forEach((r: any) => {
+    const e = (r.email||"").trim().toLowerCase();
+    if (e && r.last_visit) avecVisite.add(e);
+  });
+  return avecVisite; // on renverra le complément côté getRecipients
+}
+
 async function getRecipients(segment: string): Promise<{ email: string; name: string; token: string }[]> {
   const optin = await getOptinRecipients();
   if (segment === "optin") return optin;
   if (segment === "optin_vip") { const vip = await getVipEmails(); return optin.filter(r => vip.has(r.email)); }
+  const tranches: Record<string, [number, number]> = {
+    inactif_1_2: [1, 2],
+    inactif_3_4: [3, 4],
+    inactif_5_6: [5, 6],
+  };
+  if (tranches[segment]) {
+    const [min, max] = tranches[segment];
+    const emails = await getInactifTrancheEmails(min, max);
+    return optin.filter(r => emails.has(r.email));
+  }
+  if (segment === "jamais_venu") {
+    const avecVisite = await getJamaisVenuEmails();
+    return optin.filter(r => !avecVisite.has(r.email));
+  }
   return [];
 }
 
@@ -192,17 +235,12 @@ function blocDeuxColonnes(b: any): string {
 function renderBlocs(c: any, name: string, logoUrl: string, token: string): string {
   const blocs: any[] = Array.isArray(c.blocs) ? c.blocs : [];
 
-  const heroImg = c.hero_image ? `<table border="0" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;"><tbody><tr>
-    <td align="center" style="font-size:0; padding:0;">
-      <img width="600" alt="${esc(c.titre || RESTO_NAME)}" style="display:block; line-height:0; max-width:100%; width:600px; height:auto;" border="0" src="${esc(c.hero_image)}" />
-    </td></tr></tbody></table>` : "";
-
   const corps = blocs.map((b) => b?.type === "deux_colonnes" ? blocDeuxColonnes(b) : blocPleineLargeur(b)).join("");
 
   return layoutBlocs({
     preheader: c.preheader || c.titre || RESTO_NAME,
     title: c.titre || RESTO_NAME,
-    contenu: heroImg + corps,
+    contenu: corps,
     logoUrl,
     token,
   });
@@ -210,9 +248,12 @@ function renderBlocs(c: any, name: string, logoUrl: string, token: string): stri
 
 // Enveloppe : logo, contenu, footer. Structure du template maison.
 function layoutBlocs({ preheader, title, contenu, logoUrl, token }: { preheader: string; title: string; contenu: string; logoUrl: string; token: string }): string {
+  // Le logo renvoie toujours vers le site du restaurateur.
   const logo = logoUrl ? `<table border="0" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;"><tbody><tr>
     <td align="center" style="font-size:0; padding:0;">
-      <img width="200" alt="${esc(RESTO_NAME)}" style="display:block; line-height:0; max-width:100%; width:200px; height:auto;" border="0" src="${esc(logoUrl)}" />
+      <a href="${esc(SITE_URL)}" target="_blank" title="${esc(RESTO_NAME)}" style="text-decoration:none;">
+        <img width="200" alt="${esc(RESTO_NAME)}" style="display:block; line-height:0; max-width:100%; width:200px; height:auto; border:0;" border="0" src="${esc(logoUrl)}" />
+      </a>
     </td></tr></tbody></table>` : "";
 
   return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -263,8 +304,7 @@ function footerBlocs(token: string): string {
     <tr><td align="center" style="padding:0 30px 18px 30px;">
       <font style="font-family:Arial,sans-serif; font-size:13px; line-height:20px; color:#6b6358;">${esc(RESTO_ADDRESS)}</font>
     </td></tr>
-    ${blocCta("Voir le site", SITE_URL, 200)}
-    <tr><td align="center" style="padding:22px 30px 24px 30px;">
+    <tr><td align="center" style="padding:6px 30px 24px 30px;">
       <font style="font-family:Arial,sans-serif; font-size:11px; line-height:18px; color:#9a9189;">
         Vous recevez cet e-mail car vous êtes inscrit à notre newsletter.<br/>
         <a href="${unsubUrl}" style="color:#9a9189; text-decoration:underline;">Se désinscrire</a>
@@ -277,26 +317,52 @@ function footerBlocs(token: string): string {
 function renderTemplate(template: string, c: any, name: string, logoUrl: string, token: string): string {
   // Campagnes libres (nouveau système de blocs)
   if (template === "blocs") return renderBlocs(c, name, logoUrl, token);
+
   const ft = footer(token);
   const prenom = name.split(" ")[0] || "";
 
   if (template === "welcome") {
     const hb = `<tr><td align="center" style="padding:30px 44px 32px 44px;background-color:${ACCENT_COLOR};"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td align="center" style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.75);padding-bottom:10px;">Bienvenue</td></tr><tr><td align="center" class="h1" style="font-family:Georgia,serif;font-size:30px;line-height:38px;color:#FFFFFF;font-weight:normal;">Bienvenue chez ${esc(RESTO_NAME)}&nbsp;!</td></tr><tr><td align="center" style="padding-top:16px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="font-size:0;border-top:1px solid rgba(255,255,255,.45);width:48px;">&nbsp;</td></tr></table></td></tr></table></td></tr>`;
-    const b = `${heroImage("Photo")}<tr><td class="px" style="padding:36px 44px 6px 44px;background-color:#FFFFFF;font-family:Arial,sans-serif;">${prenom?`<p style="margin:0 0 20px 0;font-family:Georgia,serif;font-size:20px;color:#3A4A2C;">Bonjour ${esc(prenom)},</p>`:""}<p style="margin:0 0 18px 0;font-size:16px;line-height:26px;color:#4A4A45;">Merci de votre inscription. Vous faites maintenant partie de nos proches et serez les premiers inform\u00e9s de nos actualit\u00e9s, nouveaux menus et \u00e9v\u00e9nements.</p>${c.message?`<p style="margin:0 0 8px 0;font-size:16px;line-height:26px;color:#4A4A45;">${esc(c.message)}</p>`:""}</td></tr>${ctaBtn("D\u00e9couvrir le restaurant",SITE_URL)}${signoff()}`;
-    return layout({ preheader: `Bienvenue chez ${RESTO_NAME} \u2014 vous faites d\u00e9sormais partie de nos proches.`, title: `Bienvenue chez ${RESTO_NAME}`, headerBand: hb, body: b, footerHtml: ft, logoUrl, showLogo: true });
+    const b = `${heroImage("Photo")}<tr><td class="px" style="padding:36px 44px 6px 44px;background-color:#FFFFFF;font-family:Arial,sans-serif;">${prenom?`<p style="margin:0 0 20px 0;font-family:Georgia,serif;font-size:20px;color:#3A4A2C;">Bonjour ${esc(prenom)},</p>`:""}<p style="margin:0 0 18px 0;font-size:16px;line-height:26px;color:#4A4A45;">Merci de votre inscription. Vous faites maintenant partie de nos proches et serez les premiers informés de nos actualités, nouveaux menus et événements.</p>${c.message?`<p style="margin:0 0 8px 0;font-size:16px;line-height:26px;color:#4A4A45;">${esc(c.message)}</p>`:""}</td></tr>${ctaBtn("Découvrir le restaurant",SITE_URL)}${signoff()}`;
+    return layout({ preheader: `Bienvenue chez ${RESTO_NAME} — vous faites désormais partie de nos proches.`, title: `Bienvenue chez ${RESTO_NAME}`, headerBand: hb, body: b, footerHtml: ft, logoUrl, showLogo: true });
   }
   if (template === "evenementiel") {
-    const hb = `<tr><td align="center" style="padding:30px 44px 32px 44px;background-color:${ACCENT_COLOR};"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">${c.eyebrow?`<tr><td align="center" style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.75);padding-bottom:10px;">${esc(c.eyebrow)}</td></tr>`:""}<tr><td align="center" class="h1" style="font-family:Georgia,serif;font-size:30px;line-height:38px;color:#FFFFFF;font-weight:normal;">${esc(c.titre||"Un \u00e9v\u00e9nement")}</td></tr></table></td></tr>`;
+    const hb = `<tr><td align="center" style="padding:30px 44px 32px 44px;background-color:${ACCENT_COLOR};"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">${c.eyebrow?`<tr><td align="center" style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.75);padding-bottom:10px;">${esc(c.eyebrow)}</td></tr>`:""}<tr><td align="center" class="h1" style="font-family:Georgia,serif;font-size:30px;line-height:38px;color:#FFFFFF;font-weight:normal;">${esc(c.titre||"Un événement")}</td></tr></table></td></tr>`;
     const b = `${heroImage(c.titre||"",c.image_url)}<tr><td class="px" style="padding:36px 44px 6px 44px;background-color:#FFFFFF;font-family:Arial,sans-serif;">${prenom?`<p style="margin:0 0 18px 0;font-family:Georgia,serif;font-size:20px;color:#3A4A2C;">Bonjour ${esc(prenom)},</p>`:""} ${c.date_event?`<p style="margin:0 0 18px 0;display:inline-block;background:#f3f0e7;padding:8px 18px;border-radius:6px;font-size:14px;font-weight:bold;color:#1d1a16;">\ud83d\udcc5 ${esc(c.date_event)}</p>`:""}<p style="margin:0 0 6px 0;font-size:16px;line-height:26px;color:#4A4A45;">${esc(c.description||"")}</p></td></tr>${c.cta_label&&c.cta_url?ctaBtn(c.cta_label,c.cta_url):""}${signoff()}`;
     return layout({ preheader: c.preheader||c.titre||RESTO_NAME, title: c.titre||RESTO_NAME, headerBand: hb, body: b, footerHtml: ft, logoUrl });
   }
   if (template === "nouveau_menu") {
-    const hb = `<tr><td align="center" style="padding:30px 44px 32px 44px;background-color:${ACCENT_COLOR};"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td align="center" style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.75);padding-bottom:10px;">Nouveau menu</td></tr><tr><td align="center" class="h1" style="font-family:Georgia,serif;font-size:30px;line-height:38px;color:#FFFFFF;font-weight:normal;">${esc(c.titre||"Notre nouvelle carte")}</td></tr></table></td></tr>`;
-    const b = `${heroImage(c.titre||"Menu",c.image_url)}<tr><td class="px" style="padding:36px 44px 6px 44px;background-color:#FFFFFF;font-family:Arial,sans-serif;">${prenom?`<p style="margin:0 0 18px 0;font-family:Georgia,serif;font-size:20px;color:#3A4A2C;">Bonjour ${esc(prenom)},</p>`:""}<p style="margin:0 0 18px 0;font-size:16px;line-height:26px;color:#4A4A45;">${esc(c.intro||"")}</p>${c.plat_vedette?`<table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:10px 0;background:#f3f0e7;border-radius:10px;"><tr><td style="padding:18px 22px;"><p style="margin:0 0 5px 0;font-size:11px;text-transform:uppercase;color:#9a9189;">\u00c0 l'honneur</p><p style="margin:0 0 4px 0;font-family:Georgia,serif;font-size:18px;color:#1d1a16;">${esc(c.plat_vedette)}</p>${c.plat_description?`<p style="margin:0;font-size:13px;color:#6b6358;">${esc(c.plat_description)}</p>`:""}</td></tr></table>`:""}</td></tr>${c.cta_label&&c.cta_url?ctaBtn(c.cta_label,c.cta_url):ctaBtn("Voir la carte",SITE_URL)}${signoff()}`;
+    const hb = `<tr><td align="center" style="padding:30px 44px 32px 44px;background-color:${ACCENT_COLOR};"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td align="center" style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.75);padding-bottom:10px;">Nouvelle carte</td></tr><tr><td align="center" class="h1" style="font-family:Georgia,serif;font-size:30px;line-height:38px;color:#FFFFFF;font-weight:normal;">${esc(c.titre||"Notre nouvelle carte")}</td></tr>${c.sous_titre?`<tr><td align="center" style="padding-top:12px;font-family:Georgia,serif;font-size:15px;line-height:22px;color:rgba(255,255,255,.85);font-style:italic;">${esc(c.sous_titre)}</td></tr>`:""}</table></td></tr>`;
+    // 1 à 3 plats empilés : image pleine largeur puis nom + description.
+    // Repli sans image : simple filet séparateur (jamais l'image d'un autre plat).
+    let plats = "";
+    for (let i = 1; i <= 3; i++) {
+      const nom = (c[`plat${i}_nom`] || "").trim();
+      if (!nom) continue;
+      const img = c[`plat${i}_image`] || "";
+      const desc = c[`plat${i}_desc`] || "";
+      if (img) {
+        plats += `<tr><td style="font-size:0;line-height:0;padding-top:20px;"><img src="${esc(img)}" alt="${esc(nom)}" width="600" style="width:100%;max-width:600px;height:auto;display:block;"/></td></tr>`;
+      } else if (plats) {
+        plats += `<tr><td class="px" style="padding:22px 44px 0 44px;background-color:#FFFFFF;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="font-size:0;border-top:1px solid #E4E2D8;">&nbsp;</td></tr></table></td></tr>`;
+      }
+      plats += `<tr><td class="px" style="padding:${img?"16px":"14px"} 44px 4px 44px;background-color:#FFFFFF;font-family:Arial,sans-serif;"><p style="margin:0 0 5px 0;font-family:Georgia,'Times New Roman',serif;font-size:19px;line-height:26px;color:#3A4A2C;">${esc(nom)}</p>${desc?`<p style="margin:0;font-size:14px;line-height:22px;color:#6A6A60;">${esc(desc)}</p>`:""}</td></tr>`;
+    }
+    // Rétro-compatibilité : anciennes campagnes avec plat_vedette (encart)
+    if (!plats && c.plat_vedette) {
+      plats = `<tr><td class="px" style="padding:16px 44px 4px 44px;background-color:#FFFFFF;"><table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f3f0e7;border-radius:10px;"><tr><td style="padding:18px 22px;"><p style="margin:0 0 5px 0;font-size:11px;text-transform:uppercase;color:#9a9189;font-family:Arial,sans-serif;">À l'honneur</p><p style="margin:0 0 4px 0;font-family:Georgia,serif;font-size:18px;color:#1d1a16;">${esc(c.plat_vedette)}</p>${c.plat_description?`<p style="margin:0;font-size:13px;color:#6b6358;font-family:Arial,sans-serif;">${esc(c.plat_description)}</p>`:""}</td></tr></table></td></tr>`;
+    }
+    const citation = c.citation ? `<tr><td class="px" style="padding:22px 44px 4px 44px;background-color:#FFFFFF;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="border-left:3px solid ${ACCENT_COLOR};padding-left:20px;font-family:Georgia,'Times New Roman',serif;font-size:15px;line-height:24px;color:#5A6A4A;font-style:italic;">« ${esc(c.citation)} »</td></tr></table></td></tr>` : "";
+    const b = `<tr><td class="px" style="padding:36px 44px 6px 44px;background-color:#FFFFFF;font-family:Arial,sans-serif;">${prenom?`<p style="margin:0 0 18px 0;font-family:Georgia,serif;font-size:20px;color:#3A4A2C;">Bonjour ${esc(prenom)},</p>`:""}<p style="margin:0;font-size:16px;line-height:26px;color:#4A4A45;">${esc(c.intro||"")}</p></td></tr>${plats}${citation}${c.cta_label&&c.cta_url?ctaBtn(c.cta_label,c.cta_url):ctaBtn(c.cta_label||"Voir la carte",c.cta_url||SITE_URL)}${signoff()}`;
     return layout({ preheader: c.preheader||c.titre||RESTO_NAME, title: c.titre||RESTO_NAME, headerBand: hb, body: b, footerHtml: ft, logoUrl });
   }
-  const hb = `<tr><td align="center" style="padding:30px 44px 32px 44px;background-color:${ACCENT_COLOR};"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">${c.eyebrow?`<tr><td align="center" style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.75);padding-bottom:10px;">${esc(c.eyebrow)}</td></tr>`:""}<tr><td align="center" class="h1" style="font-family:Georgia,serif;font-size:30px;line-height:38px;color:#FFFFFF;font-weight:normal;">${esc(c.titre||"Actualit\u00e9")}</td></tr></table></td></tr>`;
-  const b = `${heroImage(c.titre||"",c.image_url)}<tr><td class="px" style="padding:36px 44px 6px 44px;background-color:#FFFFFF;font-family:Arial,sans-serif;">${prenom?`<p style="margin:0 0 18px 0;font-family:Georgia,serif;font-size:20px;color:#3A4A2C;">Bonjour ${esc(prenom)},</p>`:""}<p style="margin:0 0 6px 0;font-size:16px;line-height:26px;color:#4A4A45;">${esc(c.texte||"")}</p></td></tr>${c.cta_label&&c.cta_url?ctaBtn(c.cta_label,c.cta_url):""}${signoff()}`;
+  // vie_resto (et repli pour tout template inconnu)
+  const hb = `<tr><td align="center" style="padding:30px 44px 32px 44px;background-color:${ACCENT_COLOR};"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td align="center" style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.75);padding-bottom:10px;">${esc(c.eyebrow||"Vie du restaurant")}</td></tr><tr><td align="center" class="h1" style="font-family:Georgia,serif;font-size:30px;line-height:38px;color:#FFFFFF;font-weight:normal;">${esc(c.titre||"Actualité")}</td></tr></table></td></tr>`;
+  // Texte multi-paragraphes : chaque saut de ligne devient un paragraphe
+  const paras = String(c.texte||"").split(/\n+/).filter((p: string) => p.trim())
+    .map((p: string) => `<p style="margin:0 0 18px 0;font-size:16px;line-height:26px;color:#4A4A45;">${esc(p)}</p>`).join("");
+  const aRetenir = c.a_retenir ? `<tr><td class="px" style="padding:0 44px 8px 44px;background-color:#FFFFFF;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="background-color:#f3f0e7;border-radius:10px;padding:20px 22px;border-left:4px solid ${ACCENT_COLOR};"><p style="margin:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:${ACCENT_DARK};">À retenir</p><p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;line-height:24px;color:#3A4A2C;">${esc(c.a_retenir)}</p></td></tr></table></td></tr>` : "";
+  const b = `${heroImage(c.titre||"",c.image_url)}<tr><td class="px" style="padding:36px 44px 6px 44px;background-color:#FFFFFF;font-family:Arial,sans-serif;">${prenom?`<p style="margin:0 0 18px 0;font-family:Georgia,serif;font-size:20px;color:#3A4A2C;">Bonjour ${esc(prenom)},</p>`:""}${paras}</td></tr>${aRetenir}${c.cta_label&&c.cta_url?ctaBtn(c.cta_label,c.cta_url):""}${signoff()}`;
   return layout({ preheader: c.preheader||c.titre||RESTO_NAME, title: c.titre||RESTO_NAME, headerBand: hb, body: b, footerHtml: ft, logoUrl });
 }
 

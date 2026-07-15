@@ -134,13 +134,11 @@ function BlocsCanvas({ subject, content, restoName, logoUrl }: {
       </div>
 
       <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(80,100,60,.12)", maxWidth: 500, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", padding: "20px 30px 10px" }}>
+        <div style={{ textAlign: "center", padding: "20px 30px 10px" }} title="Dans l'email, le logo renvoie vers le site">
           {logoUrl
-            ? <img src={logoUrl} alt={restoName} style={{ height: 44, maxWidth: 200, objectFit: "contain", margin: "0 auto", display: "block" }} />
+            ? <img src={logoUrl} alt={restoName} style={{ height: 44, maxWidth: 200, objectFit: "contain", margin: "0 auto", display: "block", cursor: "pointer" }} />
             : <span style={{ fontFamily: "var(--font-display)", fontSize: 19, color: "var(--ink)" }}>{restoName || "Votre restaurant"}</span>}
         </div>
-
-        {content.hero_image && <img src={content.hero_image} alt="" style={{ width: "100%", display: "block" }} />}
 
         {!blocs.length && (
           <div style={{ padding: "28px 24px", textAlign: "center", fontSize: 12, color: "var(--ink-soft)", fontStyle: "italic" }}>
@@ -165,9 +163,6 @@ function BlocsCanvas({ subject, content, restoName, logoUrl }: {
         <div style={{ textAlign: "center", padding: "16px 24px 20px" }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: INK }}>{restoName || "Votre restaurant"}</div>
           <div style={{ fontSize: 11, color: "#6b6358", marginTop: 4 }}>Adresse du restaurant</div>
-          <div style={{ marginTop: 12 }}>
-            <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 12, fontWeight: 700, padding: "9px 22px", borderRadius: 5 }}>Voir le site</span>
-          </div>
           <div style={{ fontSize: 10, color: "#9a9189", marginTop: 14, lineHeight: 1.6 }}>
             Vous recevez cet e-mail car vous êtes inscrit à notre newsletter.<br />
             <span style={{ textDecoration: "underline" }}>Se désinscrire</span>
@@ -412,20 +407,6 @@ function NouveauForm({ onSaved, initial }: {
               <label>Aperçu (preheader)</label>
               <input value={content.preheader || ""} onChange={(e) => setContent({ ...content, preheader: e.target.value })}
                 placeholder="Le texte gris affiché après l'objet dans la boîte de réception" maxLength={150} />
-            </div>
-            <div className="champ">
-              <label>Image d'en-tête (optionnelle)</label>
-              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                {content.hero_image
-                  ? <img src={content.hero_image} alt="" style={{ width: 72, height: 48, objectFit: "cover", borderRadius: 6 }} />
-                  : <div style={{ width: 72, height: 48, borderRadius: 6, background: "var(--cream)", display: "grid", placeItems: "center", fontSize: 11, color: "var(--ink-soft)" }}>—</div>}
-                <label className="btn btn-ligne btn-mini" style={{ cursor: "pointer" }}>
-                  {content.hero_image ? "Remplacer" : "Ajouter"}
-                  <input type="file" accept="image/*" style={{ display: "none" }}
-                    onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const u = await uploadImage(f); if (u) setContent({ ...content, hero_image: u }); }} />
-                </label>
-                {content.hero_image && <button className="btn btn-mini btn-danger" onClick={() => setContent({ ...content, hero_image: "" })}>Retirer</button>}
-              </div>
             </div>
 
             {/* ── Éditeur de blocs ── */}
