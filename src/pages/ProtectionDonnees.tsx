@@ -73,9 +73,8 @@ export default function ProtectionDonnees() {
 
         <h2>Mesure d'audience de nos e-mails</h2>
         <p>
-          C'est un choix délibéré : nos newsletters <b>ne contiennent aucun pixel espion</b> et
-          nous <b>ne mesurons pas les ouvertures</b>. Nous ne savons pas si vous avez lu un
-          e-mail, à quel moment, ni depuis quel appareil.
+          C'est un choix délibéré : nos newsletters <b>ne contiennent aucun pixel d'ouverture</b>.
+          Nous ne savons pas si vous avez lu un e-mail, à quel moment, ni depuis quel appareil.
         </p>
         <p>
           En revanche, les liens présents dans nos e-mails sont suivis : nous savons qu'un lien a

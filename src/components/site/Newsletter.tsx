@@ -82,7 +82,7 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
               <label className="consent"><input type="checkbox" required checked={consent} onChange={(e) => setConsent(e.target.checked)} /><span>J'accepte de recevoir les actualités du restaurant par e-mail. Désinscription possible à tout moment. *</span></label>
               {erreur && <div className="news-erreur">{erreur}</div>}
               <button className="btn btn-accent" type="submit" style={{ width: "100%" }} disabled={busy}>{busy ? "Envoi…" : "S'inscrire"}</button>
-              <p className="rgpd">Vos données sont traitées conformément au RGPD et jamais transmises à des tiers. Nos e-mails ne contiennent aucun pixel espion : nous ne mesurons pas les ouvertures, seulement les clics sur nos liens.</p>
+              <p className="rgpd">Vos données sont traitées conformément au RGPD et jamais transmises à des tiers. Nos e-mails ne contiennent aucun pixel d'ouverture : nous ne savons pas si vous les lisez, seulement si vous cliquez sur un lien.</p>
             </form>
           ) : (
             <div className="news-merci">
