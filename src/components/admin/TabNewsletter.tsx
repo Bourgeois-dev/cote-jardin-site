@@ -173,6 +173,52 @@ function BlocsCanvas({ subject, content, restoName, logoUrl }: {
   );
 }
 
+/* Champs d'un bloc (ou d'une colonne) : titre, texte, image, CTA.
+   Tout est optionnel — le restaurateur ne remplit que ce dont il a besoin. */
+function ChampsBloc({ val, onChange, onUpload }: {
+  val: { titre?: string; texte?: string; image?: string; cta_label?: string; cta_url?: string };
+  onChange: (champs: Record<string, any>) => void;
+  onUpload: (f: File) => Promise<string | null>;
+}) {
+  return (
+    <>
+      <div className="champ">
+        <label>Titre</label>
+        <input value={val.titre || ""} onChange={(e) => onChange({ titre: e.target.value })} maxLength={120} placeholder="Optionnel" />
+      </div>
+      <div className="champ">
+        <label>Texte</label>
+        <textarea rows={3} value={val.texte || ""} onChange={(e) => onChange({ texte: e.target.value })} maxLength={2000}
+          placeholder="Un paragraphe par ligne" />
+      </div>
+      <div className="champ">
+        <label>Image</label>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {val.image
+            ? <img src={val.image} alt="" style={{ width: 56, height: 38, objectFit: "cover", borderRadius: 5 }} />
+            : <div style={{ width: 56, height: 38, borderRadius: 5, background: "#eee", display: "grid", placeItems: "center", fontSize: 10, color: "#999" }}>—</div>}
+          <label className="btn btn-ligne btn-mini" style={{ cursor: "pointer" }}>
+            {val.image ? "Changer" : "Ajouter"}
+            <input type="file" accept="image/*" style={{ display: "none" }}
+              onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const u = await onUpload(f); if (u) onChange({ image: u }); }} />
+          </label>
+          {val.image && <button className="btn btn-mini btn-danger" onClick={() => onChange({ image: "" })}>×</button>}
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div className="champ">
+          <label>Bouton — libellé</label>
+          <input value={val.cta_label || ""} onChange={(e) => onChange({ cta_label: e.target.value })} maxLength={40} placeholder="Ex. Réserver" />
+        </div>
+        <div className="champ">
+          <label>Bouton — lien</label>
+          <input value={val.cta_url || ""} onChange={(e) => onChange({ cta_url: e.target.value })} placeholder="https://…" />
+        </div>
+      </div>
+    </>
+  );
+}
+
 function NouveauForm({ onSaved, initial }: {
   onSaved: () => void;
   initial?: { id?: string; template: string; segment: string; subject: string; content: Record<string, string> };
@@ -235,23 +281,6 @@ function NouveauForm({ onSaved, initial }: {
       .then(({ data }) => { if (data?.content?.url) setLogoUrl(data.content.url); });
   }, []);
 
-  async function uploadImage(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUpErr("");
-    if (!file.type.startsWith("image/")) { setUpErr("Choisissez une image (JPG ou PNG)."); return; }
-    if (file.size > 10 * 1024 * 1024) { setUpErr("Image trop lourde (max 10 Mo)."); return; }
-    setUpLoad(true);
-    const path = `newsletter-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
-    const { error } = await supabase.storage.from("gallery").upload(path, file);
-    if (error) { setUpErr("Erreur d'upload : " + error.message); setUpLoad(false); return; }
-    const { data } = supabase.storage.from("gallery").getPublicUrl(path);
-    setImageUrl(data.publicUrl);
-    setUpLoad(false);
-  }
-
-  // Upload d'une image de plat (template Nouveau menu) → content.platN_image
-  // Upload générique : retourne l'URL publique (ou null). Utilisable par n'importe quel bloc.
   async function uploadImage(file: File): Promise<string | null> {
     setUpErr("");
     if (!file.type.startsWith("image/")) { setUpErr("Choisissez une image (JPG ou PNG)."); return null; }
@@ -455,7 +484,6 @@ function NouveauForm({ onSaved, initial }: {
               <button className="btn btn-accent" disabled={!subject.trim() || !blocs.length} onClick={() => setStep(2)}>
                 Suivant →
               </button>
-              <button className="btn btn-ligne" onClick={onClose}>Annuler</button>
             </div>
           </div>
 
@@ -625,52 +653,6 @@ export default function TabNewsletter() {
 
   // Date de référence d'une campagne pour le filtre par période :
   // envoyée → sent_at, planifiée → scheduled_at, brouillon → created_at.
-  
-/* Champs d'un bloc (ou d'une colonne) : titre, texte, image, CTA.
-   Tout est optionnel — le restaurateur ne remplit que ce dont il a besoin. */
-function ChampsBloc({ val, onChange, onUpload }: {
-  val: { titre?: string; texte?: string; image?: string; cta_label?: string; cta_url?: string };
-  onChange: (champs: Record<string, any>) => void;
-  onUpload: (f: File) => Promise<string | null>;
-}) {
-  return (
-    <>
-      <div className="champ">
-        <label>Titre</label>
-        <input value={val.titre || ""} onChange={(e) => onChange({ titre: e.target.value })} maxLength={120} placeholder="Optionnel" />
-      </div>
-      <div className="champ">
-        <label>Texte</label>
-        <textarea rows={3} value={val.texte || ""} onChange={(e) => onChange({ texte: e.target.value })} maxLength={2000}
-          placeholder="Un paragraphe par ligne" />
-      </div>
-      <div className="champ">
-        <label>Image</label>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {val.image
-            ? <img src={val.image} alt="" style={{ width: 56, height: 38, objectFit: "cover", borderRadius: 5 }} />
-            : <div style={{ width: 56, height: 38, borderRadius: 5, background: "#eee", display: "grid", placeItems: "center", fontSize: 10, color: "#999" }}>—</div>}
-          <label className="btn btn-ligne btn-mini" style={{ cursor: "pointer" }}>
-            {val.image ? "Changer" : "Ajouter"}
-            <input type="file" accept="image/*" style={{ display: "none" }}
-              onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const u = await onUpload(f); if (u) onChange({ image: u }); }} />
-          </label>
-          {val.image && <button className="btn btn-mini btn-danger" onClick={() => onChange({ image: "" })}>×</button>}
-        </div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        <div className="champ">
-          <label>Bouton — libellé</label>
-          <input value={val.cta_label || ""} onChange={(e) => onChange({ cta_label: e.target.value })} maxLength={40} placeholder="Ex. Réserver" />
-        </div>
-        <div className="champ">
-          <label>Bouton — lien</label>
-          <input value={val.cta_url || ""} onChange={(e) => onChange({ cta_url: e.target.value })} placeholder="https://…" />
-        </div>
-      </div>
-    </>
-  );
-}
 
 function dateRef(c: Campaign): string {
     return c.sent_at || c.scheduled_at || c.created_at;
