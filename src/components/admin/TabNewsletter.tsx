@@ -284,6 +284,13 @@ function NouveauForm({ onSaved, initial }: {
   const [sendNow, setSendNow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState("");
+  // Envoi de test : adresse cible + retour utilisateur
+  // campId mémorise la campagne créée lors d'un 1er test, pour qu'un 2e test
+  // la mette à jour au lieu de créer un doublon.
+  const [campId, setCampId] = useState<string | undefined>(initial?.id);
+  const [testEmail, setTestEmail] = useState("");
+  const [testMsg, setTestMsg] = useState("");
+  const [testBusy, setTestBusy] = useState(false);
 
   const restoName = import.meta.env.VITE_RESTO_NAME || "";
   const [logoUrl, setLogoUrl] = useState("");
@@ -374,6 +381,52 @@ function NouveauForm({ onSaved, initial }: {
 
     setBusy(false);
     onSaved();
+  }
+
+  // Envoi d'un test à une adresse précise.
+  // La campagne est d'abord sauvegardée en brouillon (il faut un campaign_id),
+  // puis l'edge l'envoie en mode test : aucun effet de bord (statut inchangé,
+  // pas de comptabilisation dans les stats).
+  async function envoyerTest() {
+    const email = testEmail.trim();
+    if (!email) { setTestMsg("Indiquez une adresse e-mail."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setTestMsg("Adresse e-mail invalide."); return; }
+    if (!subject.trim() || !blocs.length) { setTestMsg("Un objet et au moins un bloc sont nécessaires."); return; }
+
+    setTestBusy(true); setTestMsg("");
+    try {
+      // 1. Sauvegarder (création ou mise à jour) pour disposer d'un campaign_id
+      let id = campId;
+      if (id) {
+        await supabase.from("newsletter_campaigns")
+          .update({ template, segment, subject, content })
+          .eq("id", id);
+      } else {
+        const { data, error } = await supabase.from("newsletter_campaigns")
+          .insert({ template, segment, subject, content, status: "draft" })
+          .select("id").single();
+        if (error || !data) { setTestMsg("Impossible de sauvegarder la campagne."); setTestBusy(false); return; }
+        id = data.id;
+        setCampId(id);
+      }
+
+      // 2. Envoyer le test
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-newsletter`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ campaign_id: id, override_email: email }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.error) {
+        setTestMsg(`Échec de l'envoi : ${json.error || res.status}`);
+      } else {
+        setTestMsg(`Test envoyé à ${email}.`);
+      }
+    } catch (e) {
+      setTestMsg("Erreur réseau lors de l'envoi du test.");
+    }
+    setTestBusy(false);
   }
 
   return (
@@ -567,6 +620,36 @@ function NouveauForm({ onSaved, initial }: {
           {erreur && <div className="alerte">{erreur}</div>}
 
           <div className="pan-actions">
+          {/* Envoi de test — avant l'envoi réel, à une adresse précise.
+              N'altère pas la campagne (statut inchangé, hors statistiques). */}
+          <div style={{ background: "var(--cream)", border: "1px solid var(--line)", borderRadius: 10,
+            padding: "14px 16px", marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", marginBottom: 8 }}>
+              Envoyer un test
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <input
+                type="email"
+                value={testEmail}
+                onChange={(e) => { setTestEmail(e.target.value); setTestMsg(""); }}
+                placeholder="votre@email.fr"
+                style={{ flex: 1, minWidth: 220 }}
+              />
+              <button className="btn btn-ligne btn-mini" disabled={testBusy} onClick={envoyerTest}>
+                {testBusy ? "Envoi…" : "Envoyer le test"}
+              </button>
+            </div>
+            {testMsg && (
+              <div style={{ marginTop: 8, fontSize: 12.5,
+                color: testMsg.startsWith("Test envoyé") ? "var(--ok, #3E7D5A)" : "var(--erreur, #B5503C)" }}>
+                {testMsg}
+              </div>
+            )}
+            <div className="aide" style={{ fontSize: 11.5, marginTop: 6 }}>
+              L'e-mail part à cette seule adresse. La campagne n'est pas envoyée et reste modifiable.
+            </div>
+          </div>
+
             <button className="btn btn-ligne" onClick={() => setStep(2)}>← Retour</button>
             <button className="btn btn-ligne" disabled={busy} onClick={() => sauvegarder(false)}>Sauvegarder en brouillon</button>
             <button className="btn btn-accent" disabled={busy || !canSend} onClick={() => sauvegarder(true)}>

@@ -399,27 +399,45 @@ Deno.serve(async (req: Request) => {
     const { campaign_id, override_email, override_name } = body;
     if (!campaign_id) return new Response(JSON.stringify({ error: "campaign_id requis" }), { status: 400, headers: cors });
 
-    const { data: updated, error: lockErr } = await db
-      .from("newsletter_campaigns")
-      .update({ status: "sending" })
-      .eq("id", campaign_id)
-      .in("status", ["scheduled", "sending"])
-      .not("status", "eq", "sent")
-      .select()
-      .single();
+    // ── MODE TEST ────────────────────────────────────────────────────────────
+    // Un test (override_email) ne doit AVOIR AUCUN effet de bord :
+    //  - il n'altère pas le statut de la campagne (elle reste draft/scheduled et
+    //    pourra être envoyée pour de vrai ensuite) ;
+    //  - il fonctionne sur un brouillon (c'est justement le moment où on teste) ;
+    //  - il n'est pas comptabilisé dans newsletter_sends (stats non faussées).
+    const estTest = !!override_email;
 
-    if (lockErr || !updated) {
-      return new Response(JSON.stringify({ error: "Campagne introuvable ou d\u00e9j\u00e0 envoy\u00e9e" }), { status: 409, headers: cors });
+    let camp: any;
+    if (estTest) {
+      if (!isValidEmail(override_email)) {
+        return new Response(JSON.stringify({ error: "Adresse e-mail invalide" }), { status: 400, headers: cors });
+      }
+      const { data, error } = await db.from("newsletter_campaigns").select("*").eq("id", campaign_id).single();
+      if (error || !data) {
+        return new Response(JSON.stringify({ error: "Campagne introuvable" }), { status: 404, headers: cors });
+      }
+      camp = data; // aucun changement de statut
+    } else {
+      const { data: updated, error: lockErr } = await db
+        .from("newsletter_campaigns")
+        .update({ status: "sending" })
+        .eq("id", campaign_id)
+        .in("status", ["scheduled", "sending"])
+        .not("status", "eq", "sent")
+        .select()
+        .single();
+      if (lockErr || !updated) {
+        return new Response(JSON.stringify({ error: "Campagne introuvable ou d\u00e9j\u00e0 envoy\u00e9e" }), { status: 409, headers: cors });
+      }
+      camp = updated;
     }
-    const camp = updated;
+
     const logoUrl = await getLogoUrl();
 
     let recipients: { email: string; name: string; token: string }[];
-    if (override_email) {
-      if (!isValidEmail(override_email)) {
-        await db.from("newsletter_campaigns").update({ status: "failed", error_message: "override_email invalide" }).eq("id", campaign_id);
-        return new Response(JSON.stringify({ error: "override_email invalide" }), { status: 400, headers: cors });
-      }
+    if (estTest) {
+      // Token de désinscription réel si l'adresse est un lead connu, sinon vide
+      // (le lien pointera alors vers la page de désinscription sans token).
       const { data: lead } = await db.from("leads").select("unsubscribe_token").eq("email", override_email.toLowerCase()).maybeSingle();
       recipients = [{ email: override_email, name: override_name || "", token: lead?.unsubscribe_token || "" }];
     } else {
@@ -427,7 +445,9 @@ Deno.serve(async (req: Request) => {
     }
 
     if (recipients.length === 0) {
-      await db.from("newsletter_campaigns").update({ status: "sent", sent_at: new Date().toISOString(), recipients_count: 0, sent_count: 0 }).eq("id", campaign_id);
+      if (!estTest) {
+        await db.from("newsletter_campaigns").update({ status: "sent", sent_at: new Date().toISOString(), recipients_count: 0, sent_count: 0 }).eq("id", campaign_id);
+      }
       return new Response(JSON.stringify({ ok: true, sent: 0 }), { headers: cors });
     }
 
@@ -447,14 +467,21 @@ Deno.serve(async (req: Request) => {
       else { sendErrors.push(...result.errors); batch.forEach((r) => sendRecords.push({ campaign_id, email: r.email, name: r.name, error: result.errors[0] })); }
       if (i + 100 < recipients.length) await new Promise((r) => setTimeout(r, 300));
     }
-    if (sendRecords.length > 0) await db.from("newsletter_sends").insert(sendRecords);
-    const finalStatus = sendErrors.length === 0 ? "sent" : (totalSent > 0 ? "sent" : "failed");
-    await db.from("newsletter_campaigns").update({
-      status: finalStatus, sent_at: new Date().toISOString(),
-      recipients_count: recipients.length, sent_count: totalSent,
-      error_message: sendErrors.length > 0 ? sendErrors.join(" | ") : null,
-    }).eq("id", campaign_id);
-    return new Response(JSON.stringify({ ok: true, sent: totalSent, total: recipients.length }), { headers: { ...cors, "Content-Type": "application/json" } });
+    // En mode test : aucune trace en base (ni stats d'envoi, ni changement de statut).
+    // La campagne reste exactement dans l'état où elle était.
+    if (!estTest) {
+      if (sendRecords.length > 0) await db.from("newsletter_sends").insert(sendRecords);
+      const finalStatus = sendErrors.length === 0 ? "sent" : (totalSent > 0 ? "sent" : "failed");
+      await db.from("newsletter_campaigns").update({
+        status: finalStatus, sent_at: new Date().toISOString(),
+        recipients_count: recipients.length, sent_count: totalSent,
+        error_message: sendErrors.length > 0 ? sendErrors.join(" | ") : null,
+      }).eq("id", campaign_id);
+    }
+    if (estTest && sendErrors.length > 0) {
+      return new Response(JSON.stringify({ error: sendErrors.join(" | ") }), { status: 502, headers: { ...cors, "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ ok: true, sent: totalSent, total: recipients.length, test: estTest }), { headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: cors });
   }
