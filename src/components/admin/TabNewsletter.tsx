@@ -619,23 +619,25 @@ function NouveauForm({ onSaved, initial }: {
 
           {erreur && <div className="alerte">{erreur}</div>}
 
-          <div className="pan-actions">
-          {/* Envoi de test — avant l'envoi réel, à une adresse précise.
-              N'altère pas la campagne (statut inchangé, hors statistiques). */}
+          {/* Envoi de test — HORS de .pan-actions : ce conteneur est un flex dont les
+              .btn ont flex:1, ils s'étireraient à la hauteur de ce bloc. */}
           <div style={{ background: "var(--cream)", border: "1px solid var(--line)", borderRadius: 10,
-            padding: "14px 16px", marginBottom: 16 }}>
+            padding: "14px 16px", marginTop: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", marginBottom: 8 }}>
               Envoyer un test
             </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <input
-                type="email"
-                value={testEmail}
-                onChange={(e) => { setTestEmail(e.target.value); setTestMsg(""); }}
-                placeholder="votre@email.fr"
-                style={{ flex: 1, minWidth: 220 }}
-              />
-              <button className="btn btn-ligne btn-mini" disabled={testBusy} onClick={envoyerTest}>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
+              {/* .champ : indispensable, c'est lui qui porte le style des inputs de l'admin */}
+              <div className="champ" style={{ flex: 1, minWidth: 220, marginBottom: 0 }}>
+                <input
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => { setTestEmail(e.target.value); setTestMsg(""); }}
+                  placeholder="votre@email.fr"
+                />
+              </div>
+              <button className="btn btn-ligne" disabled={testBusy} onClick={envoyerTest}
+                style={{ whiteSpace: "nowrap" }}>
                 {testBusy ? "Envoi…" : "Envoyer le test"}
               </button>
             </div>
@@ -650,6 +652,7 @@ function NouveauForm({ onSaved, initial }: {
             </div>
           </div>
 
+          <div className="pan-actions">
             <button className="btn btn-ligne" onClick={() => setStep(2)}>← Retour</button>
             <button className="btn btn-ligne" disabled={busy} onClick={() => sauvegarder(false)}>Sauvegarder en brouillon</button>
             <button className="btn btn-accent" disabled={busy || !canSend} onClick={() => sauvegarder(true)}>
