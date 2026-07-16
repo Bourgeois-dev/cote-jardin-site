@@ -672,6 +672,12 @@ tr:last-child td { border-bottom:none }
 .promo-titre { font-family:var(--font-display,Georgia,serif); font-size:20px; margin-bottom:6px; color:var(--ink) }
 .promo-sous  { font-size:13px; color:var(--ink-soft); margin-bottom:14px; line-height:1.5 }
 .promo-cta   { display:block; width:100%; text-align:center; font-size:14px; padding:12px }
+/* L'aperçu doit refléter le VRAI popup du site : admin.css redéfinit .app .btn-accent
+   en bordeaux (charte admin), on rétablit ici la charte du site. */
+.promo-apercu .btn-accent,
+.app .promo-apercu .btn-accent { background:var(--accent); color:#fff }
+.promo-apercu .btn-accent:hover,
+.app .promo-apercu .btn-accent:hover { background:var(--accent-dark, var(--accent)) }
 
 
 /* ── 09. CRM CLIENTS (.cli-) — refonte maquette ────────────────────────── */
