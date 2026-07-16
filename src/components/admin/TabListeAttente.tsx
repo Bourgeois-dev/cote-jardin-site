@@ -46,7 +46,11 @@ export default function TabListeAttente() {
   }, []);
 
   async function notifier(entry: WaitlistEntry) {
-    const ok = await confirm(`Notifier ${entry.customer_name} qu'une place s'est libérée ?`);
+    const ok = await confirm({
+      titre: "Notifier ce client ?",
+      message: `Un e-mail sera envoyé à ${entry.customer_name} pour l'informer qu'une place s'est libérée.`,
+      confirmer: "Envoyer la notification",
+    });
     if (!ok) return;
     if (entry.email) {
       await sendReservationEmail("waitlist_confirm", {
@@ -62,7 +66,12 @@ export default function TabListeAttente() {
   }
 
   async function supprimer(entry: WaitlistEntry) {
-    const ok = await confirm(`Supprimer la demande de ${entry.customer_name} ?`);
+    const ok = await confirm({
+      titre: "Supprimer cette demande ?",
+      message: `La demande de ${entry.customer_name} sera retirée de la liste d'attente.`,
+      confirmer: "Supprimer",
+      danger: true,
+    });
     if (!ok) return;
     await supabase.from("waitlist").delete().eq("id", entry.id);
     charger();

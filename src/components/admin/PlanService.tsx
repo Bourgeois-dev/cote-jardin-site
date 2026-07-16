@@ -112,7 +112,13 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
     if (!error) reload();
   }
   async function annuler(r: Reservation) {
-    const ok = await confirm({ titre: "Annuler cette réservation ?", message: `${r.customer_name} — ${r.covers} cvt, ${r.time}`, confirmer: "Annuler", danger: true });
+    const ok = await confirm({
+      titre: "Annuler cette réservation ?",
+      message: `${r.customer_name} — ${r.covers} cvt, ${r.time}`,
+      confirmer: "Oui, annuler la réservation",
+      annuler: "Retour",
+      danger: true,
+    });
     if (!ok) return;
     const { error } = await supabase.from("reservations").update({ status: "annule", table_ids: [] }).eq("id", r.id);
     if (!error) { notifyWaitlist(r.date, r.time); reload(); }

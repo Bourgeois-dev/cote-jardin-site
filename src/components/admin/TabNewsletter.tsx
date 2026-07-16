@@ -136,7 +136,7 @@ function BlocsCanvas({ subject, content, restoName, logoUrl }: {
       <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(80,100,60,.12)", maxWidth: 500, margin: "0 auto" }}>
         <div style={{ textAlign: "center", padding: "20px 30px 10px" }} title="Dans l'email, le logo renvoie vers le site">
           {logoUrl
-            ? <img src={logoUrl} alt={restoName} style={{ height: 100, maxWidth: 200, objectFit: "contain", margin: "0 auto", display: "block", cursor: "pointer" }} />
+            ? <img src={logoUrl} alt={restoName} style={{ height: 44, maxWidth: 200, objectFit: "contain", margin: "0 auto", display: "block", cursor: "pointer" }} />
             : <span style={{ fontFamily: "var(--font-display)", fontSize: 19, color: "var(--ink)" }}>{restoName || "Votre restaurant"}</span>}
         </div>
 
@@ -709,21 +709,36 @@ export default function TabNewsletter() {
   }, []);
 
   async function annuler(c: Campaign) {
-    const ok = await confirm(`Annuler la campagne "${c.subject}" ?`);
+    const ok = await confirm({
+      titre: "Annuler l'envoi programmé ?",
+      message: `« ${c.subject} » repassera en brouillon et ne sera pas envoyée.`,
+      confirmer: "Oui, repasser en brouillon",
+      annuler: "Retour",
+      danger: true,
+    });
     if (!ok) return;
     await supabase.from("newsletter_campaigns").update({ status: "draft", scheduled_at: null }).eq("id", c.id);
     charger();
   }
 
   async function supprimer(c: Campaign) {
-    const ok = await confirm(`Supprimer définitivement la campagne "${c.subject}" ?`);
+    const ok = await confirm({
+      titre: "Supprimer cette campagne ?",
+      message: `« ${c.subject} » sera définitivement supprimée.`,
+      confirmer: "Supprimer",
+      danger: true,
+    });
     if (!ok) return;
     await supabase.from("newsletter_campaigns").delete().eq("id", c.id);
     charger();
   }
 
   async function envoyer(c: Campaign) {
-    const ok = await confirm(`Envoyer maintenant la campagne "${c.subject}" ?`);
+    const ok = await confirm({
+      titre: "Envoyer maintenant ?",
+      message: `« ${c.subject} » partira immédiatement aux destinataires du segment.`,
+      confirmer: "Envoyer",
+    });
     if (!ok) return;
     await supabase.from("newsletter_campaigns").update({ scheduled_at: new Date().toISOString(), status: "scheduled" }).eq("id", c.id);
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-newsletter`;

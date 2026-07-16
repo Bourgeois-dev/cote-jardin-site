@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 
-type ConfirmOptions = { titre: string; message?: string; confirmer?: string; danger?: boolean };
+// "annuler" : libellé du bouton de fermeture. Indispensable quand l'action confirmée
+// est elle-même une annulation (sinon deux boutons « Annuler » côte à côte).
+type ConfirmOptions = { titre: string; message?: string; confirmer?: string; annuler?: string; danger?: boolean };
 type ConfirmFn = (opts: ConfirmOptions) => Promise<boolean>;
 
 const ConfirmContext = createContext<ConfirmFn>(async () => false);
@@ -31,7 +33,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               <button className={`btn ${etat.opts.danger ? "btn-danger" : "btn-accent"}`} onClick={() => repondre(true)}>
                 {etat.opts.confirmer || "Confirmer"}
               </button>
-              <button className="btn btn-ligne" onClick={() => repondre(false)}>Annuler</button>
+              <button className="btn btn-ligne" onClick={() => repondre(false)}>{etat.opts.annuler || "Annuler"}</button>
             </div>
           </div>
         </div>
