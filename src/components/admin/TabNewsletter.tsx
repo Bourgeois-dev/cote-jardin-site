@@ -173,6 +173,68 @@ function BlocsCanvas({ subject, content, restoName, logoUrl }: {
   );
 }
 
+
+// ── Compression d'image côté navigateur (aucune dépendance) ────────────────
+// Objectif : que le restaurateur n'ait jamais à compresser lui-même.
+// Un email fait 600px de large : au-delà de 1200px (rétina), c'est du poids inutile.
+const MAX_IMG = 500 * 1024;        // 500 Ko
+const LARGEUR_MAX = 1200;          // px
+
+const ko = (o: number) => `${Math.round(o / 1024)} Ko`;
+
+async function compresserImage(file: File): Promise<{ fichier: File; avant: number; apres: number; compresse: boolean }> {
+  const avant = file.size;
+  // Déjà léger et pas démesuré : on n'y touche pas (évite de dégrader inutilement).
+  if (avant <= MAX_IMG) {
+    const dims = await tailleImage(file).catch(() => null);
+    if (!dims || dims.w <= LARGEUR_MAX) return { fichier: file, avant, apres: avant, compresse: false };
+  }
+  // Les formats animés/vectoriels ne passent pas par le canvas sans dégât.
+  if (file.type === "image/gif" || file.type === "image/svg+xml") {
+    return { fichier: file, avant, apres: avant, compresse: false };
+  }
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    const ratio = Math.min(1, LARGEUR_MAX / bitmap.width);
+    const w = Math.round(bitmap.width * ratio);
+    const h = Math.round(bitmap.height * ratio);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return { fichier: file, avant, apres: avant, compresse: false };
+    // Fond blanc : un PNG transparent converti en JPEG aurait un fond noir.
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close?.();
+
+    // Qualité dégressive jusqu'à passer sous la limite.
+    for (const q of [0.85, 0.75, 0.65, 0.55, 0.45]) {
+      const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, "image/jpeg", q));
+      if (!blob) break;
+      if (blob.size <= MAX_IMG || q === 0.45) {
+        const fichier = new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+        return { fichier, avant, apres: fichier.size, compresse: true };
+      }
+    }
+  } catch {
+    // Navigateur ou fichier récalcitrant : on renvoie l'original, la limite fera foi.
+  }
+  return { fichier: file, avant, apres: avant, compresse: false };
+}
+
+function tailleImage(file: File): Promise<{ w: number; h: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve({ w: img.naturalWidth, h: img.naturalHeight }); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("image illisible")); };
+    img.src = url;
+  });
+}
+
 /* Champs d'un bloc (ou d'une colonne) : titre, texte, image, CTA.
    Tout est optionnel — le restaurateur ne remplit que ce dont il a besoin. */
 function ChampsBloc({ val, onChange, onUpload }: {
@@ -279,6 +341,7 @@ function NouveauForm({ onSaved, initial }: {
   }
   const [upLoad, setUpLoad] = useState(false);
   const [upErr, setUpErr] = useState("");
+  const [upInfo, setUpInfo] = useState("");  // retour positif : image optimisée
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("09:00");
   const [sendNow, setSendNow] = useState(false);
@@ -301,15 +364,28 @@ function NouveauForm({ onSaved, initial }: {
   }, []);
 
   async function uploadImage(file: File): Promise<string | null> {
-    setUpErr("");
+    setUpErr(""); setUpInfo("");
     if (!file.type.startsWith("image/")) { setUpErr("Choisissez une image (JPG ou PNG)."); return null; }
-    if (file.size > 10 * 1024 * 1024) { setUpErr("Image trop lourde (max 10 Mo)."); return null; }
+    // Garde-fou : au-delà, même la compression ne sauverait pas (et le canvas ramerait).
+    if (file.size > 15 * 1024 * 1024) { setUpErr("Image trop lourde (max 15 Mo)."); return null; }
+
     setUpLoad(true);
-    const path = `newsletter-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
-    const { error } = await supabase.storage.from("gallery").upload(path, file);
+    // Compression automatique : le restaurateur n'a pas à s'en occuper.
+    const { fichier, avant, apres, compresse } = await compresserImage(file);
+    if (fichier.size > MAX_IMG) {
+      setUpErr(`Image encore trop lourde après compression (${ko(fichier.size)}, max ${ko(MAX_IMG)}). Essayez une image moins détaillée.`);
+      setUpLoad(false);
+      return null;
+    }
+
+    const ext = fichier.type === "image/jpeg" ? "jpg" : (file.name.split(".").pop() || "img");
+    const path = `newsletter-${Date.now()}-${file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9]/g, "_")}.${ext}`;
+    const { error } = await supabase.storage.from("gallery").upload(path, fichier);
     if (error) { setUpErr("Erreur d'upload : " + error.message); setUpLoad(false); return null; }
     const { data } = supabase.storage.from("gallery").getPublicUrl(path);
     setUpLoad(false);
+    if (compresse) setUpInfo(`Image optimisée : ${ko(avant)} → ${ko(apres)}.`);
+    else setUpInfo("");
     return data.publicUrl;
   }
 
@@ -530,6 +606,9 @@ function NouveauForm({ onSaved, initial }: {
             </div>
 
             {upErr && <div className="login-err" style={{ marginTop: 10 }}>{upErr}</div>}
+            {!upErr && upInfo && (
+              <div style={{ marginTop: 10, fontSize: 12.5, color: "var(--ok, #3E7D5A)" }}>{upInfo}</div>
+            )}
 
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
               <button className="btn btn-accent" disabled={!subject.trim() || !blocs.length} onClick={() => setStep(2)}>
