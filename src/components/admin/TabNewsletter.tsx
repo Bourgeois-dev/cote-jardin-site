@@ -183,15 +183,6 @@ function ChampsBloc({ val, onChange, onUpload }: {
   return (
     <>
       <div className="champ">
-        <label>Titre</label>
-        <input value={val.titre || ""} onChange={(e) => onChange({ titre: e.target.value })} maxLength={120} placeholder="Optionnel" />
-      </div>
-      <div className="champ">
-        <label>Texte</label>
-        <textarea rows={3} value={val.texte || ""} onChange={(e) => onChange({ texte: e.target.value })} maxLength={2000}
-          placeholder="Un paragraphe par ligne" />
-      </div>
-      <div className="champ">
         <label>Image</label>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {val.image
@@ -217,6 +208,15 @@ function ChampsBloc({ val, onChange, onUpload }: {
           </span>
         </div>
       )}
+      <div className="champ">
+        <label>Titre</label>
+        <input value={val.titre || ""} onChange={(e) => onChange({ titre: e.target.value })} maxLength={120} placeholder="Optionnel" />
+      </div>
+      <div className="champ">
+        <label>Texte</label>
+        <textarea rows={3} value={val.texte || ""} onChange={(e) => onChange({ texte: e.target.value })} maxLength={2000}
+          placeholder="Un paragraphe par ligne" />
+      </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         <div className="champ">
           <label>Bouton — libellé</label>
