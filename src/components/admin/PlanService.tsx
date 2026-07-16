@@ -175,6 +175,21 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
       }, {})
   ).sort((a, b) => a.date.localeCompare(b.date));
 
+  // Mêmes pastilles pour les réservations non placées des AUTRES jours.
+  // On réutilise estPlacee() : cohérence garantie avec la colonne « À placer »
+  // et le KPI du tableau de bord.
+  const joursAPlacer = Object.values(
+    resa.filter((r) => !estPlacee(r) && r.status !== "annule" && r.status !== "no_show"
+      && r.date !== date && new Date(r.date + "T12:00:00").getTime() >= aujMs)
+      .reduce<Record<string, { date: string; n: number; svc: "midi" | "soir"; premier: string }>>((acc, r) => {
+        const svc: "midi" | "soir" = estMidi(r.time) ? "midi" : "soir";
+        const cur = acc[r.date];
+        if (!cur) acc[r.date] = { date: r.date, n: 1, svc, premier: r.time };
+        else { cur.n += 1; if (r.time < cur.premier) { cur.premier = r.time; cur.svc = svc; } }
+        return acc;
+      }, {})
+  ).sort((a, b) => a.date.localeCompare(b.date));
+
   // Carte réservation (liste de gauche)
   function carteResa(r: Reservation, placee: boolean) {
     const tablesResa = (r.table_ids || []).map((tid) => tables.find((x) => x.id === tid)).filter(Boolean) as RestaurantTable[];
@@ -246,6 +261,18 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
         <div className="ps-attente-rappel">
           <span className="ps-attente-rappel-lab">En attente :</span>
           {joursAttente.map((j) => (
+            <button key={j.date} className="ps-attente-jour" onClick={() => { setDate(j.date); setService(j.svc); }}>
+              {libelleDateCourt(j.date)}<span className="ps-attente-jour-nb">{j.n}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Même mécanique pour les réservations non placées des autres jours */}
+      {joursAPlacer.length > 0 && (
+        <div className="ps-attente-rappel">
+          <span className="ps-attente-rappel-lab">À placer :</span>
+          {joursAPlacer.map((j) => (
             <button key={j.date} className="ps-attente-jour" onClick={() => { setDate(j.date); setService(j.svc); }}>
               {libelleDateCourt(j.date)}<span className="ps-attente-jour-nb">{j.n}</span>
             </button>
