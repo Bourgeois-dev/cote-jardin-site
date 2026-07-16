@@ -820,3 +820,8 @@ tr:hover .drag-poignee { color:var(--ink-soft) }
   color:var(--ink-soft); background:var(--cream); border:1px solid var(--line);
   border-radius:99px; padding:3px 10px; white-space:nowrap;
 }
+
+/* Cartes KPI cliquables du tableau de bord (À confirmer / À placer) */
+.stat-clic { cursor:pointer; transition:border-color .15s, box-shadow .15s, transform .15s }
+.stat-clic:hover { border-color:var(--admin-accent); box-shadow:0 4px 14px rgba(122,31,36,.10); transform:translateY(-2px) }
+.stat-clic:focus-visible { outline:2px solid var(--admin-accent); outline-offset:2px }

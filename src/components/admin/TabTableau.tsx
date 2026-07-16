@@ -41,9 +41,18 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
   // assignées ne couvrent pas les couverts. Même règle que le plan de service (estPlacee).
   const capaciteResa = (r: Reservation) =>
     (r.table_ids || []).reduce((s, tid) => s + (tables.find((t) => t.id === tid)?.capacity || 0), 0);
-  const aPlacer = resa.filter(
+  const listeAPlacer = resa.filter(
     (r) => r.status !== "annule" && r.status !== "no_show" && !((r.table_ids?.length || 0) > 0 && capaciteResa(r) >= r.covers)
-  ).length;
+  );
+  const aPlacer = listeAPlacer.length;
+
+  // Date de la réservation concernée la plus proche : c'est là qu'on ouvre l'onglet
+  // au clic sur le KPI. Avec plusieurs réservations, on ne peut en cibler qu'une —
+  // la plus imminente est la plus utile.
+  const triParDate = (l: Reservation[]) =>
+    [...l].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  const dateAPlacer = triParDate(listeAPlacer)[0]?.date;
+  const dateAConfirmer = triParDate(resa.filter((r) => r.status === "attente"))[0]?.date;
   const couvAujTotal = resa.filter((r) => r.date === todayStr && r.status !== "annule").reduce((s, r) => s + (r.covers || 0), 0);
   const nbResaAuj = resa.filter((r) => r.date === todayStr && r.status !== "annule").length;
 
@@ -182,8 +191,30 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
           <div className="stat"><div className="lib">Couverts aujourd'hui</div><div className="val">{couvAujTotal}</div><div className="det">{nbResaAuj} réservation(s)</div></div>
           <div className="stat"><div className="lib">Disponibles ce midi</div><div className="val" style={{ color: jours[0].midiDispo === 0 ? "var(--annule)" : "var(--ok)" }}>{jours[0].sertMidi ? jours[0].midiDispo : "—"}</div><div className="det">{jours[0].sertMidi ? `sur ${capacite} couverts` : "pas de service midi"}</div></div>
           <div className="stat"><div className="lib">Disponibles ce soir</div><div className="val" style={{ color: jours[0].soirDispo === 0 ? "var(--annule)" : "var(--ok)" }}>{jours[0].sertSoir ? jours[0].soirDispo : "—"}</div><div className="det">{jours[0].sertSoir ? `sur ${capacite} couverts` : "pas de service soir"}</div></div>
-          <div className="stat"><div className="lib">À confirmer</div><div className="val" style={{ color: att > 0 ? "var(--attente)" : "var(--ink)" }}>{att}</div><div className="det">demandes en attente</div></div>
-          <div className="stat"><div className="lib">À placer</div><div className="val" style={{ color: aPlacer > 0 ? "var(--attente)" : "var(--ink)" }}>{aPlacer}</div><div className="det">sans table attribuée</div></div>
+          <div
+            className={`stat${att > 0 ? " stat-clic" : ""}`}
+            onClick={att > 0 ? () => onNavigate?.("reservations", dateAConfirmer) : undefined}
+            role={att > 0 ? "button" : undefined}
+            tabIndex={att > 0 ? 0 : undefined}
+            onKeyDown={att > 0 ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigate?.("reservations", dateAConfirmer); } } : undefined}
+            title={att > 0 ? "Voir les demandes en attente" : undefined}
+          >
+            <div className="lib">À confirmer</div>
+            <div className="val" style={{ color: att > 0 ? "var(--attente)" : "var(--ink)" }}>{att}</div>
+            <div className="det">{att > 0 ? "demandes en attente →" : "demandes en attente"}</div>
+          </div>
+          <div
+            className={`stat${aPlacer > 0 ? " stat-clic" : ""}`}
+            onClick={aPlacer > 0 ? () => onNavigate?.("reservations", dateAPlacer) : undefined}
+            role={aPlacer > 0 ? "button" : undefined}
+            tabIndex={aPlacer > 0 ? 0 : undefined}
+            onKeyDown={aPlacer > 0 ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigate?.("reservations", dateAPlacer); } } : undefined}
+            title={aPlacer > 0 ? "Voir les réservations à placer" : undefined}
+          >
+            <div className="lib">À placer</div>
+            <div className="val" style={{ color: aPlacer > 0 ? "var(--attente)" : "var(--ink)" }}>{aPlacer}</div>
+            <div className="det">{aPlacer > 0 ? "sans table attribuée →" : "sans table attribuée"}</div>
+          </div>
           <div className="stat"><div className="lib">Contacts récoltés</div><div className="val">{leads.length}</div><div className="det">newsletter + réservations</div></div>
         </div>
 
