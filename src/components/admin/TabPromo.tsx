@@ -62,7 +62,7 @@ export default function TabPromo() {
             <span className="lib"><b>Afficher la popup sur le site</b><span>{f.is_active ? "Active — la popup s'affiche à l'arrivée" : "Inactive — aucune popup ne s'affiche"}</span></span>
             <span className="toggle"><input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} /><span className="piste" /></span>
           </label>
-          <div className="hint">💡 Pilote le champ <b>is_active</b> de la table <b>promo_banner</b>. Pratique pour annoncer un événement, un menu spécial ou une fermeture exceptionnelle.</div>
+          <div className="hint">💡 Pratique pour annoncer un événement, un menu spécial ou une fermeture exceptionnelle.</div>
         </div>
 
         <div className="bloc">
