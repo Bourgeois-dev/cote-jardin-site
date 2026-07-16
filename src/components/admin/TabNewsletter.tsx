@@ -317,6 +317,7 @@ function NouveauForm({ onSaved, initial }: {
 
   function ajouterBloc(type: "pleine_largeur" | "deux_colonnes") {
     setBlocs([...blocs, blocVide(type)]);
+    setManqueEtape1("");
   }
   function supprimerBloc(i: number) {
     setBlocs(blocs.filter((_, n) => n !== i));
@@ -342,6 +343,7 @@ function NouveauForm({ onSaved, initial }: {
   const [upLoad, setUpLoad] = useState(false);
   const [upErr, setUpErr] = useState("");
   const [upInfo, setUpInfo] = useState("");  // retour positif : image optimisée
+  const [manqueEtape1, setManqueEtape1] = useState("");  // ce qui bloque le passage à l'étape 2
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("09:00");
   const [sendNow, setSendNow] = useState(false);
@@ -406,8 +408,7 @@ function NouveauForm({ onSaved, initial }: {
     setUpLoad(false);
   }
 
-  // Une campagne est valide si elle a un objet et au moins un bloc.
-  const canStep2 = !!subject.trim() && blocs.length > 0;
+  // Validation de l'étape 1 : voir le message explicite au clic sur « Suivant ».
   const canSend  = sendNow || !!scheduledDate;
 
   async function sauvegarder(lancer: boolean) {
@@ -542,7 +543,7 @@ function NouveauForm({ onSaved, initial }: {
 
             <div className="champ">
               <label>Objet de l'email <span style={{ color: "var(--admin-accent)" }}>*</span></label>
-              <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Ex. Notre nouvelle carte d'été est là 🌿" maxLength={150} />
+              <input value={subject} onChange={(e) => { setSubject(e.target.value); if (manqueEtape1) setManqueEtape1(""); }} placeholder="Ex. Notre nouvelle carte d'été est là 🌿" maxLength={150} />
             </div>
             <div className="champ">
               <label>Aperçu (preheader)</label>
@@ -610,8 +611,18 @@ function NouveauForm({ onSaved, initial }: {
               <div style={{ marginTop: 10, fontSize: 12.5, color: "var(--ok, #3E7D5A)" }}>{upInfo}</div>
             )}
 
+            {/* Le bouton reste actif : un bouton grisé sans explication est une impasse.
+                Au clic, on dit précisément ce qui manque. */}
+            {manqueEtape1 && (
+              <div className="login-err" style={{ marginTop: 16 }}>{manqueEtape1}</div>
+            )}
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button className="btn btn-accent" disabled={!subject.trim() || !blocs.length} onClick={() => setStep(2)}>
+              <button className="btn btn-accent" onClick={() => {
+                if (!subject.trim()) { setManqueEtape1("Indiquez l'objet de l'email avant de continuer."); return; }
+                if (!blocs.length)   { setManqueEtape1("Ajoutez au moins un bloc de contenu avant de continuer."); return; }
+                setManqueEtape1("");
+                setStep(2);
+              }}>
                 Suivant →
               </button>
             </div>
@@ -734,7 +745,11 @@ function NouveauForm({ onSaved, initial }: {
           <div className="pan-actions">
             <button className="btn btn-ligne" onClick={() => setStep(2)}>← Retour</button>
             <button className="btn btn-ligne" disabled={busy} onClick={() => sauvegarder(false)}>Sauvegarder en brouillon</button>
-            <button className="btn btn-accent" disabled={busy || !canSend} onClick={() => sauvegarder(true)}>
+            <button className="btn btn-accent" disabled={busy} onClick={() => {
+              if (!canSend) { setErreur("Choisissez une date d'envoi, ou sélectionnez « Envoyer maintenant »."); return; }
+              setErreur("");
+              sauvegarder(true);
+            }}>
               {busy ? "…" : sendNow ? "⚡ Envoyer" : "📅 Planifier"}
             </button>
           </div>
