@@ -52,7 +52,12 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
   const triParDate = (l: Reservation[]) =>
     [...l].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const dateAPlacer = triParDate(listeAPlacer)[0]?.date;
-  const dateAConfirmer = triParDate(resa.filter((r) => r.status === "attente"))[0]?.date;
+  const serviceAPlacer: "midi" | "soir" | undefined = triParDate(listeAPlacer)[0]
+    ? (estMidi(triParDate(listeAPlacer)[0].time) ? "midi" : "soir") : undefined;
+  const listeAConfirmer = resa.filter((r) => r.status === "attente");
+  const dateAConfirmer = triParDate(listeAConfirmer)[0]?.date;
+  const serviceAConfirmer: "midi" | "soir" | undefined = triParDate(listeAConfirmer)[0]
+    ? (estMidi(triParDate(listeAConfirmer)[0].time) ? "midi" : "soir") : undefined;
   const couvAujTotal = resa.filter((r) => r.date === todayStr && r.status !== "annule").reduce((s, r) => s + (r.covers || 0), 0);
   const nbResaAuj = resa.filter((r) => r.date === todayStr && r.status !== "annule").length;
 
@@ -193,10 +198,10 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
           <div className="stat"><div className="lib">Disponibles ce soir</div><div className="val" style={{ color: jours[0].soirDispo === 0 ? "var(--annule)" : "var(--ok)" }}>{jours[0].sertSoir ? jours[0].soirDispo : "—"}</div><div className="det">{jours[0].sertSoir ? `sur ${capacite} couverts` : "pas de service soir"}</div></div>
           <div
             className={`stat${att > 0 ? " stat-clic" : ""}`}
-            onClick={att > 0 ? () => onNavigate?.("reservations", dateAConfirmer) : undefined}
+            onClick={att > 0 ? () => onNavigate?.("reservations", dateAConfirmer, serviceAConfirmer) : undefined}
             role={att > 0 ? "button" : undefined}
             tabIndex={att > 0 ? 0 : undefined}
-            onKeyDown={att > 0 ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigate?.("reservations", dateAConfirmer); } } : undefined}
+            onKeyDown={att > 0 ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigate?.("reservations", dateAConfirmer, serviceAConfirmer); } } : undefined}
             title={att > 0 ? "Voir les demandes en attente" : undefined}
           >
             <div className="lib">À confirmer</div>
@@ -205,10 +210,10 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
           </div>
           <div
             className={`stat${aPlacer > 0 ? " stat-clic" : ""}`}
-            onClick={aPlacer > 0 ? () => onNavigate?.("reservations", dateAPlacer) : undefined}
+            onClick={aPlacer > 0 ? () => onNavigate?.("reservations", dateAPlacer, serviceAPlacer) : undefined}
             role={aPlacer > 0 ? "button" : undefined}
             tabIndex={aPlacer > 0 ? 0 : undefined}
-            onKeyDown={aPlacer > 0 ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigate?.("reservations", dateAPlacer); } } : undefined}
+            onKeyDown={aPlacer > 0 ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigate?.("reservations", dateAPlacer, serviceAPlacer); } } : undefined}
             title={aPlacer > 0 ? "Voir les réservations à placer" : undefined}
           >
             <div className="lib">À placer</div>
