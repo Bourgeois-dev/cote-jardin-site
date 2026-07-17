@@ -11,25 +11,20 @@ Tout le contenu evolutif se gere ensuite depuis l'admin (/gestion-a7x9k2).
 
 ## 2. Supabase
 - [ ] `chmod +x deploy.sh && ./deploy.sh` (cree le projet, pousse le schema + seed,
-      deploie les edge functions reservation-email + mailchimp-sync).
+      deploie l'edge function reservation-email).
 - [ ] Creer le compte admin : Dashboard → Authentication → Users → Add user →
       email EXACTEMENT `gerant@cote-jardin.fr` + mot de passe + Auto Confirm User.
 - [ ] Reporter le `project ref` dans `clients/cote-jardin.json` (`deploy.projectRef`).
 - [ ] Verifier le domaine d'envoi Resend.
 
-## 3. CRM Mailchimp (optionnel)
-- [ ] Si non fait via `deploy.sh` : suivre `mailchimp-mise-en-route.md` (compte
-      dedie au client, audience, secrets MAILCHIMP_API_KEY/MAILCHIMP_LIST_ID/
-      MAILCHIMP_DC, automation Welcome).
-
-## 4. Netlify
+## 3. Netlify
 - [ ] Creer le site (), brancher le repo GitHub.
 - [ ] Le `netlify.toml` est deja inclus (build `npm run build`, publish `dist`, redirect SPA).
 - [ ] Variables d'env : recopier le contenu de `.env.example` en remplacant
       VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY par les vraies cles.
 - [ ] Domaine :  + HTTPS.
 
-## 5. Auth — URLs de redirection (ETAPE CRITIQUE, sinon le "mot de passe oublie" casse)
+## 4. Auth — URLs de redirection (ETAPE CRITIQUE, sinon le "mot de passe oublie" casse)
 - [ ] Supabase Dashboard -> Authentication -> URL Configuration.
 - [ ] **Site URL** : mettre l'URL Netlify/domaine final (ex. https://).
       Par defaut Supabase pointe vers http://localhost:3000 -> tant que ce n'est
@@ -47,6 +42,6 @@ Tout le contenu evolutif se gere ensuite depuis l'admin (/gestion-a7x9k2).
       repetes de mot de passe oublie. Sans SMTP perso, prevenir le restaurateur
       de ne pas redemander un lien plusieurs fois de suite.
 
-## 6. Contenu
+## 5. Contenu
 - [ ] Se connecter a /gestion-a7x9k2 avec gerant@cote-jardin.fr.
 - [ ] Saisir la carte, la galerie (upload photos), les partenaires, le plan de salle.
