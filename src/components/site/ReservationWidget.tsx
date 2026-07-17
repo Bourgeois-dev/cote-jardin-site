@@ -89,7 +89,7 @@ function ListeAttente({ date, time, covers, onClose }: WaitlistProps) {
   );
 }
 
-export default function ReservationWidget({ hours, open, onClose }: { hours: OpeningHour[]; open: boolean; onClose: () => void }) {
+export default function ReservationWidget({ hours, open, onClose, masquerFermer }: { hours: OpeningHour[]; open: boolean; onClose: () => void; masquerFermer?: boolean }) {
   const [closures, setClosures] = useState<ClosurePeriod[]>([]);
   const [settings, setSettings] = useState<ReservationSettings | null>(null);
   const [step, setStep] = useState(1);
@@ -286,7 +286,7 @@ export default function ReservationWidget({ hours, open, onClose }: { hours: Ope
 
   return (
     <div className="panneau ouvert" role="dialog" aria-label="Réserver une table">
-      <button className="fermer-x" onClick={onClose} aria-label="Fermer">×</button>
+      {!masquerFermer && <button className="fermer-x" onClick={onClose} aria-label="Fermer">×</button>}
       {showWaitlist ? (
         <ListeAttente date={date} time={slot || ""} covers={covers} onClose={onClose} />
       ) : done ? (

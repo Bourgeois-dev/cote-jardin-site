@@ -7,6 +7,7 @@ import MentionsLegales from "./pages/MentionsLegales";
 import ProtectionDonnees from "./pages/ProtectionDonnees";
 import Desinscription from "./pages/Desinscription";
 import Annuler from "./pages/Annuler";
+import WidgetReservation from "./pages/WidgetReservation";
 import "./theme.css";
 import "./app.css";
 import "./site.css";
@@ -23,6 +24,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <Route path={ADMIN_PATH} element={<Admin />} />
         <Route path="/desinscription" element={<Desinscription />} />
         <Route path="/annuler" element={<Annuler />} />
+        <Route path="/widget-reservation" element={<WidgetReservation />} />
         <Route path="*" element={<Site />} />
       </Routes>
     </BrowserRouter>

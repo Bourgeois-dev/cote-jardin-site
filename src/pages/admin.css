@@ -835,3 +835,14 @@ tr:hover .drag-poignee { color:var(--ink-soft) }
 .stat-clic { cursor:pointer; transition:border-color .15s, box-shadow .15s, transform .15s }
 .stat-clic:hover { border-color:var(--admin-accent); box-shadow:0 4px 14px rgba(122,31,36,.10); transform:translateY(-2px) }
 .stat-clic:focus-visible { outline:2px solid var(--admin-accent); outline-offset:2px }
+
+/* ── Page widget seul (iframe sur le site d'un client externe) ──────────
+   .panneau est conçu pour flotter en position:fixed sur un site complet.
+   En iframe pleine page, on le remet en flux normal, sans ombre/coin arrondi
+   (le site hôte encadre déjà l'iframe à sa façon) et sans marge parasite. */
+.widget-seul { background:transparent }
+.widget-seul .panneau {
+  position:static; width:100%; max-width:520px; margin:0 auto;
+  transform:none; box-shadow:none; border-radius:8px;
+  max-height:none; padding:24px 20px;
+}
