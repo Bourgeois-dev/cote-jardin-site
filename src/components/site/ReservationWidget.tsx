@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase, fetchActive, sendReservationEmail, syncToMailchimp } from "../../lib/supabase";
+import { supabase, fetchActive, sendReservationEmail } from "../../lib/supabase";
 import type { OpeningHour, ClosurePeriod, ReservationSettings } from "../../lib/types";
 
 const fmtFR = (d: Date) => d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
@@ -277,7 +277,6 @@ export default function ReservationWidget({ hours, open, onClose, masquerFermer 
       await supabase.from("leads").upsert({
         first_name: form.p, last_name: form.n, email: form.e.trim().toLowerCase(), source: "reservation", consent: true,
       }, { onConflict: "email" });
-      syncToMailchimp({ email: form.e.trim().toLowerCase(), first_name: form.p, last_name: form.n, source: "reservation" });
     }
     // Accusé de réception au client (n'interrompt pas le flux si l'email échoue)
     sendReservationEmail("accuse", reservation);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase, syncToMailchimp } from "../../lib/supabase";
+import { supabase } from "../../lib/supabase";
 import type { SocialLink } from "../../lib/types";
 import { SOCIAL_SVG } from "./socialIcons";
 
@@ -27,7 +27,6 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
       return;
     }
     setSent(true);
-    syncToMailchimp({ email: email.trim().toLowerCase(), first_name: prenom, last_name: nom, source: "newsletter" });
     // Email de bienvenue automatique via send-newsletter (template welcome)
     try {
       const welcomeUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-newsletter`;

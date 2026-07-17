@@ -54,19 +54,3 @@ export async function sendReservationEmail(type: "accuse" | "confirmation" | "wa
   }
 }
 
-// Synchronise un contact vers Mailchimp via l'Edge Function (ne bloque jamais en cas d'échec).
-export async function syncToMailchimp(contact: { email: string; first_name?: string; last_name?: string; source?: string }): Promise<void> {
-  try {
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mailchimp-sync`;
-    await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify(contact),
-    });
-  } catch (e) {
-    console.error("syncToMailchimp", e);
-  }
-}
