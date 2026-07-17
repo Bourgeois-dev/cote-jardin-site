@@ -6,11 +6,17 @@ export default function Ardoise({ ardoise }: { ardoise: any }) {
   // Image du plat : éditable depuis l'admin (ardoise.image). Si aucune image,
   // le bloc s'affiche proprement sans visuel (pas d'image d'un autre bloc).
   const img = ardoise?.image || "";
+  const imgAlt = ardoise?.image_alt || plat;
   if (!plat) return null;
   return (
     <section className={`ardoise${img ? "" : " ardoise-sans-img"}`} id="jour">
       <div className="ardoise-grid">
-        <div className="ardoise-img" style={img ? { backgroundImage: `url("${img}")` } : undefined} />
+        <div
+          className="ardoise-img"
+          style={img ? { backgroundImage: `url("${img}")` } : undefined}
+          role={img ? "img" : undefined}
+          aria-label={img ? imgAlt : undefined}
+        />
         <div className="ardoise-txt">
           <div className="ardoise-lab"><span className="trait" />{label}</div>
           <h2 className="ardoise-pj">{plat}</h2>

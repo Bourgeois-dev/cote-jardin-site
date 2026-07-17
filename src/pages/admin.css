@@ -572,15 +572,19 @@ tr:last-child td { border-bottom:none }
 
 
 /* ── 11. AUTRES ONGLETS ─────────────────────────────────────────────────── */
-/* Ardoise */
-.ardoise-edit { background:var(--admin-ink); border-radius:12px; padding:26px; color:var(--cream) }
-.ardoise-edit .champ label { color:var(--admin-accent-light) }
-.ardoise-edit .champ input,.ardoise-edit .champ textarea { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.2); color:var(--cream) }
-.apercu-ardoise { border:1px dashed rgba(255,255,255,.3); border-radius:8px; padding:20px; text-align:center; margin-top:12px }
-.apercu-ardoise .pj { font-family:var(--font-display); font-size:22px; color:var(--cream) }
-.apercu-ardoise .px { font-size:19px; font-weight:600; color:var(--attente); margin-top:6px; font-family:var(--font-body) }
+/* Ardoise — même patron que Bannière promo : carte blanche, aperçu à droite */
 .ardoise-img-actuelle img { display:block; width:100%; max-width:320px; height:180px; object-fit:cover; border-radius:8px; border:1px solid var(--line) }
 .ardoise-img-actuelle .actions-ligne { margin-top:10px }
+
+.ardoise-apercu { border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.08) }
+.ardoise-apercu-img { height:140px; background:var(--cream) center/cover; display:flex; align-items:center; justify-content:center }
+.ardoise-apercu-img span { font-size:12px; color:var(--ink-soft) }
+.ardoise-apercu-txt { padding:18px; text-align:center }
+.ardoise-apercu-lab { font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); margin-bottom:8px }
+.ardoise-apercu-pj { font-family:var(--font-display); font-size:21px; color:var(--ink); margin-bottom:8px }
+.ardoise-apercu-meta { display:flex; align-items:center; justify-content:center; gap:10px; font-size:14px }
+.ardoise-apercu-px { font-weight:700; color:var(--accent) }
+.ardoise-apercu-note { color:var(--ink-soft); font-style:italic }
 
 /* Galerie */
 .galerie-admin { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; margin-top:14px }
