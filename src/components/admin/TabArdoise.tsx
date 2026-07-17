@@ -8,6 +8,7 @@ export default function TabArdoise() {
   const [note, setNote] = useState("");
   const [image, setImage] = useState("");
   const [imageAlt, setImageAlt] = useState("");
+  const [altModifie, setAltModifie] = useState(false); // true dès que l'utilisateur retouche le champ à la main
   const [enabled, setEnabled] = useState(true);
   const [msg, setMsg] = useState("");
   const [upLoad, setUpLoad] = useState(false);
@@ -22,6 +23,9 @@ export default function TabArdoise() {
         setLabel(a.label || ""); setNote(a.note || "");
         setImage(a.image || ""); setImageAlt(a.image_alt || "");
         setEnabled(a.enabled !== false);
+        // Un alt déjà différent du plat = personnalisé par le restaurateur → on ne
+        // l'écrasera plus automatiquement. S'il est vide ou identique, l'auto-sync continue.
+        setAltModifie(!!a.image_alt && a.image_alt !== a.plat);
       }
     })();
   }, []);
@@ -70,7 +74,7 @@ export default function TabArdoise() {
               <div className="desc" style={{ marginBottom: 16 }}>Ces informations s'affichent dans le bloc « Plat du jour » du site.</div>
 
               <div className="grid2">
-                <div className="champ"><label>Plat du jour</label><input value={plat} onChange={(e) => setPlat(e.target.value)} placeholder="Galette saumon fumé, avocat & citron vert" /></div>
+                <div className="champ"><label>Plat du jour</label><input value={plat} onChange={(e) => { const v = e.target.value; setPlat(v); if (!altModifie) setImageAlt(v); }} placeholder="Galette saumon fumé, avocat & citron vert" /></div>
                 <div className="champ"><label>Prix</label><input value={prix} onChange={(e) => setPrix(e.target.value)} placeholder="13,50 €" /></div>
               </div>
               <div className="grid2">
@@ -87,7 +91,7 @@ export default function TabArdoise() {
                     <img src={image} alt="" />
                     <div className="actions-ligne">
                       <button className="btn btn-mini btn-ligne" onClick={() => fileRef.current?.click()} disabled={upLoad}>{upLoad ? "Envoi…" : "Remplacer"}</button>
-                      <button className="btn btn-mini btn-danger" onClick={() => { setImage(""); setImageAlt(""); }}>Retirer</button>
+                      <button className="btn btn-mini btn-danger" onClick={() => { setImage(""); setImageAlt(""); setAltModifie(false); }}>Retirer</button>
                     </div>
                   </div>
                 ) : (
@@ -99,8 +103,8 @@ export default function TabArdoise() {
               {image && (
                 <div className="champ">
                   <label>Texte alternatif de l'image</label>
-                  <input value={imageAlt} onChange={(e) => setImageAlt(e.target.value)} maxLength={125} placeholder="Ex. Galette au saumon fumé et avocat" />
-                  <span className="aide" style={{ fontSize: 11.5 }}>Affiché si l'image ne se charge pas, et lu par les lecteurs d'écran.</span>
+                  <input value={imageAlt} onChange={(e) => { setImageAlt(e.target.value); setAltModifie(true); }} maxLength={125} placeholder="Ex. Galette au saumon fumé et avocat" />
+                  <span className="aide" style={{ fontSize: 11.5 }}>Reprend le plat du jour par défaut (modifiable) — lu par les lecteurs d'écran et affiché si l'image ne se charge pas.</span>
                 </div>
               )}
 
