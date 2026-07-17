@@ -234,9 +234,22 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
                   key={j.ds}
                   className={`semaine-jour${j.isToday ? " semaine-jour-auj" : ""}${j.ferme ? " semaine-jour-ferme" : ""}`}
                   onClick={() => {
-                    // Service à ouvrir : celui qui a des réservations. S'il y en a aux deux,
-                    // ou à aucun, on garde le comportement historique (soir par défaut).
-                    const svc = (j.midiRes > 0 && j.soirRes === 0) ? "midi" : undefined;
+                    // Service à ouvrir :
+                    //  - un seul service a des réservations → celui-là
+                    //  - les deux (ou aucun) → celui dont l'heure repère (13h/20h, au centre
+                    //    des créneaux habituels) est la plus proche de maintenant. Cohérent
+                    //    pour aujourd'hui (le service en cours ou imminent) comme pour un
+                    //    jour à venir (comparaison purement horaire, jour par jour).
+                    let svc: "midi" | "soir" | undefined;
+                    if (j.midiRes > 0 && j.soirRes === 0) svc = "midi";
+                    else if (j.soirRes > 0 && j.midiRes === 0) svc = "soir";
+                    else if (j.midiRes > 0 || j.soirRes > 0) {
+                      const maintenant = new Date();
+                      const minutesActuelles = maintenant.getHours() * 60 + maintenant.getMinutes();
+                      const ecartMidi = Math.abs(minutesActuelles - 13 * 60);
+                      const ecartSoir = Math.abs(minutesActuelles - 20 * 60);
+                      svc = ecartMidi <= ecartSoir ? "midi" : "soir";
+                    }
                     onNavigate?.("reservations", j.ds, svc);
                   }}
                   title={`Voir le plan de service du ${j.d.getDate()} ${MOIS[j.d.getMonth()]}`}
