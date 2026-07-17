@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchActive } from "../lib/supabase";
 import ReservationWidget from "../components/site/ReservationWidget";
-import type { OpeningHour } from "../lib/types";
+import type { OpeningHour, ReservationSettings } from "../lib/types";
 // Le style du widget (.panneau, .creno, .etapes…) vit dans admin.css — voir son
 // sommaire, section 10. Chargé ici explicitement puisque cette page n'affiche
 // jamais le reste du site (qui charge site.css mais pas admin.css).
@@ -13,14 +13,26 @@ import "./admin.css";
  * Ne rend RIEN d'autre : pas de Navbar, pas de Footer, pas de hero.
  * Le widget est ouvert en permanence (pas de bouton "Réserver" à cliquer,
  * puisque la page entière EST le widget).
+ *
+ * Respecte le toggle "Activer la réservation en ligne" (onglet Réservations
+ * & site, reservation_settings.enabled) — même règle que Site.tsx. Sans ça,
+ * désactiver la réservation depuis l'admin cacherait le widget sur le site
+ * complet mais le laisserait actif dans l'iframe : incohérent, et gênant si
+ * le restaurateur veut couper les réservations (fermeture exceptionnelle…)
+ * pour un client qui n'utilise QUE l'iframe.
  */
 export default function WidgetReservation() {
   const [hours, setHours] = useState<OpeningHour[]>([]);
+  const [resaEnabled, setResaEnabled] = useState(true);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    fetchActive<OpeningHour>("opening_hours", "day_of_week").then((h) => {
+    Promise.all([
+      fetchActive<OpeningHour>("opening_hours", "day_of_week"),
+      fetchActive<ReservationSettings>("reservation_settings", "id"),
+    ]).then(([h, rs]) => {
       setHours(h);
+      setResaEnabled(rs[0]?.enabled ?? true);
       setLoaded(true);
     });
   }, []);
@@ -42,6 +54,17 @@ export default function WidgetReservation() {
   }, [loaded]);
 
   if (!loaded) return null;
+
+  if (!resaEnabled) {
+    return (
+      <div className="widget-seul">
+        <div className="panneau ouvert" role="status" style={{ textAlign: "center" }}>
+          <h3>Réservation indisponible</h3>
+          <p className="sous">Merci de nous contacter directement par téléphone pour réserver une table.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="widget-seul">
