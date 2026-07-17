@@ -11,7 +11,7 @@ function estMidi(time: string): boolean {
   return h < 16;
 }
 
-export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, date?: string) => void } = {}) {
+export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, date?: string, service?: "midi" | "soir") => void } = {}) {
   // Fenêtre glissante J-90/+horizon — évite de charger tout l'historique
   const dateMinTdb = (() => { const d = new Date(); d.setDate(d.getDate() - 90); return d.toISOString().slice(0,10); })();
   const { rows: resa } = useTable<Reservation>("reservations", "date", true, { column: "date", op: "gte", value: dateMinTdb });
@@ -233,7 +233,12 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
                 <div
                   key={j.ds}
                   className={`semaine-jour${j.isToday ? " semaine-jour-auj" : ""}${j.ferme ? " semaine-jour-ferme" : ""}`}
-                  onClick={() => onNavigate?.("reservations", j.ds)}
+                  onClick={() => {
+                    // Service à ouvrir : celui qui a des réservations. S'il y en a aux deux,
+                    // ou à aucun, on garde le comportement historique (soir par défaut).
+                    const svc = (j.midiRes > 0 && j.soirRes === 0) ? "midi" : undefined;
+                    onNavigate?.("reservations", j.ds, svc);
+                  }}
                   title={`Voir le plan de service du ${j.d.getDate()} ${MOIS[j.d.getMonth()]}`}
                 >
                   <div className="semaine-nom">{j.isToday ? "Auj." : JOURS[j.d.getDay()]}</div>

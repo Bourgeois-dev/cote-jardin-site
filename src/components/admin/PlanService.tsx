@@ -50,7 +50,7 @@ function horsCreneaux(dateStr: string, time: string, hours: OpeningHour[]): stri
   return `Hors créneaux. ${services.length ? `Ce ${jour} : ${services.join(", ")}.` : `Aucun service le ${jour}.`}`;
 }
 
-export default function PlanService({ initialDate }: { initialDate?: string } = {}) {
+export default function PlanService({ initialDate, initialService }: { initialDate?: string; initialService?: "midi" | "soir" } = {}) {
   const confirm = useConfirm();
   const dateMin = (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0,10); })();
   const { rows: resa, reload, insert } = useTable<Reservation>("reservations", "date", true, { column: "date", op: "gte", value: dateMin });
@@ -59,7 +59,7 @@ export default function PlanService({ initialDate }: { initialDate?: string } = 
   const { rows: hours } = useTable<OpeningHour>("opening_hours", "day_of_week");
   const [date, setDate] = useState(initialDate || ymd(new Date()));
   const [zoneId, setZoneId] = useState<string | null>(null);
-  const [service, setService] = useState<"midi" | "soir">("soir");
+  const [service, setService] = useState<"midi" | "soir">(initialService || "soir");
   const [filtreStatut, setFiltreStatut] = useState<"toutes" | "attente" | "confirme">("toutes");
   const [drag, setDrag] = useState<string | null>(null);
   const [survol, setSurvol] = useState<string | null>(null);

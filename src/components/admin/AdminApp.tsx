@@ -49,6 +49,7 @@ export default function AdminApp({ session }: { session: Session }) {
   const [active, setActive] = useState("tableau");
   const [nbAttente, setNbAttente] = useState(0);
   const [forceDate, setForceDate] = useState<string | undefined>();
+  const [forceService, setForceService] = useState<"midi" | "soir" | undefined>();
   const [features, setFeatures] = useState<Record<string, boolean>>({});
   // isEditor calculé directement depuis la session (synchrone, fiable)
   const isEditor = (session.user.email || "").toLowerCase().includes("latable-digitale");
@@ -140,11 +141,11 @@ export default function AdminApp({ session }: { session: Session }) {
       </aside>
       <main className="main">
         {active === "tableau"
-          ? <TabTableau onNavigate={(tab, date) => { setActive(tab); setForceDate(date); }} />
+          ? <TabTableau onNavigate={(tab, date, service) => { setActive(tab); setForceDate(date); setForceService(service); }} />
           : active === "reservations"
-          ? <TabReservations initialDate={forceDate} />
+          ? <TabReservations initialDate={forceDate} initialService={forceService} />
           : active === "features" && !isEditor
-          ? <TabTableau onNavigate={(tab, date) => { setActive(tab); setForceDate(date); }} />
+          ? <TabTableau onNavigate={(tab, date, service) => { setActive(tab); setForceDate(date); setForceService(service); }} />
           : <Current />}
       </main>
     </div>

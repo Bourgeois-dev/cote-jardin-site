@@ -7,7 +7,7 @@ import PlanService from "./PlanService";
 const STATUTS: Record<string, string> = { attente: "t-attente", confirme: "t-ok", annule: "t-annule", no_show: "t-noshow" };
 const LABELS: Record<string, string> = { attente: "En attente", confirme: "Confirmée", annule: "Annulée", no_show: "Absent" };
 
-export default function TabReservations({ initialDate }: { initialDate?: string } = {}) {
+export default function TabReservations({ initialDate, initialService }: { initialDate?: string; initialService?: "midi" | "soir" } = {}) {
   // Fenêtre glissante : J-90 à aujourd'hui + futur — historique récent sans tout charger
   const dateMin90 = (() => { const d = new Date(); d.setDate(d.getDate() - 90); return d.toISOString().slice(0,10); })();
   const { rows, update } = useTable<Reservation>("reservations", "date", true, { column: "date", op: "gte", value: dateMin90 });
@@ -58,7 +58,7 @@ export default function TabReservations({ initialDate }: { initialDate?: string 
         </div>
       </div>
       {vue === "plan" ? (
-        <div className="contenu pleine"><PlanService initialDate={initialDate} /></div>
+        <div className="contenu pleine"><PlanService initialDate={initialDate} initialService={initialService} /></div>
       ) : (
       <div className="contenu"><div className="bloc">
         <div className="bloc-tete">
