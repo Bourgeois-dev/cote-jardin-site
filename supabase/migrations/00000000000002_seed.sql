@@ -29,14 +29,18 @@ on conflict (section_key) do update set variant = excluded.variant;
 
 -- Parametres de reservation
 insert into public.reservation_settings
-  (enabled, phone_threshold, min_advance_hours, slot_duration, booking_horizon_days, newsletter_optin)
+  (enabled, phone_threshold, min_advance_hours, slot_duration, booking_horizon_days, newsletter_optin,
+   max_covers_per_slot, waitlist_enabled, reminder_enabled)
 values
   (true,
    8,
    2,
    30,
    60,
-   true);
+   true,
+   null,   -- pas de plafond au départ (repli sur capacité physique)
+   false,  -- liste d'attente désactivée par défaut
+   true);  -- rappel J-1 activé par défaut
 
 -- Banniere promo (desactivee par defaut)
 insert into public.promo_banner (is_active) values (false);
