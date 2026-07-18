@@ -63,11 +63,11 @@ export default function Site() {
         get(6, null), get(7, null), get(8, null), get(9, null), get(10, null),
         get(11), get(12), get(13, null), get(14), get(15, null),
       ];
-      setMenu(m.filter((x) => x.is_active));
-      setGallery(g.filter((x) => x.is_active));
-      setPartners(p.filter((x) => x.is_active));
-      setReviews(r.filter((x) => x.is_active));
-      setSocials(s.filter((x) => x.is_active));
+      setMenu((m as MenuItem[]).filter((x) => x.is_active));
+      setGallery((g as GalleryImage[]).filter((x) => x.is_active));
+      setPartners((p as Partner[]).filter((x) => x.is_active));
+      setReviews((r as Review[]).filter((x) => x.is_active));
+      setSocials((s as SocialLink[]).filter((x) => x.is_active));
       setHours(h);
       setArdoise(ard);
       setCatMeta(cm);
@@ -75,7 +75,7 @@ export default function Site() {
       setFlags({ partners: pf?.enabled ?? true, reviews: rf?.enabled ?? true, newsletter: nf?.enabled ?? true });
       setResaEnabled(rs[0]?.enabled ?? true);
       setPromo(pb[0] || null);
-      setTakeaway(tw.filter((x) => x.is_active));
+      setTakeaway((tw as TakeawayItem[]).filter((x) => x.is_active));
       setTakeawayEnabled(twf?.enabled ?? false);
       setLoading(false);
     })();
