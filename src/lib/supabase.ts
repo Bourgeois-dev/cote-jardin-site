@@ -54,3 +54,22 @@ export async function sendReservationEmail(type: "accuse" | "confirmation" | "wa
   }
 }
 
+/**
+ * Traduit une erreur d'upload Supabase Storage en libellé humain.
+ * Évite d'afficher le message technique brut au restaurateur.
+ */
+export function messageUpload(error: { message?: string; statusCode?: string | number } | null): string {
+  const m = (error?.message || "").toLowerCase();
+  const code = String((error as any)?.statusCode ?? "");
+  if (m.includes("exceeded the maximum allowed size") || m.includes("too large") || code === "413")
+    return "L'image est trop lourde. Réduisez sa taille (moins de 5 Mo) et réessayez.";
+  if (m.includes("mime") || m.includes("content-type") || m.includes("not supported") || m.includes("invalid_mime"))
+    return "Format de fichier non accepté. Utilisez une image JPG, PNG ou WebP.";
+  if (m.includes("duplicate") || m.includes("already exists"))
+    return "Un fichier du même nom existe déjà. Renommez l'image et réessayez.";
+  if (m.includes("network") || m.includes("failed to fetch") || m.includes("load failed"))
+    return "Problème de connexion pendant l'envoi. Vérifiez votre réseau et réessayez.";
+  if (m.includes("row-level security") || m.includes("unauthorized") || code === "403")
+    return "Envoi refusé : votre session a peut-être expiré. Reconnectez-vous et réessayez.";
+  return "L'envoi de l'image a échoué. Réessayez ; si le problème persiste, contactez La Table Digitale.";
+}

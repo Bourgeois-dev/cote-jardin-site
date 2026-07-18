@@ -1,21 +1,23 @@
 import { useTable } from "../../hooks/useTable";
 import { useState } from "react";
 import type { OpeningHour, ClosurePeriod } from "../../lib/types";
+import { useToast } from "./Toast";
+import Chargement from "./Chargement";
 
 const JOURS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 
 export default function TabHoraires() {
+  const toast = useToast();
   const oh = useTable<OpeningHour>("opening_hours", "day_of_week");
   const cp = useTable<ClosurePeriod>("closure_periods", "start_date");
   const [nc, setNc] = useState({ start_date: "", end_date: "", reason: "", service: "", note_interne: "", custom_message: "" });
-  const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
   const jours = oh.rows.slice().sort((a, b) => a.day_of_week - b.day_of_week);
 
   async function setHeure(h: OpeningHour, champ: keyof OpeningHour, val: string) {
     const ok = await oh.update(h.id, { [champ]: val || null });
-    if (ok) { setMsg("Horaires enregistrés ✓"); setTimeout(() => setMsg(""), 2000); }
+    if (ok) toast.ok("Horaires enregistrés");
     else setErr("Échec de l'enregistrement.");
   }
   async function toggleJour(h: OpeningHour, ouvert: boolean) {
@@ -32,9 +34,10 @@ export default function TabHoraires() {
     <>
       <div className="topbar"><div><h1>Horaires</h1><div className="sous">Ouvertures et fermetures exceptionnelles</div></div></div>
       <div className="contenu">
+        {oh.loading && oh.rows.length === 0 && <Chargement />}
         <div className="bloc">
-          <div className="bloc-tete"><div><h2>Horaires d'ouverture</h2><div className="desc">Laissez un créneau vide si le restaurant n'ouvre pas à ce moment (ex. pas de service le midi).</div></div>{msg && <span className="ok-msg">{msg}</span>}</div>
-          {err && <div className="login-err">{err}</div>}
+          <div className="bloc-tete"><div><h2>Horaires d'ouverture</h2><div className="desc">Laissez un créneau vide si le restaurant n'ouvre pas à ce moment (ex. pas de service le midi).</div></div></div>
+          {err && <div className="err-inline">{err}</div>}
           <table className="tab-horaires"><thead><tr>
             <th>Jour</th><th>Ouvert</th><th>Midi</th><th>Soir</th>
           </tr></thead><tbody>

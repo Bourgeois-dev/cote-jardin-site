@@ -1,15 +1,18 @@
 import { useState, useEffect, useRef } from "react";
 import { useTable } from "../../hooks/useTable";
-import { supabase, fetchContent } from "../../lib/supabase";
+import { useDirty } from "./Dirty";
+import { supabase, fetchContent, messageUpload } from "../../lib/supabase";
 import type { MenuItem } from "../../lib/types";
 import { useConfirm } from "./Confirm";
+import Chargement from "./Chargement";
 
 const CAT_BASE = ["Entrées", "Plats", "Desserts", "Menus", "Boissons"];
 const TYPES_OK = ["application/pdf", "image/png", "image/jpeg"];
 
 export default function TabCarte() {
   const confirm = useConfirm();
-  const { rows, reload, insert, update, remove } = useTable<MenuItem>("menu_items");
+  const { rows, loading, reload, insert, update, remove } = useTable<MenuItem>("menu_items");
+  const dirty = useDirty();
 
   // Carte téléchargeable (fichier PDF/PNG/JPG) — stockée dans le bucket "menu",
   // son URL est mémorisée dans site_content (clé "menu_file").
@@ -34,7 +37,7 @@ export default function TabCarte() {
     setUpLoad(true);
     const path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
     const { error } = await supabase.storage.from("menu").upload(path, file);
-    if (error) { setUpErr("Erreur d'upload : " + error.message); setUpLoad(false); return; }
+    if (error) { setUpErr(messageUpload(error)); setUpLoad(false); return; }
     const { data } = supabase.storage.from("menu").getPublicUrl(path);
     const meta = { url: data.publicUrl, name: file.name };
     await supabase.from("site_content").upsert({ section_key: "menu_file", content: meta }, { onConflict: "section_key" });
@@ -54,6 +57,8 @@ export default function TabCarte() {
   }
 
   const [edit, setEdit] = useState<Partial<MenuItem> | null>(null);
+  // Formulaire plat ouvert = travail en cours (protège le changement d'onglet)
+  useEffect(() => { dirty.set(edit !== null); return () => dirty.set(false); }, [edit]); // eslint-disable-line
   const [newCat, setNewCat] = useState(false);
   const [catText, setCatText] = useState("");
   const [q, setQ] = useState("");                       // recherche
@@ -188,7 +193,8 @@ export default function TabCarte() {
   return (
     <>
       <div className="topbar"><div><h1>La carte</h1><div className="sous">Vos plats, dans l'ordre du site — glissez-déposez pour réordonner</div></div></div>
-      <div className="contenu"><div className="bloc">
+      <div className="contenu">
+        {loading && rows.length === 0 && <Chargement />}<div className="bloc">
         <div className="bloc-tete"><div><h2>Vos plats</h2></div><button className="btn btn-accent" onClick={nouveau}>+ Ajouter un plat</button></div>
 
         <div className="carte-outils">

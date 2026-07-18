@@ -345,7 +345,7 @@ export default function PlanService({ initialDate, initialService }: { initialDa
                   <div className="champ"><label>Couverts</label><input type="number" min="1" value={saisie.covers} onChange={(e) => setSaisie({ ...saisie, covers: Number(e.target.value) })} /></div>
                 </div>
                 <div className="champ"><label>Notes</label><input value={saisie.notes} onChange={(e) => setSaisie({ ...saisie, notes: e.target.value })} placeholder="Allergies, occasion…" /></div>
-                {erreurSaisie && <div className="login-err">{erreurSaisie}</div>}
+                {erreurSaisie && <div className="err-inline">{erreurSaisie}</div>}
                 {avertSaisie && <div className="avert-creneau">⚠️ {avertSaisie}<br /><span>Vérifiez ou enregistrez malgré tout.</span></div>}
                 <button className="btn btn-accent" style={{ width: "100%", marginTop: 4 }} onClick={enregistrerSaisie}>{avertSaisie ? "Enregistrer malgré tout" : "Enregistrer"}</button>
               </div>

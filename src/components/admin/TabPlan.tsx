@@ -169,7 +169,7 @@ export default function TabPlan() {
               </div>
             </div>
 
-            {err && <div className="login-err" style={{ marginBottom: 8 }}>{err}</div>}
+            {err && <div className="err-inline" style={{ marginBottom: 8 }}>{err}</div>}
 
             {/* Canvas */}
             <div className="tp-plan" ref={planRef} style={{ height: PLAN_H }}>

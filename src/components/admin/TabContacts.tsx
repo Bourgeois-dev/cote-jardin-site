@@ -1,10 +1,11 @@
 import { useTable } from "../../hooks/useTable";
 import type { Lead } from "../../lib/types";
+import Chargement from "./Chargement";
 
 export default function TabContacts() {
   // Seuls les contacts opt-in newsletter (consent = true) apparaissent ici.
   // Les opt-out (désinscription via lien email) sont exclus de la liste.
-  const { rows: allRows } = useTable<Lead>("leads", "created_at");
+  const { rows: allRows, loading } = useTable<Lead>("leads", "created_at");
   const rows = allRows.filter((l) => l.consent === true);
 
   function exportCsv() {
@@ -21,7 +22,8 @@ export default function TabContacts() {
       <div className="topbar">
         <div><h1>Contacts</h1><div className="sous">Inscrits newsletter (opt-in actif)</div></div>
       </div>
-      <div className="contenu"><div className="bloc">
+      <div className="contenu">
+        {loading && allRows.length === 0 && <Chargement />}<div className="bloc">
         <div className="bloc-tete">
           <div><h2>{rows.length} contact{rows.length > 1 ? "s" : ""}</h2></div>
           <button className="btn btn-ligne" onClick={exportCsv}>Exporter en CSV</button>

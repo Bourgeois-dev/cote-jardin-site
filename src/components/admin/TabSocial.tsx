@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTable } from "../../hooks/useTable";
 import type { SocialLink } from "../../lib/types";
+import Chargement from "./Chargement";
 
 const PLATEFORMES = [
   { key: "instagram", label: "Instagram", ph: "https://instagram.com/votre-compte" },
@@ -13,7 +14,7 @@ const PLATEFORMES = [
 ];
 
 export default function TabSocial() {
-  const { rows, insert, update } = useTable<SocialLink>("social_links");
+  const { rows, loading, insert, update } = useTable<SocialLink>("social_links");
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
   const byKey: Record<string, SocialLink> = {};
@@ -38,7 +39,8 @@ export default function TabSocial() {
   return (
     <>
       <div className="topbar"><div><h1>Réseaux sociaux</h1><div className="sous">Liens affichés dans le pied de page</div></div></div>
-      <div className="contenu"><div className="bloc">
+      <div className="contenu">
+        {loading && rows.length === 0 && <Chargement />}<div className="bloc">
         <div className="bloc-tete"><div><h2>Vos réseaux</h2><div className="desc">Activez un réseau et renseignez son lien. Les icônes actives apparaissent dans le footer.</div></div></div>
         {PLATEFORMES.map((p, i) => {
           const r = byKey[p.key];

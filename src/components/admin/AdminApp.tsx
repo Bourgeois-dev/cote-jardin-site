@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabase";
 import TabTableau from "./TabTableau";
@@ -19,7 +19,9 @@ import TabEmporter from "./TabEmporter";
 import TabListeAttente from "./TabListeAttente";
 import TabFeatures from "./TabFeatures";
 import TabNewsletter from "./TabNewsletter";
-import { ConfirmProvider } from "./Confirm";
+import { ConfirmProvider, useConfirm } from "./Confirm";
+import { ToastProvider } from "./Toast";
+import { DirtyProvider, useDirty } from "./Dirty";
 
 const TABS: { key: string; label: string; comp: React.FC; groupe?: string }[] = [
   // — Service —
@@ -45,12 +47,38 @@ const TABS: { key: string; label: string; comp: React.FC; groupe?: string }[] = 
   { key: "features",     label: "Fonctionnalités",    comp: TabFeatures },
 ];
 
+/** Onglet initial : lu depuis le hash de l'URL (survit au refresh, lien partageable). */
+function ongletInitial(): string {
+  const h = window.location.hash.replace(/^#/, "");
+  return TABS.some((t) => t.key === h) ? h : "tableau";
+}
+
+/**
+ * AdminApp = couche providers. La logique vit dans AdminShell,
+ * qui peut ainsi consommer useConfirm / useDirty.
+ */
 export default function AdminApp({ session }: { session: Session }) {
-  const [active, setActive] = useState("tableau");
+  return (
+    <ConfirmProvider>
+      <ToastProvider>
+        <DirtyProvider>
+          <AdminShell session={session} />
+        </DirtyProvider>
+      </ToastProvider>
+    </ConfirmProvider>
+  );
+}
+
+function AdminShell({ session }: { session: Session }) {
+  const [active, setActive] = useState(ongletInitial);
   const [nbAttente, setNbAttente] = useState(0);
+  const [nbListeAttente, setNbListeAttente] = useState(0);
+  const [nbNewsProg, setNbNewsProg] = useState(0);
   const [forceDate, setForceDate] = useState<string | undefined>();
   const [forceService, setForceService] = useState<"midi" | "soir" | undefined>();
   const [features, setFeatures] = useState<Record<string, boolean>>({});
+  const confirm = useConfirm();
+  const dirty = useDirty();
   // isEditor calculé directement depuis la session (synchrone, fiable)
   const isEditor = (session.user.email || "").toLowerCase().includes("latable-digitale");
   // Onglets masqués selon feature flags
@@ -69,8 +97,45 @@ export default function AdminApp({ session }: { session: Session }) {
   const Current = TABS_VISIBLES.find((t) => t.key === active)?.comp || TabTableau;
   const siteUrl = import.meta.env.VITE_SITE_URL || "/";
 
-  // Compteur de réservations en attente, mis à jour en temps réel
-  // Charger les feature flags et détecter si éditeur LTD
+  /** Navigation centralisée : garde "modifications non enregistrées" + sync du hash. */
+  const naviguer = useCallback(async (key: string) => {
+    if (key === active) return;
+    if (dirty.get()) {
+      const ok = await confirm({
+        titre: "Modifications non enregistrées",
+        message: "Si vous changez d'onglet maintenant, vos modifications seront perdues.",
+        confirmer: "Quitter sans enregistrer",
+        annuler: "Rester ici",
+        danger: true,
+      });
+      if (!ok) {
+        // Rétablir le hash si l'utilisateur a utilisé Précédent/Suivant
+        if (window.location.hash.replace(/^#/, "") !== active) window.location.hash = active;
+        return;
+      }
+      dirty.set(false);
+    }
+    setActive(key);
+    if (window.location.hash.replace(/^#/, "") !== key) window.location.hash = key;
+  }, [active, confirm, dirty]);
+
+  // Boutons Précédent/Suivant du navigateur
+  useEffect(() => {
+    function surHash() {
+      const h = window.location.hash.replace(/^#/, "");
+      if (TABS.some((t) => t.key === h) && h !== active) naviguer(h);
+    }
+    window.addEventListener("hashchange", surHash);
+    return () => window.removeEventListener("hashchange", surHash);
+  }, [active, naviguer]);
+
+  // Poser le hash initial si absent (arrivée sur /gestion-a7x9k2 sans hash)
+  useEffect(() => {
+    if (!window.location.hash) window.history.replaceState(null, "", "#" + active);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Charger les feature flags
   useEffect(() => {
     supabase.from("feature_flags").select("key,enabled")
       .then(({ data }) => {
@@ -82,24 +147,38 @@ export default function AdminApp({ session }: { session: Session }) {
       });
   }, []);
 
+  // Compteurs de la sidebar (résa en attente, liste d'attente, newsletters programmées),
+  // mis à jour en temps réel
   useEffect(() => {
     async function compter() {
-      const { count } = await supabase
-        .from("reservations")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "attente");
-      setNbAttente(count || 0);
+      const [resa, liste, news] = await Promise.all([
+        supabase.from("reservations").select("*", { count: "exact", head: true }).eq("status", "attente"),
+        supabase.from("waitlist").select("*", { count: "exact", head: true })
+          .eq("notified", false).gte("date", new Date().toISOString().slice(0, 10)),
+        supabase.from("newsletter_campaigns").select("*", { count: "exact", head: true }).eq("status", "scheduled"),
+      ]);
+      setNbAttente(resa.count || 0);
+      setNbListeAttente(liste.count || 0);
+      setNbNewsProg(news.count || 0);
     }
     compter();
     const canal = supabase.channel("rt-attente-nav");
     canal
       .on("postgres_changes", { event: "*", schema: "public", table: "reservations" }, () => compter())
+      .on("postgres_changes", { event: "*", schema: "public", table: "waitlist" }, () => compter())
+      .on("postgres_changes", { event: "*", schema: "public", table: "newsletter_campaigns" }, () => compter())
       .subscribe();
     return () => { supabase.removeChannel(canal); };
   }, []);
 
+  function pastille(key: string) {
+    if (key === "reservations" && nbAttente > 0) return <span className="nav-pastille">{nbAttente}</span>;
+    if (key === "liste-attente" && nbListeAttente > 0) return <span className="nav-pastille">{nbListeAttente}</span>;
+    if (key === "newsletter" && nbNewsProg > 0) return <span className="nav-pastille sobre">{nbNewsProg}</span>;
+    return null;
+  }
+
   return (
-    <ConfirmProvider>
     <div className="app">
       <aside className="side">
         <div className="logo">{import.meta.env.VITE_RESTO_NAME || "Restaurant"}<small>Administration</small></div>
@@ -124,11 +203,11 @@ export default function AdminApp({ session }: { session: Session }) {
               {t.groupe && <div className="nav-groupe">{t.groupe}</div>}
               <button
                 className={active === t.key ? "actif" : ""}
-                onClick={() => setActive(t.key)}
+                onClick={() => naviguer(t.key)}
                 style={t.key === "features" ? { borderTop: "1px solid rgba(255,255,255,.1)", marginTop: 4, opacity: .7, fontSize: 12 } : undefined}
               >
                 {t.key === "features" ? "⚙ Fonctionnalités" : t.label}
-                {t.key === "reservations" && nbAttente > 0 && <span className="nav-pastille">{nbAttente}</span>}
+                {pastille(t.key)}
               </button>
             </div>
           ))}
@@ -141,14 +220,26 @@ export default function AdminApp({ session }: { session: Session }) {
       </aside>
       <main className="main">
         {active === "tableau"
-          ? <TabTableau onNavigate={(tab, date, service) => { setActive(tab); setForceDate(date); setForceService(service); }} />
+          ? <TabTableau onNavigate={(tab, date, service) => { setForceDate(date); setForceService(service); naviguer(tab); }} />
           : active === "reservations"
           ? <TabReservations initialDate={forceDate} initialService={forceService} />
           : active === "features" && !isEditor
-          ? <TabTableau onNavigate={(tab, date, service) => { setActive(tab); setForceDate(date); setForceService(service); }} />
+          ? <TabTableau onNavigate={(tab, date, service) => { setForceDate(date); setForceService(service); naviguer(tab); }} />
           : <Current />}
       </main>
+      {/* Barre d'accès rapide mobile : les 3 onglets du service en cours */}
+      <nav className="quickbar" aria-label="Accès rapide">
+        <button className={active === "tableau" ? "qb-btn actif" : "qb-btn"} onClick={() => naviguer("tableau")}>
+          <span className="qb-ico" aria-hidden="true">◧</span>Tableau
+        </button>
+        <button className={active === "reservations" ? "qb-btn actif" : "qb-btn"} onClick={() => naviguer("reservations")}>
+          <span className="qb-ico" aria-hidden="true">☰</span>Résa
+          {nbAttente > 0 && <span className="qb-pastille">{nbAttente}</span>}
+        </button>
+        <button className={active === "plan" ? "qb-btn actif" : "qb-btn"} onClick={() => naviguer("plan")}>
+          <span className="qb-ico" aria-hidden="true">⌗</span>Plan
+        </button>
+      </nav>
     </div>
-    </ConfirmProvider>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useTable } from "../../hooks/useTable";
 import type { PromoBanner } from "../../lib/types";
+import { useToast } from "./Toast";
 
 function formatDate(d: string): string {
   if (!d) return "Événement";
@@ -10,11 +11,11 @@ function formatDate(d: string): string {
 }
 
 export default function TabPromo() {
+  const toast = useToast();
   const { rows, loading, insert, update } = useTable<PromoBanner>("promo_banner", "id");
   const promo = rows[0];
   const [f, setF] = useState({ title: "", subtitle: "", cta_label: "", cta_url: "", event_date: "", image_url: "", is_active: false });
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -48,7 +49,7 @@ export default function TabPromo() {
     };
     if (promo) await update(promo.id, vals); else await insert(vals);
     setBusy(false);
-    setMsg("Bannière enregistrée ✓"); setTimeout(() => setMsg(""), 2500);
+    toast.ok("Bannière enregistrée");
   }
 
   if (loading) return <div className="loading">Chargement…</div>;
@@ -86,7 +87,7 @@ export default function TabPromo() {
               <div className="desc">Sans date, le badge affiche simplement « Événement ».</div>
               <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
                 <button className="btn btn-accent" onClick={save} disabled={busy}>Enregistrer</button>
-                {msg && <span className="ok-msg">{msg}</span>}
+                
               </div>
             </div>
 

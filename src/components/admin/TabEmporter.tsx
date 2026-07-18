@@ -3,10 +3,11 @@ import { useTable } from "../../hooks/useTable";
 import { supabase, fetchContent } from "../../lib/supabase";
 import type { TakeawayItem } from "../../lib/types";
 import { useConfirm } from "./Confirm";
+import Chargement from "./Chargement";
 
 export default function TabEmporter() {
   const confirm = useConfirm();
-  const { rows, insert, update, remove } = useTable<TakeawayItem>("takeaway_items");
+  const { rows, loading, insert, update, remove } = useTable<TakeawayItem>("takeaway_items");
   const [edit, setEdit] = useState<Partial<TakeawayItem> | null>(null);
   const [enabled, setEnabled] = useState(false);
 
@@ -44,7 +45,8 @@ export default function TabEmporter() {
         <div className="topbar">
           <div><h1>{edit.id ? "Modifier l'article" : "Nouvel article"}</h1></div>
         </div>
-        <div className="contenu"><div className="bloc">
+        <div className="contenu">
+        {loading && rows.length === 0 && <Chargement />}<div className="bloc">
           <div className="grid2">
             <div className="champ"><label>Nom *</label>
               <input value={edit.name || ""} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="Galette complète" />

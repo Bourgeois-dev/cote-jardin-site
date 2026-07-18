@@ -1,4 +1,5 @@
 import { useTable } from "../../hooks/useTable";
+import Chargement from "./Chargement";
 
 interface FeatureFlag {
   id: string; key: string; label: string;
@@ -11,7 +12,7 @@ interface FeatureFlag {
  * Les changements sont pris en compte au prochain chargement de l'admin.
  */
 export default function TabFeatures() {
-  const { rows, update } = useTable<FeatureFlag>("feature_flags", "label");
+  const { rows, loading, update } = useTable<FeatureFlag>("feature_flags", "label");
 
   return (
     <>
@@ -22,6 +23,7 @@ export default function TabFeatures() {
         </div>
       </div>
       <div className="contenu">
+        {loading && rows.length === 0 && <Chargement />}
         <div className="bloc">
           <div className="bloc-tete">
             <div>

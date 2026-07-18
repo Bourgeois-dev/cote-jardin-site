@@ -3,16 +3,18 @@ import { useTable } from "../../hooks/useTable";
 import { sendReservationEmail, notifyWaitlist } from "../../lib/supabase";
 import type { Reservation, RestaurantTable } from "../../lib/types";
 import PlanService from "./PlanService";
+import { useToast } from "./Toast";
+import Chargement from "./Chargement";
 
 const STATUTS: Record<string, string> = { attente: "t-attente", confirme: "t-ok", annule: "t-annule", no_show: "t-noshow" };
 const LABELS: Record<string, string> = { attente: "En attente", confirme: "Confirmée", annule: "Annulée", no_show: "Absent" };
 
 export default function TabReservations({ initialDate, initialService }: { initialDate?: string; initialService?: "midi" | "soir" } = {}) {
+  const toast = useToast();
   // Fenêtre glissante : J-90 à aujourd'hui + futur — historique récent sans tout charger
   const dateMin90 = (() => { const d = new Date(); d.setDate(d.getDate() - 90); return d.toISOString().slice(0,10); })();
-  const { rows, update } = useTable<Reservation>("reservations", "date", true, { column: "date", op: "gte", value: dateMin90 });
+  const { rows, loading, update } = useTable<Reservation>("reservations", "date", true, { column: "date", op: "gte", value: dateMin90 });
   const { rows: tables } = useTable<RestaurantTable>("restaurant_tables", "label");
-  const [msg, setMsg] = useState("");
   const [sensTri, setSensTri] = useState<"asc" | "desc">("asc");
   const [filtre, setFiltre] = useState<"avenir" | "passees" | "toutes">("avenir");
   const [recherche, setRecherche] = useState("");
@@ -42,8 +44,7 @@ export default function TabReservations({ initialDate, initialService }: { initi
     const ok = await update(r.id, { status: "confirme" });
     if (ok) {
       if (r.email) sendReservationEmail("confirmation", r);
-      setMsg(`Réservation de ${r.customer_name} confirmée${r.email ? " — e-mail envoyé" : ""}.`);
-      setTimeout(() => setMsg(""), 3000);
+      toast.ok(`Réservation de ${r.customer_name} confirmée${r.email ? " — e-mail envoyé" : ""}`);
     }
   }
   async function annuler(r: Reservation) { const ok = await update(r.id, { status: "annule" }); if (ok) notifyWaitlist(r.date, r.time); }
@@ -60,7 +61,8 @@ export default function TabReservations({ initialDate, initialService }: { initi
       {vue === "plan" ? (
         <div className="contenu pleine"><PlanService initialDate={initialDate} initialService={initialService} /></div>
       ) : (
-      <div className="contenu"><div className="bloc">
+      <div className="contenu">
+        {loading && rows.length === 0 && <Chargement />}<div className="bloc">
         <div className="bloc-tete">
           <div><h2>Le carnet</h2><div className="desc">Toutes vos réservations, passées et à venir</div></div>
         </div>
@@ -73,7 +75,6 @@ export default function TabReservations({ initialDate, initialService }: { initi
           </div>
         </div>
         {q && <div className="desc" style={{ marginBottom: 10 }}>{affichees.length} résultat(s) pour « {recherche} »</div>}
-        {msg && <div className="ok-msg" style={{ display: "block", marginBottom: 14 }}>{msg}</div>}
         <table><thead><tr><th className="th-tri" onClick={() => setSensTri(sensTri === "asc" ? "desc" : "asc")}>Date {sensTri === "asc" ? "↑" : "↓"}</th><th>Heure</th><th>Client</th><th>Couverts</th><th>Table</th><th>Origine</th><th>Statut</th><th></th></tr></thead><tbody>
           {affichees.length ? affichees.map((r) => (
             <tr key={r.id}>

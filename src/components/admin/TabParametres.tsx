@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase, fetchActive, fetchContent } from "../../lib/supabase";
 import { useTable } from "../../hooks/useTable";
 import { useConfirm } from "./Confirm";
 import type { ReservationSettings, AdminUser } from "../../lib/types";
+import { useToast } from "./Toast";
+import { useDirty } from "./Dirty";
 
 export default function TabParametres() {
+  const toast = useToast();
   const confirm = useConfirm();
   const { rows: admins, reload: reloadAdmins, remove: removeAdmin } = useTable<AdminUser>("admin_users", "created_at");
   const [nouvEmail, setNouvEmail] = useState("");
@@ -12,8 +15,16 @@ export default function TabParametres() {
   const [erreurAdmin, setErreurAdmin] = useState("");
   const [s, setS] = useState<ReservationSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const dirty = useDirty();
+  const sInitial = useRef<string>("");
+  // Compare l'état du formulaire à sa version chargée/enregistrée
+  useEffect(() => {
+    if (!s) return;
+    if (!sInitial.current) { sInitial.current = JSON.stringify(s); return; }
+    dirty.set(JSON.stringify(s) !== sInitial.current);
+  }, [s]); // eslint-disable-line
+  useEffect(() => () => dirty.set(false), []); // eslint-disable-line
   const [newsletterOn, setNewsletterOn] = useState(true);
-  const [msg, setMsg] = useState("");
 
   useEffect(() => {
     fetchActive<ReservationSettings>("reservation_settings", "id").then((r) => { setS(r[0] || null); setLoading(false); });
@@ -28,7 +39,9 @@ export default function TabParametres() {
   async function save() {
     if (!s) return;
     await supabase.from("reservation_settings").update({ enabled: s.enabled, phone_threshold: s.phone_threshold, min_advance_hours: s.min_advance_hours, booking_horizon_days: s.booking_horizon_days, newsletter_optin: s.newsletter_optin, max_covers_per_slot: s.max_covers_per_slot || null, waitlist_enabled: s.waitlist_enabled, reminder_enabled: s.reminder_enabled }).eq("id", s.id);
-    setMsg("Réglages enregistrés ✓"); setTimeout(() => setMsg(""), 2500);
+    sInitial.current = JSON.stringify(s);
+    dirty.set(false);
+    toast.ok("Réglages enregistrés");
   }
 
   async function ajouterAdmin() {
@@ -87,7 +100,7 @@ export default function TabParametres() {
           <label className="ligne-toggle"><div className="lib"><b>Liste d'attente</b><span>Quand un créneau est complet, propose au client de s'inscrire sur la liste d'attente.</span></div><span className="toggle"><input type="checkbox" checked={s.waitlist_enabled || false} onChange={(e) => setS({ ...s, waitlist_enabled: e.target.checked })} /><span className="piste" /></span></label>
           <label className="ligne-toggle"><div className="lib"><b>Rappel J-1 automatique</b><span>Envoie un email de rappel la veille de chaque réservation (inclut un lien d'annulation).</span></div><span className="toggle"><input type="checkbox" checked={s.reminder_enabled !== false} onChange={(e) => setS({ ...s, reminder_enabled: e.target.checked })} /><span className="piste" /></span></label>
         </div>
-        <div style={{ marginTop: 16 }}><button className="btn btn-accent" onClick={save}>Enregistrer</button> {msg && <span className="ok-msg">{msg}</span>}</div>
+        <div style={{ marginTop: 16 }}><button className="btn btn-accent" onClick={save}>Enregistrer</button></div>
       </div>
 
       <div className="bloc">
@@ -111,7 +124,7 @@ export default function TabParametres() {
           <div className="champ"><label>Email</label><input type="email" value={nouvEmail} onChange={(e) => setNouvEmail(e.target.value)} placeholder="prenom@email.com" /></div>
           <div className="champ"><label>Nom (optionnel)</label><input value={nouvLabel} onChange={(e) => setNouvLabel(e.target.value)} placeholder="Ex. Accueil, Marie…" /></div>
         </div>
-        {erreurAdmin && <div className="login-err">{erreurAdmin}</div>}
+        {erreurAdmin && <div className="err-inline">{erreurAdmin}</div>}
         <button className="btn btn-ligne" style={{ marginTop: 6 }} onClick={ajouterAdmin}>+ Ajouter un accès admin</button>
         <div className="hint" style={{ marginTop: 16 }}>
           💡 Ajouter un email ici ne crée pas le compte de connexion : la personne doit d'abord exister dans Supabase (Dashboard → Authentication → Users → Add user) avec ce même email. Cette liste détermine simplement qui, parmi les comptes existants, a accès à l'administration.

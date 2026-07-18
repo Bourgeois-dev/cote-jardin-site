@@ -3,6 +3,7 @@ import { useTable } from "../../hooks/useTable";
 import { supabase, fetchContent } from "../../lib/supabase";
 import type { Review } from "../../lib/types";
 import { useConfirm } from "./Confirm";
+import Chargement from "./Chargement";
 
 function Stars({ n, onPick }: { n: number; onPick?: (v: number) => void }) {
   return (
@@ -20,7 +21,7 @@ function Stars({ n, onPick }: { n: number; onPick?: (v: number) => void }) {
 
 export default function TabAvis() {
   const confirm = useConfirm();
-  const { rows, insert, update, remove } = useTable<Review>("reviews");
+  const { rows, loading, insert, update, remove } = useTable<Review>("reviews");
   async function supprimer(r: Review) {
     if (await confirm({ titre: "Supprimer cet avis ?", message: `L'avis de ${r.author} sera retiré du site.`, confirmer: "Supprimer", danger: true })) remove(r.id);
   }
@@ -57,6 +58,7 @@ export default function TabAvis() {
     <>
       <div className="topbar"><div><h1>Avis clients</h1><div className="sous">Carrousel affiché avant la newsletter</div></div></div>
       <div className="contenu">
+        {loading && rows.length === 0 && <Chargement />}
         <div className="bloc">
           <label className="ligne-toggle" style={{ paddingTop: 0 }}>
             <span className="lib"><b>Afficher le bloc « Avis clients » sur le site</b><span>{enabled ? `Visible — ${rows.filter((r) => r.is_active).length} avis` : "Masqué"}</span></span>

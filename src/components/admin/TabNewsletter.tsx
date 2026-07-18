@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../../lib/supabase";
+import { supabase, messageUpload } from "../../lib/supabase";
 import { useConfirm } from "./Confirm";
+import { useDirty } from "./Dirty";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 interface Campaign {
@@ -297,6 +298,10 @@ function NouveauForm({ onSaved, initial }: {
   onSaved: () => void;
   initial?: { id?: string; template: string; segment: string; subject: string; content: Record<string, string> };
 }) {
+  const dirty = useDirty();
+  // Éditeur ouvert = travail en cours : protège contre la perte (changement
+  // d'onglet, fermeture navigateur). Nettoyé au démontage (sauvegarde ou sortie).
+  useEffect(() => { dirty.set(true); return () => dirty.set(false); }, []); // eslint-disable-line
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [template] = useState(initial?.template || "blocs");
   const [segment, setSegment] = useState(initial?.segment || "optin");
@@ -383,7 +388,7 @@ function NouveauForm({ onSaved, initial }: {
     const ext = fichier.type === "image/jpeg" ? "jpg" : (file.name.split(".").pop() || "img");
     const path = `newsletter-${Date.now()}-${file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9]/g, "_")}.${ext}`;
     const { error } = await supabase.storage.from("gallery").upload(path, fichier);
-    if (error) { setUpErr("Erreur d'upload : " + error.message); setUpLoad(false); return null; }
+    if (error) { setUpErr(messageUpload(error)); setUpLoad(false); return null; }
     const { data } = supabase.storage.from("gallery").getPublicUrl(path);
     setUpLoad(false);
     if (compresse) setUpInfo(`Image optimisée : ${ko(avant)} → ${ko(apres)}.`);
@@ -401,7 +406,7 @@ function NouveauForm({ onSaved, initial }: {
     setUpLoad(true);
     const path = `newsletter-logo-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
     const { error } = await supabase.storage.from("gallery").upload(path, file);
-    if (error) { setUpErr("Erreur d'upload : " + error.message); setUpLoad(false); return; }
+    if (error) { setUpErr(messageUpload(error)); setUpLoad(false); return; }
     const { data } = supabase.storage.from("gallery").getPublicUrl(path);
     await supabase.from("site_content").upsert({ section_key: "newsletter_logo", content: { url: data.publicUrl } }, { onConflict: "section_key" });
     setLogoUrl(data.publicUrl);
@@ -606,7 +611,7 @@ function NouveauForm({ onSaved, initial }: {
               ))}
             </div>
 
-            {upErr && <div className="login-err" style={{ marginTop: 10 }}>{upErr}</div>}
+            {upErr && <div className="err-inline" style={{ marginTop: 10 }}>{upErr}</div>}
             {!upErr && upInfo && (
               <div style={{ marginTop: 10, fontSize: 12.5, color: "var(--ok, #3E7D5A)" }}>{upInfo}</div>
             )}
@@ -614,7 +619,7 @@ function NouveauForm({ onSaved, initial }: {
             {/* Le bouton reste actif : un bouton grisé sans explication est une impasse.
                 Au clic, on dit précisément ce qui manque. */}
             {manqueEtape1 && (
-              <div className="login-err" style={{ marginTop: 16 }}>{manqueEtape1}</div>
+              <div className="err-inline" style={{ marginTop: 16 }}>{manqueEtape1}</div>
             )}
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
               <button className="btn btn-accent" onClick={() => {
@@ -761,6 +766,7 @@ function NouveauForm({ onSaved, initial }: {
 
 // ── Onglet principal ────────────────────────────────────────────────────────
 export default function TabNewsletter() {
+  const confirmDirty = useConfirm();
   const [campagnes, setCampagnes] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<"liste" | "nouveau">("liste");
@@ -874,7 +880,13 @@ function dateRef(c: Campaign): string {
           <h1>Newsletter</h1>
           <p className="sous">Campagnes email — {campagnes.length} au total</p>
         </div>
-        <button className="btn btn-accent" onClick={() => { setPrefill(undefined); setMode(mode === "nouveau" ? "liste" : "nouveau"); }}>
+        <button className="btn btn-accent" onClick={async () => {
+          if (mode === "nouveau") {
+            const ok = await confirmDirty({ titre: "Quitter la campagne ?", message: "Les modifications non sauvegardées en brouillon seront perdues.", confirmer: "Quitter", annuler: "Rester", danger: true });
+            if (!ok) return;
+          }
+          setPrefill(undefined); setMode(mode === "nouveau" ? "liste" : "nouveau");
+        }}>
           {mode === "nouveau" ? "← Retour à la liste" : "+ Nouvelle campagne"}
         </button>
       </div>

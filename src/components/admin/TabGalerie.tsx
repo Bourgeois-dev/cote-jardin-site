@@ -1,12 +1,13 @@
 import { useRef, useState } from "react";
 import { useTable } from "../../hooks/useTable";
-import { supabase } from "../../lib/supabase";
+import { supabase, messageUpload } from "../../lib/supabase";
 import type { GalleryImage } from "../../lib/types";
 import { useConfirm } from "./Confirm";
+import Chargement from "./Chargement";
 
 export default function TabGalerie() {
   const confirm = useConfirm();
-  const { rows, insert, update, remove, reload } = useTable<GalleryImage>("gallery_images");
+  const { rows, loading, insert, update, remove, reload } = useTable<GalleryImage>("gallery_images");
   const fileRef = useRef<HTMLInputElement>(null);
   const [err, setErr] = useState("");
   const [edit, setEdit] = useState<GalleryImage | null>(null);
@@ -18,7 +19,7 @@ export default function TabGalerie() {
     setErr("");
     const path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
     const { error } = await supabase.storage.from("gallery").upload(path, file);
-    if (error) { setErr("Erreur d'upload : " + error.message); return; }
+    if (error) { setErr(messageUpload(error)); return; }
     const { data } = supabase.storage.from("gallery").getPublicUrl(path);
     await insert({ url: data.publicUrl, alt: "", caption: "", position: rows.length, is_active: true });
     if (fileRef.current) fileRef.current.value = "";
@@ -54,11 +55,12 @@ export default function TabGalerie() {
   return (
     <>
       <div className="topbar"><div><h1>Galerie</h1><div className="sous">Les photos affichées sur le site — glissez-déposez pour réordonner</div></div></div>
-      <div className="contenu"><div className="bloc">
+      <div className="contenu">
+        {loading && rows.length === 0 && <Chargement />}<div className="bloc">
         <div className="bloc-tete"><div><h2>Vos photos</h2></div>
           <div><input ref={fileRef} type="file" accept="image/*" onChange={upload} style={{ display: "none" }} /><button className="btn btn-accent" onClick={() => fileRef.current?.click()}>+ Ajouter une photo</button></div>
         </div>
-        {err && <div className="login-err">{err}</div>}
+        {err && <div className="err-inline">{err}</div>}
         <div className="galerie-admin">
           {ordered.length ? ordered.map((g) => (
             <div className="ga-item" key={g.id}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTable } from "../../hooks/useTable";
 import type { Reservation, Lead, RestaurantTable, OpeningHour, ReservationSettings } from "../../lib/types";
+import Chargement from "./Chargement";
 
 const JOURS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const MOIS = ["jan", "fév", "mar", "avr", "mai", "juin", "juil", "août", "sep", "oct", "nov", "déc"];
@@ -14,7 +15,7 @@ function estMidi(time: string): boolean {
 export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, date?: string, service?: "midi" | "soir") => void } = {}) {
   // Fenêtre glissante J-90/+horizon — évite de charger tout l'historique
   const dateMinTdb = (() => { const d = new Date(); d.setDate(d.getDate() - 90); return d.toISOString().slice(0,10); })();
-  const { rows: resa } = useTable<Reservation>("reservations", "date", true, { column: "date", op: "gte", value: dateMinTdb });
+  const { rows: resa, loading } = useTable<Reservation>("reservations", "date", true, { column: "date", op: "gte", value: dateMinTdb });
   const { rows: allLeads } = useTable<Lead>("leads", "created_at");
   const leads = allLeads.filter((l) => l.consent === true);
   const { rows: tables } = useTable<RestaurantTable>("restaurant_tables", "label");
@@ -192,6 +193,7 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
     <>
       <div className="topbar"><div><h1>Tableau de bord</h1><div className="sous">Vue d'ensemble de votre activité</div></div></div>
       <div className="contenu">
+        {loading && resa.length === 0 && <Chargement />}
         <div className="cartes-stat cartes-stat-kpi">
           <div className="stat"><div className="lib">Couverts aujourd'hui</div><div className="val">{couvAujTotal}</div><div className="det">{nbResaAuj} réservation(s)</div></div>
           <div className="stat"><div className="lib">Disponibles ce midi</div><div className="val" style={{ color: jours[0].midiDispo === 0 ? "var(--annule)" : "var(--ok)" }}>{jours[0].sertMidi ? jours[0].midiDispo : "—"}</div><div className="det">{jours[0].sertMidi ? `sur ${capacite} couverts` : "pas de service midi"}</div></div>

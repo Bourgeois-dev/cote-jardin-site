@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useTable } from "../../hooks/useTable";
-import { supabase, fetchContent } from "../../lib/supabase";
+import { supabase, fetchContent, messageUpload } from "../../lib/supabase";
 import type { Partner } from "../../lib/types";
 import { useConfirm } from "./Confirm";
 
@@ -30,7 +30,7 @@ export default function TabPartenaires() {
     const ext = file.name.split(".").pop();
     const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error } = await supabase.storage.from("partners").upload(path, file);
-    if (error) { setErr("Erreur d'upload : " + error.message); setUploading(false); return; }
+    if (error) { setErr(messageUpload(error)); setUploading(false); return; }
     const { data } = supabase.storage.from("partners").getPublicUrl(path);
     setEdit({ ...edit, image_url: data.publicUrl });
     setUploading(false);

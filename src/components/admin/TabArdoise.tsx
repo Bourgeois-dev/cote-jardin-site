@@ -1,7 +1,9 @@
 import { useEffect, useState, useRef } from "react";
-import { supabase, fetchContent } from "../../lib/supabase";
+import { supabase, fetchContent, messageUpload } from "../../lib/supabase";
+import { useToast } from "./Toast";
 
 export default function TabArdoise() {
+  const toast = useToast();
   const [plat, setPlat] = useState("");
   const [prix, setPrix] = useState("");
   const [label, setLabel] = useState("");
@@ -10,7 +12,6 @@ export default function TabArdoise() {
   const [imageAlt, setImageAlt] = useState("");
   const [altModifie, setAltModifie] = useState(false); // true dès que l'utilisateur retouche le champ à la main
   const [enabled, setEnabled] = useState(true);
-  const [msg, setMsg] = useState("");
   const [upLoad, setUpLoad] = useState(false);
   const [upErr, setUpErr] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -35,7 +36,7 @@ export default function TabArdoise() {
       { section_key: "ardoise", content: { plat, prix, label, note, image, image_alt: imageAlt, enabled } },
       { onConflict: "section_key" }
     );
-    setMsg("Ardoise enregistrée ✓"); setTimeout(() => setMsg(""), 2500);
+    toast.ok("Ardoise enregistrée");
   }
 
   async function upload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -47,7 +48,7 @@ export default function TabArdoise() {
     setUpLoad(true);
     const path = `ardoise-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
     const { error } = await supabase.storage.from("gallery").upload(path, file);
-    if (error) { setUpErr("Erreur d'upload : " + error.message); setUpLoad(false); return; }
+    if (error) { setUpErr(messageUpload(error)); setUpLoad(false); return; }
     const { data } = supabase.storage.from("gallery").getPublicUrl(path);
     setImage(data.publicUrl);
     setUpLoad(false);
@@ -110,7 +111,7 @@ export default function TabArdoise() {
 
               <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
                 <button className="btn btn-accent" onClick={save}>Enregistrer</button>
-                {msg && <span className="ok-msg">{msg}</span>}
+                
               </div>
             </div>
 
