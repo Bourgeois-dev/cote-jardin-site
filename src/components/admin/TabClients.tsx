@@ -148,7 +148,7 @@ export default function TabClients() {
         <div><h1>Clients</h1><div className="sous">Historique et fiches — {total ?? clients.length} client(s)</div></div>
       </div>
       <div className="contenu cli-contenu">
-        <div className="cli-layout">
+        <div className={`cli-layout${selId ? " fiche-ouverte" : ""}`}>
 
           {/* ── Colonne liste ── */}
           <div className="cli-col-liste">
@@ -198,6 +198,8 @@ export default function TabClients() {
               const badge = badgeClient(sel);
               return (
                 <div className="cli-fiche">
+                  {/* Retour à la liste — visible uniquement sur mobile (master/detail) */}
+                  <button className="cli-retour btn btn-ligne" onClick={() => setSelId(null)}>← Tous les clients</button>
                   {/* En-tête nom + badge + VIP */}
                   <div className="cli-fiche-tete">
                     <div className="cli-fiche-tete-gauche">

@@ -319,7 +319,7 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
 
         <div className="bloc">
           <div className="bloc-tete"><div><h2>Indicateurs</h2><div className="desc">Sur les 30 derniers jours, sauf clients récurrents et jour le plus demandé (historique complet).</div></div></div>
-          <div className="cartes-stat" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
+          <div className="cartes-stat">
             <div className="stat"><div className="lib">Taux d'annulation</div><div className="val" style={{ color: tauxAnnulation >= 20 ? "var(--annule)" : "var(--ink)" }}>{tauxAnnulation}%</div><div className="det">{nbAnnulePeriode} sur {periode.length} réservation(s)</div></div>
             <div className="stat"><div className="lib">Taux de no-show</div><div className="val" style={{ color: tauxNoShow >= 10 ? "var(--annule)" : "var(--ink)" }}>{tauxNoShow}%</div><div className="det">{nbNoShowPeriode} absence(s) constatée(s)</div></div>
             <div className="stat"><div className="lib">Taille de groupe moy.</div><div className="val">{tailleMoyenne.toLocaleString("fr-FR", { maximumFractionDigits: 1 })}</div><div className="det">couverts par réservation</div></div>

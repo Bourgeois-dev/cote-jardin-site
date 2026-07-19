@@ -881,6 +881,7 @@ tr:hover .drag-poignee { color:var(--ink-soft) }
 .mob-burger { display:none }
 .mob-drawer { display:none }
 .mob-drawer-fond { display:none }
+.cli-retour { display:none }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MOBILE ≤ 820px — refonte complète de l'admin sur petit écran
@@ -1028,14 +1029,21 @@ tr:hover .drag-poignee { color:var(--ink-soft) }
   .semaine-date { margin-bottom:0; min-width:64px; font-size:13px }
   .semaine-services { flex:1; margin-left:auto }
 
-  /* ═══ CLIENTS (CRM) ═══
-     Layout liste + fiche empilé ; la liste défile, la fiche s'ouvre dessous. */
-  .clients-layout, .cli-layout { grid-template-columns:1fr; gap:16px; padding:16px 14px; height:auto }
-  .cli-col-liste { border-right:none; border-bottom:1px solid var(--line);
-    height:auto; max-height:none; padding:16px 14px }
-  .clients-items, .cli-items { max-height:none }
-  .clients-fiche, .cli-fiche { min-height:0 }
-  .fiche-stats { grid-template-columns:repeat(2,1fr) }
+  /* ═══ CLIENTS (CRM) — master/detail ═══
+     Le CRM desktop fige la hauteur (100vh - 72px, overflow:hidden) : sur mobile
+     ça COUPAIT la fiche. On libère les hauteurs, et on bascule en master/detail :
+     fiche ouverte = liste masquée, bouton « ← Tous les clients » pour revenir. */
+  .cli-contenu { height:auto; overflow:visible }
+  .cli-layout, .clients-layout { grid-template-columns:1fr; height:auto; overflow:visible }
+  .cli-col-liste { border-right:none; height:auto; max-height:none;
+    overflow:visible; padding:16px 14px }
+  .cli-col-fiche { overflow:visible }
+  .cli-items, .clients-items { max-height:none }
+  .cli-fiche { padding:20px 16px }
+  .cli-layout.fiche-ouverte .cli-col-liste { display:none }
+  .cli-retour { display:inline-flex; align-self:flex-start; margin-bottom:14px;
+    min-height:40px }
+  .fiche-stats, .cli-stats { grid-template-columns:repeat(2,1fr) }
   .fiche-coord { gap:14px }
 
   /* ═══ PLAN DE SALLE ═══
@@ -1052,6 +1060,20 @@ tr:hover .drag-poignee { color:var(--ink-soft) }
   .ps-plan { margin:12px 0 0 }              /* le canevas garde son overflow:auto natif */
   .ps-resa-bas, .ps-resa-actions { flex-wrap:wrap }
   .ps-resa-actions .btn { flex:1 }
+
+  /* ═══ PLAN DE SALLE — ÉDITEUR (onglet « Plan de salle », .tp-) ═══
+     Desktop : canevas 1fr + panneau latéral 280px. Sur 380px, le canevas
+     s'écrasait à ~100px (colonne blanche filiforme). On empile, et le canevas
+     devient défilable horizontalement avec une largeur minimale qui préserve
+     la géométrie des tables (positions en px absolus). */
+  .tp-zone-bloc { grid-template-columns:1fr; gap:14px }
+  .tp-zone-main { overflow-x:auto; -webkit-overflow-scrolling:touch }
+  .tp-plan { min-width:640px }
+  .tp-nb-zones { display:none }                    /* le gros « 1 zone » du topbar : superflu ici */
+  .tp-zones-barre { overflow-x:auto; flex-wrap:nowrap; padding-bottom:6px;
+    scrollbar-width:none }
+  .tp-zones-barre::-webkit-scrollbar { display:none }
+  .tp-zone-pill, .tp-zone-add { flex-shrink:0 }
 
   /* Modales / panneaux : plein écran confortable */
   .modal-in { width:calc(100% - 24px); max-width:none; margin:12px; padding:20px 18px }
