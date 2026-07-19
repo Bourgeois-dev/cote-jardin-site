@@ -119,7 +119,7 @@ export default function TabListeAttente() {
 
         {!loading && affichees.length > 0 && (
           <div className="bloc" style={{ padding: 0 }}>
-            <table>
+            <table className="tbl-cartes">
               <thead>
                 <tr>
                   <th>Client</th>
@@ -133,26 +133,26 @@ export default function TabListeAttente() {
               <tbody>
                 {affichees.map((e) => (
                   <tr key={e.id} style={{ opacity: e.notified ? 0.5 : 1 }}>
-                    <td>
+                    <td data-label="Client">
                       <b style={{ fontSize: 14 }}>{e.customer_name}</b>
                       {e.notified && (
                         <span className="tag t-ok" style={{ fontSize: 10, marginLeft: 8, padding: "2px 7px" }}>Notifié</span>
                       )}
                       {e.notes && <div className="sub-desc" style={{ marginTop: 2 }}>{e.notes}</div>}
                     </td>
-                    <td style={{ fontFamily: "monospace", fontSize: 13 }}>
+                    <td data-label="Date · Heure" style={{ fontFamily: "monospace", fontSize: 13 }}>
                       {fmtDate(e.date)}<br />
                       <span style={{ color: "var(--ink-soft)" }}>{e.time.replace(":", "h")}</span>
                     </td>
-                    <td style={{ fontFamily: "monospace" }}>{e.covers}</td>
-                    <td style={{ fontSize: 13 }}>
+                    <td data-label="Couverts" style={{ fontFamily: "monospace" }}>{e.covers}</td>
+                    <td data-label="Contact" style={{ fontSize: 13 }}>
                       {e.phone && <div><a href={`tel:${e.phone}`} style={{ color: "var(--ink)", textDecoration: "none" }}>{e.phone}</a></div>}
                       {e.email && <div className="sub-desc"><a href={`mailto:${e.email}`} style={{ color: "var(--admin-accent)" }}>{e.email}</a></div>}
                     </td>
-                    <td className="sub-desc" style={{ fontSize: 12 }}>
+                    <td data-label="Inscrit le" className="sub-desc" style={{ fontSize: 12 }}>
                       {new Date(e.created_at).toLocaleDateString("fr-FR")}
                     </td>
-                    <td>
+                    <td className="td-actions">
                       <div className="actions-ligne">
                         {!e.notified && (
                           <button className="btn btn-mini btn-ok" onClick={() => notifier(e)}

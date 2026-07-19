@@ -37,11 +37,8 @@
 
 /* ── 02. LAYOUT ────────────────────────────────────────────────────────── */
 .app { display:grid; grid-template-columns:248px 1fr; height:100vh; overflow:hidden }
-@media(max-width:820px) {
-  .app { grid-template-columns:1fr; height:auto; overflow:visible }
-  .side { position:static; height:auto; overflow:visible }
-  .main { overflow:visible }
-}
+/* Note : toute l'adaptation mobile (≤820px) est regroupée en fin de fichier,
+   section « MOBILE ≤ 820px — refonte complète ». Un seul point de vérité. */
 .side { background:var(--admin-ink); color:#fff; padding:22px 16px; display:flex;
   flex-direction:column; gap:2px; height:100vh; overflow-y:auto }
 .side .logo { font-family:var(--font-display); font-size:22px; padding:6px 10px 18px;
@@ -882,41 +879,160 @@ tr:hover .drag-poignee { color:var(--ink-soft) }
 /* Barre d'accès rapide mobile — masquée sur desktop */
 .quickbar { display:none }
 
-/* ── Mobile ≤ 820px : nav horizontale compacte + quickbar ─────────────────
-   Avant : la sidebar (18 boutons) s'empilait au-dessus du contenu.
-   Après : bandeau haut avec navigation horizontale scrollable,
-   contenu tout de suite visible, accès rapide Service en bas d'écran. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE ≤ 820px — refonte complète de l'admin sur petit écran
+   Objectif : chaque onglet réellement utilisable au doigt sur téléphone.
+   - Navigation : bandeau haut horizontal scrollable + quickbar bas + menu complet
+   - Tables (Réservations, Liste d'attente, Newsletter, Horaires) → cartes empilées
+   - Tableau de bord, Clients, Plan de salle : mises en page repensées
+   ═══════════════════════════════════════════════════════════════════════════ */
 @media(max-width:820px) {
-  .side { padding:12px 12px 8px; gap:0 }
-  .side .logo { font-size:17px; padding:2px 4px 10px; margin-bottom:8px }
-  .side .logo small { font-size:9px; margin-top:2px }
-  .side-marque { display:none }               /* le logo LTD reste sur desktop */
+
+  /* ---- Cadre général ---- */
+  .app { grid-template-columns:1fr; height:auto; overflow:visible }
+  .main { padding-bottom:72px }              /* place pour la quickbar */
+
+  /* ---- Barre de navigation haute (sidebar → bandeau horizontal) ---- */
+  .side { position:sticky; top:0; z-index:60; height:auto; overflow:visible;
+    padding:10px 12px calc(10px + env(safe-area-inset-top)); gap:0;
+    box-shadow:0 2px 12px rgba(0,0,0,.18) }
+  .side-marque { display:none }
+  .side .logo { font-size:16px; padding:2px 4px 8px; margin-bottom:6px;
+    display:flex; align-items:baseline; gap:8px; border-bottom-color:rgba(255,255,255,.1) }
+  .side .logo small { display:inline; font-size:9px; margin-top:0 }
   .side nav { flex-direction:row; overflow-x:auto; overflow-y:hidden; gap:6px;
-    padding-bottom:8px; -webkit-overflow-scrolling:touch; scrollbar-width:none }
+    padding-bottom:6px; -webkit-overflow-scrolling:touch; scrollbar-width:none; flex:none }
   .side nav::-webkit-scrollbar { display:none }
   .side nav > div { flex-shrink:0; display:flex; align-items:center }
-  .nav-groupe { writing-mode:initial; padding:0 6px 0 10px; margin:0;
+  .nav-groupe { padding:0 4px 0 8px; margin:0; font-size:9px;
     border-left:1px solid rgba(255,255,255,.18); align-self:center }
-  .nav-groupe:first-child { border-left:none; padding-left:0 }
-  .side nav button { white-space:nowrap; padding:8px 12px; font-size:13px; border-radius:99px }
-  .voir-site { display:none }                  /* accessible depuis le site lui-même */
-  .side .compte { border-top:none; padding:0; margin:0; position:absolute; top:12px; right:12px }
-  .side .compte b { display:none }             /* l'email prendrait trop de place */
-  .side .deco { padding:6px 10px; font-size:11.5px; margin:0 }
-  .side { position:relative }
-  .main { padding-bottom:76px }                /* laisse la place à la quickbar */
+  .nav-groupe:first-child { border-left:none; padding-left:2px }
+  .side nav button { white-space:nowrap; padding:9px 14px; font-size:13px;
+    border-radius:99px; min-height:38px }        /* cible tactile ≥ 38px */
+  .voir-site { display:none }
+  .side .compte { position:absolute; top:8px; right:10px; border-top:none;
+    padding:0; margin:0 }
+  .side .compte b { display:none }
+  .side .deco { padding:6px 11px; font-size:11.5px; margin:0; min-height:34px }
+  /* .side reste position:sticky (défini plus haut) : il établit déjà le contexte
+     pour l'ancrage absolu de .compte, inutile de le repasser en relative. */
 
+  /* ---- Quickbar bas (accès pouce aux 3 vues du service) ---- */
   .quickbar { display:flex; position:fixed; bottom:0; left:0; right:0; z-index:90;
-    background:var(--admin-ink, #1d1a16); border-top:1px solid rgba(255,255,255,.12);
-    padding:6px 8px calc(6px + env(safe-area-inset-bottom)); gap:6px }
+    background:var(--admin-ink,#1d1a16); border-top:1px solid rgba(255,255,255,.12);
+    padding:6px 8px calc(6px + env(safe-area-inset-bottom)); gap:4px }
   .qb-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
-    background:none; border:none; color:rgba(255,255,255,.65); font-size:11px;
-    font-weight:600; padding:6px 4px; border-radius:8px; position:relative; cursor:pointer }
-  .qb-btn.actif { color:#fff; background:rgba(255,255,255,.1) }
-  .qb-ico { font-size:17px; line-height:1 }
-  .qb-pastille { position:absolute; top:0; right:calc(50% - 26px);
-    background:var(--admin-accent, #7a1f24); color:#fff; font-size:10px; font-weight:700;
+    background:none; border:none; color:rgba(255,255,255,.6); font-size:11px;
+    font-weight:600; padding:6px 4px; border-radius:8px; position:relative;
+    cursor:pointer; min-height:46px }
+  .qb-btn.actif { color:#fff; background:rgba(255,255,255,.12) }
+  .qb-ico { font-size:18px; line-height:1 }
+  .qb-pastille { position:absolute; top:2px; right:calc(50% - 24px);
+    background:var(--admin-accent,#7a1f24); color:#fff; font-size:10px; font-weight:700;
     min-width:16px; height:16px; border-radius:99px; display:inline-flex;
     align-items:center; justify-content:center; padding:0 4px }
-  .toasts { bottom:calc(76px + env(safe-area-inset-bottom)) }  /* au-dessus de la quickbar */
+
+  /* ---- Topbar & contenu ---- */
+  .topbar { padding:14px 16px; flex-wrap:wrap; gap:8px }
+  .topbar h1 { font-size:21px }
+  .topbar .sous { font-size:12px }
+  .contenu { padding:16px 14px 60px }
+  .bloc { padding:16px 14px }
+  .bloc-tete { flex-wrap:wrap; gap:10px }
+  .bloc-tete h2 { font-size:17px }
+
+  /* Barres d'outils (recherche, filtres, onglets internes) : passent à la ligne */
+  .carnet-barre, .clients-tri, .ps-entete, .ps-entete-droite,
+  .actions-ligne, .puces, .filtres, .segments { flex-wrap:wrap }
+  .carnet-search, .clients-recherche input { width:100%; min-width:0 }
+  .puce { flex:1; text-align:center; min-height:38px }
+
+  /* Boutons : cibles tactiles confortables */
+  .btn { min-height:42px; padding:11px 18px }
+  .btn-mini { min-height:34px; padding:7px 12px }
+
+  /* ═══ TABLES CIBLÉES → CARTES EMPILÉES ═══
+     Seuls les tableaux portant .tbl-cartes sont transformés (les autres onglets
+     gardent leur tableau classique, défilable horizontalement si besoin).
+     Chaque <tr> devient une carte ; chaque <td> une ligne « Label : valeur »,
+     le libellé venant de l'attribut data-label posé dans le TSX. */
+  .contenu table.tbl-cartes thead { position:absolute; width:1px; height:1px; overflow:hidden;
+    clip:rect(0 0 0 0); white-space:nowrap }              /* en-têtes masqués visuellement, lus par data-label */
+  .contenu table.tbl-cartes, .tbl-cartes tbody, .tbl-cartes tr, .tbl-cartes td { display:block; width:100% }
+  .contenu table.tbl-cartes { border-collapse:separate }
+  .tbl-cartes tbody tr { background:#fff; border:1px solid var(--line); border-radius:12px;
+    padding:6px 14px; margin-bottom:12px; box-shadow:0 1px 4px rgba(0,0,0,.04) }
+  .tbl-cartes td { border:none; border-bottom:1px solid var(--line); padding:9px 0;
+    display:flex; justify-content:space-between; align-items:flex-start; gap:14px;
+    text-align:right; font-size:14px }
+  .tbl-cartes td:last-child { border-bottom:none }
+  .tbl-cartes td[data-label]::before { content:attr(data-label); flex-shrink:0; text-align:left;
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--ink-soft); padding-top:2px }
+  /* Cellule d'actions : pleine largeur, boutons étalés */
+  .tbl-cartes td.td-actions { text-align:left }
+  .tbl-cartes td.td-actions .actions-ligne { width:100%; gap:8px }
+  .tbl-cartes td.td-actions .btn { flex:1 }
+  .tbl-cartes td .sub-desc { text-align:right }
+  .tbl-cartes .vide { display:block; text-align:center; padding:24px 8px }
+  .tbl-cartes td.vide::before { display:none }
+  .tbl-cartes tr:has(.vide) { padding:0; border:none; background:none; box-shadow:none }
+
+  /* Onglets HORS périmètre carte : le tableau reste tabulaire mais devient
+     défilable horizontalement plutôt que d'écraser le texte. */
+  .contenu table:not(.tbl-cartes) { display:block; overflow-x:auto; white-space:nowrap;
+    -webkit-overflow-scrolling:touch }
+
+  /* Horaires : la ligne jour reste compacte (toggle + heures) */
+  .tbl-cartes td[data-label="Midi"], .tbl-cartes td[data-label="Soir"] { flex-wrap:wrap }
+  .creneau-edit { flex-wrap:wrap; justify-content:flex-end }
+  .creneau-edit input[type=time] { flex:1; min-width:110px }
+
+  /* ═══ TABLEAU DE BORD ═══ */
+  .cartes-stat { grid-template-columns:1fr 1fr; gap:10px }
+  .cartes-stat-kpi { grid-template-columns:1fr 1fr }
+  .semaine-grille { grid-template-columns:1fr; gap:8px }   /* 7 colonnes → liste verticale */
+  .semaine-jour { display:flex; align-items:center; gap:12px; padding:12px 14px }
+  .semaine-nom { margin-bottom:0; min-width:40px }
+  .semaine-date { margin-bottom:0; min-width:64px; font-size:13px }
+  .semaine-services { flex:1; margin-left:auto }
+
+  /* ═══ CLIENTS (CRM) ═══
+     Layout liste + fiche empilé ; la liste défile, la fiche s'ouvre dessous. */
+  .clients-layout, .cli-layout { grid-template-columns:1fr; gap:16px; padding:16px 14px; height:auto }
+  .cli-col-liste { border-right:none; border-bottom:1px solid var(--line);
+    height:auto; max-height:none; padding:16px 14px }
+  .clients-items, .cli-items { max-height:none }
+  .clients-fiche, .cli-fiche { min-height:0 }
+  .fiche-stats { grid-template-columns:repeat(2,1fr) }
+  .fiche-coord { gap:14px }
+
+  /* ═══ PLAN DE SALLE ═══
+     Le canevas absolu n'est pas manipulable au doigt : sur mobile on privilégie
+     la LISTE des réservations (attribution via le formulaire), et le plan devient
+     un aperçu défilable en dessous plutôt qu'une zone de glisser-déposer. */
+  .ps-wrap { height:auto; max-height:none; overflow:visible }
+  .ps-entete { flex-wrap:wrap; padding:14px 16px 10px }
+  .ps-services { grid-template-columns:1fr; gap:10px; padding:4px 14px 12px }
+  .ps-grid { grid-template-columns:1fr; overflow:visible; padding:0 14px 16px }
+  .ps-col-liste { height:auto; padding-right:0; overflow:visible }
+  .ps-liste { overflow-y:visible; max-height:none }
+  .ps-col-plan { min-height:340px; margin-top:16px }
+  .ps-plan { margin:12px 0 0 }              /* le canevas garde son overflow:auto natif */
+  .ps-resa-bas, .ps-resa-actions { flex-wrap:wrap }
+  .ps-resa-actions .btn { flex:1 }
+
+  /* Modales / panneaux : plein écran confortable */
+  .modal-in { width:calc(100% - 24px); max-width:none; margin:12px; padding:20px 18px }
+
+  /* Toasts au-dessus de la quickbar */
+  .toasts { bottom:calc(72px + env(safe-area-inset-bottom)) }
+}
+
+/* Très petit écran ≤ 480px : on resserre encore */
+@media(max-width:480px) {
+  .cartes-stat, .cartes-stat-kpi { grid-template-columns:1fr }
+  .fiche-stats { grid-template-columns:1fr }
+  .topbar h1 { font-size:19px }
+  .contenu td { font-size:13.5px }
 }

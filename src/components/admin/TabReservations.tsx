@@ -75,17 +75,17 @@ export default function TabReservations({ initialDate, initialService }: { initi
           </div>
         </div>
         {q && <div className="desc" style={{ marginBottom: 10 }}>{affichees.length} résultat(s) pour « {recherche} »</div>}
-        <table><thead><tr><th className="th-tri" onClick={() => setSensTri(sensTri === "asc" ? "desc" : "asc")}>Date {sensTri === "asc" ? "↑" : "↓"}</th><th>Heure</th><th>Client</th><th>Couverts</th><th>Table</th><th>Origine</th><th>Statut</th><th></th></tr></thead><tbody>
+        <table className="tbl-cartes"><thead><tr><th className="th-tri" onClick={() => setSensTri(sensTri === "asc" ? "desc" : "asc")}>Date {sensTri === "asc" ? "↑" : "↓"}</th><th>Heure</th><th>Client</th><th>Couverts</th><th>Table</th><th>Origine</th><th>Statut</th><th></th></tr></thead><tbody>
           {affichees.length ? affichees.map((r) => (
             <tr key={r.id}>
-              <td>{new Date(r.date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</td>
-              <td>{r.time}</td>
-              <td><b>{r.customer_name}</b><div className="sub-desc">{r.phone}</div>{r.email && <div className="sub-desc">{r.email}</div>}</td>
-              <td>{r.covers}</td>
-              <td>{(r.table_ids?.length ?? 0) > 0 ? <b style={{ color: "var(--admin-accent)" }}>{r.table_ids.map((tid) => tables.find((t) => t.id === tid)?.label || "?").join(", ")}</b> : <span className="sub-desc">—</span>}</td>
-              <td><span className="sub-desc">{r.source === "telephone" ? "Téléphone" : "Site web"}</span></td>
-              <td><span className={`tag ${STATUTS[r.status] || ""}`}>{LABELS[r.status] || r.status}</span></td>
-              <td><div className="actions-ligne">
+              <td data-label="Date">{new Date(r.date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</td>
+              <td data-label="Heure">{r.time}</td>
+              <td data-label="Client"><b>{r.customer_name}</b><div className="sub-desc">{r.phone}</div>{r.email && <div className="sub-desc">{r.email}</div>}</td>
+              <td data-label="Couverts">{r.covers}</td>
+              <td data-label="Table">{(r.table_ids?.length ?? 0) > 0 ? <b style={{ color: "var(--admin-accent)" }}>{r.table_ids.map((tid) => tables.find((t) => t.id === tid)?.label || "?").join(", ")}</b> : <span className="sub-desc">—</span>}</td>
+              <td data-label="Origine"><span className="sub-desc">{r.source === "telephone" ? "Téléphone" : "Site web"}</span></td>
+              <td data-label="Statut"><span className={`tag ${STATUTS[r.status] || ""}`}>{LABELS[r.status] || r.status}</span></td>
+              <td className="td-actions"><div className="actions-ligne">
                 {r.status !== "confirme" && r.status !== "no_show" && <button className="btn btn-mini btn-ok" onClick={() => confirmer(r)}>Confirmer</button>}
                 {r.status !== "annule" && <button className="btn btn-mini btn-danger" onClick={() => annuler(r)}>Annuler</button>}
               </div></td>

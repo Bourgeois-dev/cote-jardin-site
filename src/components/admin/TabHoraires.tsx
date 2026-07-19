@@ -38,16 +38,16 @@ export default function TabHoraires() {
         <div className="bloc">
           <div className="bloc-tete"><div><h2>Horaires d'ouverture</h2><div className="desc">Laissez un créneau vide si le restaurant n'ouvre pas à ce moment (ex. pas de service le midi).</div></div></div>
           {err && <div className="err-inline">{err}</div>}
-          <table className="tab-horaires"><thead><tr>
+          <table className="tab-horaires tbl-cartes"><thead><tr>
             <th>Jour</th><th>Ouvert</th><th>Midi</th><th>Soir</th>
           </tr></thead><tbody>
             {jours.map((h) => (
               <tr key={h.id}>
-                <td style={{ width: 100 }}><b>{JOURS[h.day_of_week]}</b></td>
-                <td style={{ width: 70 }}>
+                <td data-label="Jour" style={{ width: 100 }}><b>{JOURS[h.day_of_week]}</b></td>
+                <td data-label="Ouvert" style={{ width: 70 }}>
                   <label className="toggle"><input type="checkbox" checked={!h.is_closed} onChange={(e) => toggleJour(h, e.target.checked)} /><span className="piste" /></label>
                 </td>
-                <td>
+                <td data-label="Midi">
                   {h.is_closed ? <span className="sub-desc">—</span> : (
                     <div className="creneau-edit">
                       <input type="time" defaultValue={h.lunch_open || ""} onBlur={(e) => setHeure(h, "lunch_open", e.target.value)} />
@@ -56,7 +56,7 @@ export default function TabHoraires() {
                     </div>
                   )}
                 </td>
-                <td>
+                <td data-label="Soir">
                   {h.is_closed ? <span className="sub-desc">—</span> : (
                     <div className="creneau-edit">
                       <input type="time" defaultValue={h.dinner_open || ""} onBlur={(e) => setHeure(h, "dinner_open", e.target.value)} />
@@ -73,15 +73,15 @@ export default function TabHoraires() {
 
         <div className="bloc">
           <div className="bloc-tete"><div><h2>Fermetures &amp; événements exceptionnels</h2><div className="desc">Fermetures totales, partielles (midi ou soir uniquement), ou événements privatifs. Le widget masque automatiquement les créneaux bloqués.</div></div></div>
-          <table><thead><tr><th>Du</th><th>Au</th><th>Service</th><th>Motif</th><th>Note interne</th><th></th></tr></thead><tbody>
+          <table className="tab-fermetures tbl-cartes"><thead><tr><th>Du</th><th>Au</th><th>Service</th><th>Motif</th><th>Note interne</th><th></th></tr></thead><tbody>
             {cp.rows.length ? cp.rows.map((cl) => (
               <tr key={cl.id}>
-                <td>{cl.start_date}</td>
-                <td>{cl.end_date}</td>
-                <td>{cl.service === "midi" ? "Midi seul." : cl.service === "soir" ? "Soir seul." : "Toute la journée"}</td>
-                <td>{cl.reason || "—"}</td>
-                <td><span className="sub-desc">{cl.note_interne || "—"}</span></td>
-                <td><button className="btn btn-mini btn-danger" onClick={() => cp.remove(cl.id)}>Supprimer</button></td>
+                <td data-label="Du">{cl.start_date}</td>
+                <td data-label="Au">{cl.end_date}</td>
+                <td data-label="Service">{cl.service === "midi" ? "Midi seul." : cl.service === "soir" ? "Soir seul." : "Toute la journée"}</td>
+                <td data-label="Motif">{cl.reason || "—"}</td>
+                <td data-label="Note interne"><span className="sub-desc">{cl.note_interne || "—"}</span></td>
+                <td className="td-actions"><button className="btn btn-mini btn-danger" onClick={() => cp.remove(cl.id)}>Supprimer</button></td>
               </tr>
             )) : <tr><td colSpan={6} className="vide">Aucune fermeture programmée.</td></tr>}
           </tbody></table>

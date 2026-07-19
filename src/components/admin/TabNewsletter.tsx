@@ -970,7 +970,7 @@ function dateRef(c: Campaign): string {
 
             {!loading && affichees.length > 0 && (
               <div className="bloc" style={{ padding: 0 }}>
-                <table>
+                <table className="tbl-cartes">
                   <thead>
                     <tr>
                       <th>Campagne</th>
@@ -985,7 +985,7 @@ function dateRef(c: Campaign): string {
                       const st = STATUS_LABELS[c.status] || { label: c.status, cls: "" };
                       return (
                         <tr key={c.id}>
-                          <td>
+                          <td data-label="Campagne">
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                               <span style={{ fontSize: 18 }}>{TYPE_DISPLAY[c.template]?.icon || "📧"}</span>
                               <div>
@@ -994,7 +994,7 @@ function dateRef(c: Campaign): string {
                               </div>
                             </div>
                           </td>
-                          <td style={{ fontSize: 13 }}>
+                          <td data-label="Segment" style={{ fontSize: 13 }}>
                             {SEGMENTS[c.segment]?.label || c.segment}
                             {c.status === "sent" && c.recipients_count != null && (
                               <div className="sub-desc" style={{ fontSize: 11, marginTop: 2 }}>
@@ -1003,14 +1003,14 @@ function dateRef(c: Campaign): string {
                             )}
                           </td>
                           {/* Une seule colonne : date d'envoi effective, ou envoi à venir mis en avant */}
-                          <td style={{ fontSize: 13 }}>
+                          <td data-label="Envoi" style={{ fontSize: 13 }}>
                             {c.status === "scheduled" && c.scheduled_at ? (
                               <span style={{ color: "var(--admin-accent)", fontWeight: 700 }}>→ {fmtDatetime(c.scheduled_at)}</span>
                             ) : (
                               <span style={{ color: "var(--ink-soft)" }}>{fmtDatetime(c.sent_at || c.scheduled_at)}</span>
                             )}
                           </td>
-                          <td>
+                          <td data-label="Résultat">
                             <span className={`tag ${st.cls}`} style={{ fontSize: 11 }}>{st.label}</span>
                             {c.status === "sent" && c.sent_count != null && c.recipients_count != null && c.sent_count < c.recipients_count && (
                               <div style={{ fontSize: 11, color: "var(--annule)", marginTop: 4 }}>
@@ -1021,7 +1021,7 @@ function dateRef(c: Campaign): string {
                               <div style={{ fontSize: 11, color: "var(--annule)", marginTop: 2 }}>⚠ {c.error_message.slice(0, 60)}</div>
                             )}
                           </td>
-                          <td>
+                          <td className="td-actions">
                             <div className="actions-ligne">
                               {(c.status === "draft") && (
                                 <>
