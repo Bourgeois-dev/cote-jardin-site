@@ -391,7 +391,7 @@ export default function ReservationWidget({ hours, open, onClose, masquerFermer 
               <div className="champ"><label>Notes (allergies, occasion…)</label><textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={1000} /></div>
               <label className="consent"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} /><span>J'accepte que mes données soient utilisées pour la gestion de ma réservation. *</span></label>
               {proposeNewsletter && (
-                <label className="consent"><input type="checkbox" checked={newsletterOptin} onChange={(e) => setNewsletterOptin(e.target.checked)} /><span>Je souhaite aussi recevoir les actualités du restaurant par e-mail. Sans mesure d'ouverture, désinscription à tout moment.</span></label>
+                <label className="consent"><input type="checkbox" checked={newsletterOptin} onChange={(e) => setNewsletterOptin(e.target.checked)} /><span>Je souhaite aussi recevoir les actualités du restaurant par e-mail. Nous ne suivons pas l'ouverture de nos e-mails ; désinscription possible à tout moment.</span></label>
               )}
               <div className="pan-actions"><button className="btn btn-ghost" onClick={() => setStep(2)}>Retour</button><button className="btn btn-accent" onClick={confirmer}>Confirmer</button></div>
             </div>
