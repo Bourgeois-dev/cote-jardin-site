@@ -71,6 +71,7 @@ export default function AdminApp({ session }: { session: Session }) {
 
 function AdminShell({ session }: { session: Session }) {
   const [active, setActive] = useState(ongletInitial);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [nbAttente, setNbAttente] = useState(0);
   const [nbListeAttente, setNbListeAttente] = useState(0);
   const [nbNewsProg, setNbNewsProg] = useState(0);
@@ -118,6 +119,15 @@ function AdminShell({ session }: { session: Session }) {
     setActive(key);
     if (window.location.hash.replace(/^#/, "") !== key) window.location.hash = key;
   }, [active, confirm, dirty]);
+
+  // Tiroir mobile : Échap ferme, et on fige le scroll de fond quand il est ouvert
+  useEffect(() => {
+    if (!menuOpen) return;
+    function surTouche(e: KeyboardEvent) { if (e.key === "Escape") setMenuOpen(false); }
+    window.addEventListener("keydown", surTouche);
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", surTouche); document.body.style.overflow = ""; };
+  }, [menuOpen]);
 
   // Boutons Précédent/Suivant du navigateur
   useEffect(() => {
@@ -182,6 +192,9 @@ function AdminShell({ session }: { session: Session }) {
     <div className="app">
       <aside className="side">
         <div className="logo">{import.meta.env.VITE_RESTO_NAME || "Restaurant"}<small>Administration</small></div>
+        <button className="mob-burger" aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)}>
+          {menuOpen ? "✕" : "☰"}
+        </button>
         <div className="side-marque">
           <svg className="side-marque-logo" viewBox="0 0 280 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="La Table Digitale">
             <rect x="4" y="33" width="8" height="22" rx="2.5" fill="#fff" />
@@ -227,6 +240,30 @@ function AdminShell({ session }: { session: Session }) {
           ? <TabTableau onNavigate={(tab, date, service) => { setForceDate(date); setForceService(service); naviguer(tab); }} />
           : <Current />}
       </main>
+      {/* Tiroir de navigation mobile (menu burger) */}
+      {menuOpen && <div className="mob-drawer-fond" onClick={() => setMenuOpen(false)} />}
+      <div className={`mob-drawer${menuOpen ? " ouvert" : ""}`} role="dialog" aria-modal="true" aria-label="Menu de navigation">
+        <nav>
+          {TABS_VISIBLES.filter((t) => t.key !== "features" || isEditor).map((t) => (
+            <div key={t.key}>
+              {t.groupe && <div className="nav-groupe">{t.groupe}</div>}
+              <button
+                className={active === t.key ? "actif" : ""}
+                onClick={() => { setMenuOpen(false); naviguer(t.key); }}
+              >
+                {t.key === "features" ? "⚙ Fonctionnalités" : t.label}
+                {pastille(t.key)}
+              </button>
+            </div>
+          ))}
+        </nav>
+        <a className="voir-site" href={siteUrl} target="_blank" rel="noopener">↗ Voir le site</a>
+        <div className="compte">
+          <b>{session.user.email}</b>
+          <button className="deco" onClick={() => supabase.auth.signOut()}>Se déconnecter</button>
+        </div>
+      </div>
+
       {/* Barre d'accès rapide mobile : les 3 onglets du service en cours */}
       <nav className="quickbar" aria-label="Accès rapide">
         <button className={active === "tableau" ? "qb-btn actif" : "qb-btn"} onClick={() => naviguer("tableau")}>
