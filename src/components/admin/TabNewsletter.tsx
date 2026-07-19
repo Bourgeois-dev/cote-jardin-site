@@ -114,7 +114,7 @@ function BlocsCanvas({ subject, content, restoName, logoUrl }: {
   );
 
   return (
-    <div style={{ background: "#ECEAE1", borderRadius: 14, padding: "24px 16px", position: "sticky", top: 90 }}>
+    <div className="news-apercu">
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase",
         color: "var(--ink-soft)", marginBottom: 10, textAlign: "center" }}>
         Aperçu de l'email
@@ -525,7 +525,7 @@ function NouveauForm({ onSaved, initial }: {
 
       {/* Étape 1 : Composition libre par blocs */}
       {step === 1 && (
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 560px", gap: 28 }}>
+        <div className="news-editor-grid">
           <div>
             <p className="desc">Composez votre campagne avec des blocs. Aucun format imposé : ajoutez, réordonnez, supprimez.</p>
 
@@ -558,7 +558,7 @@ function NouveauForm({ onSaved, initial }: {
 
             {/* ── Éditeur de blocs ── */}
             <div style={{ marginTop: 22 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
                 <b style={{ fontSize: 14, color: "var(--ink)" }}>Contenu ({blocs.length} bloc{blocs.length > 1 ? "s" : ""})</b>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button className="btn btn-ligne btn-mini" onClick={() => ajouterBloc("pleine_largeur")}>+ Pleine largeur</button>

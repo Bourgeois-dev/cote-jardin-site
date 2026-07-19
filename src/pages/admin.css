@@ -882,6 +882,11 @@ tr:hover .drag-poignee { color:var(--ink-soft) }
 .mob-drawer { display:none }
 .mob-drawer-fond { display:none }
 .cli-retour { display:none }
+/* Éditeur newsletter : grille formulaire + aperçu (remplace les styles inline
+   qui empêchaient toute adaptation mobile) */
+.news-editor-grid { display:grid; grid-template-columns:minmax(0,1fr) 560px; gap:28px }
+.news-apercu { background:#ECEAE1; border-radius:14px; padding:24px 16px;
+  position:sticky; top:90px }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MOBILE ≤ 820px — refonte complète de l'admin sur petit écran
@@ -1077,6 +1082,14 @@ tr:hover .drag-poignee { color:var(--ink-soft) }
 
   /* Modales / panneaux : plein écran confortable */
   .modal-in { width:calc(100% - 24px); max-width:none; margin:12px; padding:20px 18px }
+
+  /* ═══ NEWSLETTER — éditeur de campagne ═══
+     Desktop : formulaire + aperçu 560px côte à côte (aperçu sticky).
+     Sur mobile l'aperçu écrasait le formulaire (un mot par ligne) et le
+     chevauchait : on empile, aperçu statique sous le formulaire. */
+  .news-editor-grid { grid-template-columns:1fr; gap:18px }
+  .news-apercu { position:static; top:auto; padding:18px 12px }
+  .news-grid2 { grid-template-columns:1fr }
 
   /* Toasts au-dessus de la quickbar */
   .toasts { bottom:calc(72px + env(safe-area-inset-bottom)) }
