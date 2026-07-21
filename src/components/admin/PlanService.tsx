@@ -3,7 +3,9 @@ import { useTable } from "../../hooks/useTable";
 import { supabase, sendReservationEmail, notifyWaitlist } from "../../lib/supabase";
 import type { Reservation, RestaurantTable, DiningArea, OpeningHour } from "../../lib/types";
 import { useConfirm } from "./Confirm";
+import TableSVG from "./TableSVG";
 
+const psTaille = (cap: number) => (cap <= 2 ? 80 : cap <= 4 ? 100 : 130);
 const estMidi = (t: string) => (parseInt(String(t || "0").split(":")[0]) || 0) < 16;
 const JOURS = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
 const JOURS_C = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
@@ -415,6 +417,8 @@ export default function PlanService({ initialDate, initialService }: { initialDa
                   onDragLeave={() => setSurvol((s) => (s === t.id ? null : s))}
                   onDrop={() => onDrop(t.id)}
                   onClick={() => { if (occ) setResaEclairee((c) => c === occ.id ? null : occ.id); }}>
+                  <TableSVG size={psTaille(t.capacity)} capacity={t.capacity} round={t.shape === "round"} className="ps-svg" />
+                  <div className="ps-table-contenu">
                   <div className="ps-table-tete">
                     <span className="ps-table-label">{t.label}</span>
                     <span className="ps-table-cap">{occ ? `${occ.covers} couv.` : `${t.capacity} pl.`}</span>
@@ -424,6 +428,7 @@ export default function PlanService({ initialDate, initialService }: { initialDa
                   ) : (
                     <div className="ps-table-libre">Libre</div>
                   )}
+                  </div>
                 </div>
               );
             })}

@@ -378,31 +378,50 @@ tr:last-child td { border-bottom:none }
   border-radius:12px; min-height:340px; background-image:radial-gradient(circle,rgba(0,0,0,.06) 1px,transparent 1px); background-size:24px 24px }
 .ps-vide-plan { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--ink-soft); font-style:italic }
 
-.ps-table { position:absolute; display:flex; flex-direction:column; justify-content:space-between;
-  padding:10px 12px; cursor:default; transition:box-shadow .15s, transform .1s; user-select:none; box-sizing:border-box }
+.ps-table { position:absolute; display:grid; place-items:center; cursor:default;
+  transition:transform .1s; user-select:none; box-sizing:border-box }
+.ps-table > * { grid-area:1 / 1 }
+/* Tailles alignées sur le SVG (plateau + chaises débordantes) */
 .ps-table.t-petite  { width:80px;  height:80px  }
 .ps-table.t-moyenne { width:100px; height:100px }
 .ps-table.t-grande  { width:130px; height:130px }
-.ps-table.carree { border-radius:14px }
-.ps-table.ronde  { border-radius:50%; align-items:center; justify-content:center; text-align:center }
-.ps-table.libre   { background:#fff; border:2px dashed var(--a25) }
-.ps-table.occupee { background:var(--or); border:2px solid rgba(0,0,0,.06); box-shadow:0 3px 10px rgba(0,0,0,.12); cursor:pointer }
-.ps-table.occupee:hover { box-shadow:0 6px 18px rgba(0,0,0,.18); transform:translateY(-2px) }
-.ps-table.survol   { box-shadow:0 0 0 3px var(--admin-accent); z-index:5 }
-.ps-table.eclairee { box-shadow:0 0 0 3px var(--admin-accent), 0 6px 18px rgba(0,0,0,.18); z-index:5; transform:translateY(-2px); animation:psPulse 1.6s ease-in-out infinite }
-@keyframes psPulse {
-  0%,100% { box-shadow:0 0 0 3px var(--admin-accent), 0 0 0 7px var(--a25) }
-  50%     { box-shadow:0 0 0 3px var(--admin-accent), 0 0 0 10px var(--a12) }
+
+/* Le SVG « mobilier » porte désormais la surface (plateau) et les chaises. */
+.ps-svg { display:block; overflow:visible; pointer-events:none }
+.ps-svg .tp-chaise  { fill:#fff; stroke:var(--a25); stroke-width:1.5 }
+.ps-svg .tp-plateau { transition:fill .15s, stroke .15s }
+/* Libre : plateau blanc, contour pointillé rappelé sur le plateau */
+.ps-table.libre   .ps-svg .tp-plateau { fill:#fff; stroke:var(--a25); stroke-width:2; stroke-dasharray:5 4 }
+.ps-table.libre   .ps-svg .tp-chaise  { fill:#fff; stroke:var(--a25) }
+/* Occupée : plateau or plein, chaises assorties */
+.ps-table.occupee { cursor:pointer }
+.ps-table.occupee .ps-svg .tp-plateau { fill:var(--or); stroke:rgba(0,0,0,.10); stroke-width:2; stroke-dasharray:none }
+.ps-table.occupee .ps-svg .tp-chaise  { fill:var(--or); stroke:rgba(0,0,0,.12) }
+.ps-table.occupee:hover { transform:translateY(-2px) }
+/* États d'interaction : halo porté par le plateau, épouse rond/carré */
+.ps-table.survol   .ps-svg .tp-plateau { stroke:var(--admin-accent); stroke-width:3; stroke-dasharray:none }
+.ps-table.retrait  .ps-svg .tp-plateau { stroke:var(--annule); stroke-width:3; stroke-dasharray:none }
+.ps-table.eclairee { z-index:5; transform:translateY(-2px) }
+.ps-table.eclairee .ps-svg .tp-plateau { stroke:var(--admin-accent); stroke-width:3; stroke-dasharray:none;
+  animation:psPulsePlateau 1.6s ease-in-out infinite }
+.ps-table.survol, .ps-table.eclairee { z-index:5 }
+@keyframes psPulsePlateau {
+  0%,100% { stroke-width:3 }
+  50%     { stroke-width:4.5 }
 }
 .ps-table.trop-petit { opacity:.4; cursor:not-allowed }
-.ps-table.retrait    { box-shadow:0 0 0 3px var(--annule) }
+
+/* Contenu texte superposé au plateau */
+.ps-table-contenu { display:flex; flex-direction:column; justify-content:space-between;
+  align-items:stretch; text-align:left; width:56%; height:56%; pointer-events:none; z-index:2 }
+.ps-table.ronde .ps-table-contenu { align-items:center; text-align:center; justify-content:center; gap:2px }
 .ps-table-tete { display:flex; align-items:flex-start; justify-content:space-between; width:100%; gap:6px }
 .ps-table.ronde .ps-table-tete { flex-direction:column; align-items:center; gap:2px }
 .ps-table-label { font-size:14px; font-weight:600; line-height:1 }
 .ps-table.occupee .ps-table-label { color:#fff }
 .ps-table.libre   .ps-table-label { color:var(--ink-soft) }
 .ps-table-cap { font-size:9px; font-weight:500 }
-.ps-table.occupee .ps-table-cap { color:rgba(255,255,255,.85) }
+.ps-table.occupee .ps-table-cap { color:rgba(255,255,255,.9) }
 .ps-table.libre   .ps-table-cap { color:var(--ink-soft) }
 .ps-table-client { font-size:11px; font-weight:600; color:#fff; line-height:1.2 }
 .ps-table-libre  { font-size:10px; color:var(--ink-soft); font-style:italic }
