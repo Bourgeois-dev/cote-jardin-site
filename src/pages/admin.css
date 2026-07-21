@@ -446,15 +446,22 @@ tr:last-child td { border-bottom:none }
   background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
   background-size:32px 32px }
 
-.tp-table { position:absolute; display:flex; flex-direction:column; align-items:center;
-  justify-content:center; gap:3px; cursor:grab; user-select:none; touch-action:none; transition:box-shadow .15s; padding:8px }
+.tp-table { position:absolute; display:grid; place-items:center; cursor:grab;
+  user-select:none; touch-action:none; transition:filter .15s }
+.tp-table > * { grid-area:1 / 1 }
 .tp-table:active { cursor:grabbing }
-.tp-table.carree { border-radius:14px; background:#fff; border:2px solid var(--a25) }
-.tp-table.ronde  { border-radius:50%;  background:#fff; border:2px solid var(--a25) }
-.tp-table:hover { border-color:var(--admin-accent); box-shadow:0 3px 12px var(--a12) }
-.tp-table.selectionnee { border-color:var(--admin-accent); border-width:2.5px; box-shadow:0 0 0 3px var(--a12) }
-.tp-table-label { font-family:var(--font-display); font-size:18px; font-weight:600; color:var(--admin-accent); line-height:1 }
-.tp-table-cap { font-size:11px; color:var(--ink-soft) }
+.tp-table-svg { display:block; overflow:visible; pointer-events:none }
+.tp-chaise { fill:#fff; stroke:var(--a25); stroke-width:1.5; transition:stroke .15s }
+.tp-plateau { fill:#fff; stroke:var(--a25); stroke-width:2.5; transition:stroke .15s }
+.tp-table:hover .tp-plateau { stroke:var(--admin-accent) }
+.tp-table:hover .tp-chaise  { stroke:var(--admin-accent-light) }
+.tp-table:hover { filter:drop-shadow(0 3px 10px var(--a12)) }
+.tp-table.selectionnee .tp-plateau { stroke:var(--admin-accent); stroke-width:3 }
+.tp-table.selectionnee .tp-chaise  { stroke:var(--admin-accent-light) }
+.tp-table.selectionnee { filter:drop-shadow(0 0 0 var(--a12)) }
+.tp-table-texte { display:flex; flex-direction:column; align-items:center; gap:2px; pointer-events:none; z-index:2 }
+.tp-table-label { font-family:var(--font-display); font-size:17px; font-weight:600; color:var(--admin-accent); line-height:1 }
+.tp-table-cap { font-size:10px; color:var(--ink-soft) }
 
 .tp-zone-pied { display:flex; align-items:center; gap:10px; padding:12px 20px; border-top:1px solid var(--line); font-size:13.5px; color:var(--ink-soft); flex-wrap:wrap }
 .tp-zone-pied b { color:var(--ink); font-weight:700 }
