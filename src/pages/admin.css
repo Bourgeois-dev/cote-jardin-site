@@ -412,19 +412,20 @@ tr:last-child td { border-bottom:none }
 .ps-table.trop-petit { opacity:.4; cursor:not-allowed }
 
 /* Contenu texte superposé au plateau */
-.ps-table-contenu { display:flex; flex-direction:column; justify-content:space-between;
-  align-items:stretch; text-align:left; width:66%; height:64%; pointer-events:none; z-index:2 }
-.ps-table.ronde .ps-table-contenu { align-items:center; text-align:center; justify-content:center; gap:2px }
-.ps-table-tete { display:flex; align-items:flex-start; justify-content:space-between; width:100%; gap:6px }
-.ps-table.ronde .ps-table-tete { flex-direction:column; align-items:center; gap:2px }
-.ps-table-label { font-size:14px; font-weight:600; line-height:1 }
+/* Contenu : tout centré et empilé (mêmes règles pour carrées et rondes),
+   comme une étiquette posée au centre du plateau. */
+.ps-table-contenu { display:flex; flex-direction:column; justify-content:center; align-items:center;
+  text-align:center; gap:2px; width:80%; pointer-events:none; z-index:2 }
+.ps-table-tete { display:flex; flex-direction:column; align-items:center; gap:2px }
+.ps-table-label { font-size:15px; font-weight:600; line-height:1; font-family:var(--font-display) }
 .ps-table.occupee .ps-table-label { color:#fff }
-.ps-table.libre   .ps-table-label { color:var(--ink-soft) }
-.ps-table-cap { font-size:9px; font-weight:500 }
+.ps-table.libre   .ps-table-label { color:var(--ink) }
+.ps-table-cap { font-size:9.5px; font-weight:500 }
 .ps-table.occupee .ps-table-cap { color:rgba(255,255,255,.9) }
 .ps-table.libre   .ps-table-cap { color:var(--ink-soft) }
-.ps-table-client { font-size:11px; font-weight:600; color:#fff; line-height:1.2 }
-.ps-table-libre  { font-size:10px; color:var(--ink-soft); font-style:italic }
+.ps-table-client { font-size:10.5px; font-weight:600; color:#fff; line-height:1.15; white-space:nowrap; margin-top:1px; max-width:100%; overflow:hidden; text-overflow:ellipsis }
+.ps-table.t-petite .ps-table-client { font-size:9.5px }
+.ps-table-libre  { font-size:9.5px; color:var(--ink-soft); font-style:italic; margin-top:1px }
 .ps-aide { font-size:11px; color:var(--ink-soft); padding:8px 16px; font-style:italic; border-top:1px solid var(--line); flex-shrink:0 }
 
 .ps-saisie { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px }
