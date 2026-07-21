@@ -79,7 +79,7 @@ function TableSVG({ size, capacity, round }: { size: number; capacity: number; r
 
 export default function TabPlan() {
   const confirm = useConfirm();
-  const { rows, loading, insert, update, remove } = useTable<RestaurantTable>("restaurant_tables", "label");
+  const { rows, loading, reload, update, remove } = useTable<RestaurantTable>("restaurant_tables", "label");
   const areas = useTable<DiningArea>("dining_areas", "position");
   const [zoneId, setZoneId] = useState<string | null>(null);
   const [selId, setSelId] = useState<string | null>(null);
@@ -138,11 +138,13 @@ export default function TabPlan() {
     const nums = rows.map((t) => parseInt((t.label || "").replace(/\D/g, "")) || 0);
     const n = Math.max(0, ...nums) + 1;
     const offset = tablesZone.length;
-    const ok = await insert({
+    const { data, error } = await supabase.from("restaurant_tables").insert({
       label: `T${n}`, capacity: 2, online_limit: 2, shape: "square",
       pos_x: 20 + (offset * 30) % 320, pos_y: 20 + (offset * 26) % 360, is_active: true, area_id: zoneId,
-    });
-    if (!ok) setErr("Échec de l'ajout de la table.");
+    }).select().single();
+    if (error || !data) { setErr("Échec de l'ajout de la table."); return; }
+    await reload();
+    setSelId(data.id); // la nouvelle table est sélectionnée : elle passe au premier plan et est prête à configurer
   }
 
   async function majSel(champ: string, val: any) {
