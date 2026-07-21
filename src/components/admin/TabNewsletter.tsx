@@ -3,6 +3,19 @@ import { supabase, messageUpload } from "../../lib/supabase";
 import { useConfirm } from "./Confirm";
 import { useDirty } from "./Dirty";
 
+// Récupère les en-têtes d'appel aux edge functions AVEC le JWT de session admin.
+// send-newsletter vérifie is_admin() sous l'identité de ce token : il FAUT donc
+// envoyer le token de session (et non la clé anon, qui n'est pas un admin).
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
+  return {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`,
+    "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
+  };
+}
+
 // ── Types ───────────────────────────────────────────────────────────────────
 interface Campaign {
   id: string;
@@ -456,7 +469,7 @@ function NouveauForm({ onSaved, initial }: {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-newsletter`;
       await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+        headers: await authHeaders(),
         body: JSON.stringify({ campaign_id: camp.id }),
       });
     }
@@ -496,7 +509,7 @@ function NouveauForm({ onSaved, initial }: {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-newsletter`;
       const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+        headers: await authHeaders(),
         body: JSON.stringify({ campaign_id: id, override_email: email }),
       });
       const json = await res.json().catch(() => ({}));
@@ -844,7 +857,7 @@ export default function TabNewsletter() {
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-newsletter`;
     await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+      headers: await authHeaders(),
       body: JSON.stringify({ campaign_id: c.id }),
     });
     charger();
