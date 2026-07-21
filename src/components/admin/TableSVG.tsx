@@ -20,7 +20,7 @@ export default function TableSVG({
   const chairLong = Math.max(13, size * 0.16);
   const chairShort = chairLong * 0.62;
   const n = Math.max(1, capacity);
-  const plateau = round ? size * 0.62 : size * 0.60;
+  const plateau = round ? size * 0.64 : size * 0.64;
   const chairs: JSX.Element[] = [];
 
   if (round) {

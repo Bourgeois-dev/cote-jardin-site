@@ -382,9 +382,9 @@ tr:last-child td { border-bottom:none }
   transition:transform .1s; user-select:none; box-sizing:border-box }
 .ps-table > * { grid-area:1 / 1 }
 /* Tailles alignées sur le SVG (plateau + chaises débordantes) */
-.ps-table.t-petite  { width:80px;  height:80px  }
-.ps-table.t-moyenne { width:100px; height:100px }
-.ps-table.t-grande  { width:130px; height:130px }
+.ps-table.t-petite  { width:96px;  height:96px  }
+.ps-table.t-moyenne { width:120px; height:120px }
+.ps-table.t-grande  { width:150px; height:150px }
 
 /* Le SVG « mobilier » porte désormais la surface (plateau) et les chaises. */
 .ps-svg { display:block; overflow:visible; pointer-events:none }
@@ -413,7 +413,7 @@ tr:last-child td { border-bottom:none }
 
 /* Contenu texte superposé au plateau */
 .ps-table-contenu { display:flex; flex-direction:column; justify-content:space-between;
-  align-items:stretch; text-align:left; width:56%; height:56%; pointer-events:none; z-index:2 }
+  align-items:stretch; text-align:left; width:66%; height:64%; pointer-events:none; z-index:2 }
 .ps-table.ronde .ps-table-contenu { align-items:center; text-align:center; justify-content:center; gap:2px }
 .ps-table-tete { display:flex; align-items:flex-start; justify-content:space-between; width:100%; gap:6px }
 .ps-table.ronde .ps-table-tete { flex-direction:column; align-items:center; gap:2px }

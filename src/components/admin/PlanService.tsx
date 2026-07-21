@@ -5,7 +5,7 @@ import type { Reservation, RestaurantTable, DiningArea, OpeningHour } from "../.
 import { useConfirm } from "./Confirm";
 import TableSVG from "./TableSVG";
 
-const psTaille = (cap: number) => (cap <= 2 ? 80 : cap <= 4 ? 100 : 130);
+const psTaille = (cap: number) => (cap <= 2 ? 96 : cap <= 4 ? 120 : 150);
 const estMidi = (t: string) => (parseInt(String(t || "0").split(":")[0]) || 0) < 16;
 const JOURS = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
 const JOURS_C = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
