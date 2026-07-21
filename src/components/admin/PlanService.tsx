@@ -252,7 +252,13 @@ export default function PlanService({ initialDate, initialService }: { initialDa
 
       {/* Barre de navigation date + bouton réservation */}
       <div className="ps-entete">
-        <div className="ps-sous-titre">Plan de service · {libelleDate(date)}</div>
+        <div>
+          <div className="ps-sous-titre">Plan de service</div>
+          <div className="ps-date-grande">
+            {libelleDate(date)}
+            {date === ymd(new Date()) && <span className="ps-badge-auj">Aujourd’hui</span>}
+          </div>
+        </div>
         <div className="ps-entete-droite">
           <div className="ps-nav-date">
             <button className="ps-fleche" onClick={() => decalerJour(-1)}>‹</button>
@@ -355,7 +361,7 @@ export default function PlanService({ initialDate, initialService }: { initialDa
               <>
                 {sansTable.length > 0 && (
                   <>
-                    <div className="ps-liste-titre">À placer <span className="ps-liste-nb">{sansTable.length}</span></div>
+                    <div className="ps-liste-titre aplacer">À placer <span className="ps-liste-nb">{sansTable.length}</span></div>
                     {sansTable.map((r) => carteResa(r, false))}
                   </>
                 )}
