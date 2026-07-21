@@ -390,9 +390,9 @@ tr:last-child td { border-bottom:none }
   transition:transform .1s; user-select:none; box-sizing:border-box }
 .ps-table > * { grid-area:1 / 1 }
 /* Tailles alignées sur le SVG (plateau + chaises débordantes) */
-.ps-table.t-petite  { width:96px;  height:96px  }
-.ps-table.t-moyenne { width:120px; height:120px }
-.ps-table.t-grande  { width:150px; height:150px }
+.ps-table.t-petite  { width:108px; height:108px }
+.ps-table.t-moyenne { width:134px; height:134px }
+.ps-table.t-grande  { width:166px; height:166px }
 
 /* Le SVG « mobilier » porte désormais la surface (plateau) et les chaises. */
 .ps-svg { display:block; overflow:visible; pointer-events:none }
