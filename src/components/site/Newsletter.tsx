@@ -27,23 +27,11 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
       return;
     }
     setSent(true);
-    // Email de bienvenue automatique via send-newsletter (template welcome)
-    try {
-      const welcomeUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-newsletter`;
-      // Créer une campagne welcome temporaire et l'envoyer
-      const { data: camp } = await supabase.from("newsletter_campaigns").insert({
-        template: "welcome", segment: "optin", subject: `Bienvenue chez ${import.meta.env.VITE_RESTO_NAME || "nous"} !`,
-        content: {}, scheduled_at: new Date().toISOString(), status: "sending",
-      }).select().single();
-      if (camp) {
-        // Override : envoyer uniquement à cet email
-        await fetch(welcomeUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
-          body: JSON.stringify({ campaign_id: camp.id, override_email: email.trim().toLowerCase(), override_name: `${prenom} ${nom}`.trim() }),
-        });
-      }
-    } catch { /* silencieux */ }
+    // L'email de bienvenue est envoyé côté serveur par newsletter-scheduler
+    // (il détecte les nouveaux leads consentis et déclenche l'envoi avec le
+    // secret interne). Le site public ne déclenche plus aucun envoi d'email :
+    // il se contente d'enregistrer le lead ci-dessus. Cela ferme la faille du
+    // relais d'envoi ouvert (send-newsletter n'est plus appelable en anon).
   }
   const actifs = socials.filter((s) => s.url && SOCIAL_SVG[s.platform]);
 
