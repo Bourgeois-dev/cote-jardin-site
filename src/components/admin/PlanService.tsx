@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTable } from "../../hooks/useTable";
 import { supabase, sendReservationEmail } from "../../lib/supabase";
 import type { Reservation, RestaurantTable, DiningArea, OpeningHour, ReservationSettings } from "../../lib/types";
@@ -69,6 +69,9 @@ export default function PlanService({ initialDate, initialService }: { initialDa
   const [resaEclairee, setResaEclairee] = useState<string | null>(null);
   const [creneauActif, setCreneauActif] = useState<string | null>(null);
   const [infoAuto, setInfoAuto] = useState("");
+  // Référence de la carte sélectionnée, pour la faire défiler dans la liste
+  // quand la sélection vient du plan (clic sur une table).
+  const carteRef = useRef<HTMLDivElement | null>(null);
   const VIDE = { p: "", n: "", phone: "", email: "", time: "", covers: 2, notes: "" };
   const [saisie, setSaisie] = useState<typeof VIDE | null>(null);
   const [erreurSaisie, setErreurSaisie] = useState("");
@@ -79,6 +82,21 @@ export default function PlanService({ initialDate, initialService }: { initialDa
   // basculer automatiquement sur celui qui est ouvert.
   // Le bilan du placement automatique ne vaut que pour le service affiché.
   useEffect(() => { setInfoAuto(""); }, [date, service]);
+  // Quand une réservation est sélectionnée (depuis le plan ou la liste), on
+  // amène sa carte dans la vue : sur un service chargé elle est souvent hors
+  // écran. `block: "nearest"` évite de faire sauter la page si elle est déjà
+  // visible.
+  useEffect(() => {
+    if (!resaEclairee) return;
+    // Si un filtre de statut masque la réservation sélectionnée, sa carte n'est
+    // pas dans le DOM : on lève le filtre pour qu'elle redevienne visible.
+    const r = resa.find((x) => x.id === resaEclairee);
+    if (r && filtreStatut !== "toutes" && r.status !== filtreStatut) {
+      setFiltreStatut("toutes");
+      return; // le scroll se fera au rendu suivant, la carte existera alors
+    }
+    carteRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [resaEclairee, filtreStatut, resa]);
   useEffect(() => {
     const h = hours.find((x) => x.day_of_week === new Date(date + "T12:00:00").getDay());
     if (!h || h.is_closed) return;
@@ -387,6 +405,7 @@ export default function PlanService({ initialDate, initialService }: { initialDa
     const statutLabel = r.status === "attente" ? "En attente" : r.status === "confirme" ? "Confirmée" : r.status === "no_show" ? "Absent" : "Annulée";
     return (
       <div key={r.id}
+        ref={resaEclairee === r.id ? carteRef : undefined}
         className={`ps-resa${placee ? " placee" : ""}${partiel ? " partiel" : ""}${drag === r.id ? " drag" : ""}${resaEclairee === r.id ? " eclairee" : ""}`}
         draggable onDragStart={() => setDrag(r.id)} onDragEnd={() => { setDrag(null); setSurvol(null); }}
         onClick={() => {

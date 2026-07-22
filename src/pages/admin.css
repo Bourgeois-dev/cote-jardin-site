@@ -494,10 +494,14 @@ tr:last-child td { border-bottom:none }
   transition:box-shadow .15s, border-color .15s; user-select:none }
 .ps-resa:hover   { box-shadow:0 3px 12px rgba(0,0,0,.07) }
 .ps-resa.drag    { opacity:.5 }
-.ps-resa.eclairee { box-shadow:0 0 0 2px var(--admin-accent); border-left-color:var(--admin-accent); background:var(--a06) }
 .ps-resa.partiel  { border-left-color:var(--attente); background:rgba(193,138,46,.06) }
 /* Carte « Placée » : calme, blanche, liseré vert */
 .ps-resa.placee   { background:#fff; border-color:var(--line); border-left:4px solid var(--ok) }
+/* Sélection (clic sur la carte OU sur sa table dans le plan) — déclarée après
+   .placee pour ne pas être écrasée par son fond blanc. */
+.ps-resa.eclairee, .ps-resa.placee.eclairee {
+  box-shadow:0 0 0 2px var(--admin-accent); border-left-color:var(--admin-accent);
+  background:var(--a06); scroll-margin:12px }
 .ps-resa-haut { display:flex; align-items:baseline; gap:10px; margin-bottom:7px }
 .ps-resa-heure { font-family:monospace; font-size:15px; font-weight:700; color:var(--ink) }
 .ps-resa-nom   { font-size:14px; font-weight:600; color:var(--ink); flex:1 }
