@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { signalerIncident } from "../lib/incident";
 
 /**
  * Page /annuler?token=xxx
@@ -13,7 +14,7 @@ export default function Annuler() {
   useEffect(() => {
     if (!token) { setState("missing"); return; }
     supabase.rpc("cancel_by_token", { p_token: token }).then(({ data, error }) => {
-      if (error || !data) { setState("error"); return; }
+      if (error || !data) { signalerIncident("annulation", error || { message: "cancel_by_token: reponse vide" }); setState("error"); return; }
       if (data.error === "already_cancelled") { setState("already"); return; }
       if (data.error === "past_reservation")  { setState("past");    return; }
       if (data.error === "not_found")         { setState("error");   return; }

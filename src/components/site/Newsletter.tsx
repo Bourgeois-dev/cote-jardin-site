@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { signalerIncident } from "../../lib/incident";
 import type { SocialLink } from "../../lib/types";
 import { SOCIAL_SVG } from "./socialIcons";
 
@@ -67,6 +68,7 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
       p_source: utm ? `newsletter:${utm}` : "newsletter",
     });
     setBusy(false);
+    if (error) signalerIncident("newsletter", error);
     if (error || data === false) {
       setErreur(error
         ? "Une erreur est survenue. Merci de réessayer dans un instant."

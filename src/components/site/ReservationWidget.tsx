@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase, fetchActive, sendReservationEmail } from "../../lib/supabase";
+import { signalerIncident } from "../../lib/incident";
 import type { OpeningHour, ClosurePeriod, ReservationSettings } from "../../lib/types";
 
 const fmtFR = (d: Date) => d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
@@ -42,7 +43,7 @@ function ListeAttente({ date, time, covers, onClose }: WaitlistProps) {
       phone: form.t.trim(),
     });
     setBusy(false);
-    if (error) { setErreur("Une erreur est survenue, réessayez."); return; }
+    if (error) { signalerIncident("reservation", error); setErreur("Une erreur est survenue, réessayez."); return; }
     // Email d'accusé si email fourni
     if (form.e.trim()) {
       sendReservationEmail("accuse", {
