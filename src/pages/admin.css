@@ -375,6 +375,35 @@ tr:last-child td { border-bottom:none }
   .ps-creneaux-titre { display:none }
 }
 
+/* ===== Rotation de table & conflits (plan de service) =====
+   Une réservation occupe une table 1h30 : une table peut donc servir deux fois
+   dans un même service. Le plan doit le montrer plutôt que de bloquer. */
+
+/* Heure de libération, affichée sous le client */
+.ps-table-jusqua { font-size:8.5px; color:rgba(255,255,255,.75); font-style:italic; line-height:1.1 }
+.ps-table.t-petite .ps-table-jusqua { font-size:8px }
+
+/* Rotation possible : la table est occupée plus tôt mais libre à l'heure visée.
+   Liseré vert pointillé pendant le glisser-déposer. */
+.ps-table.rotation .ps-svg .tp-plateau { stroke:var(--ok); stroke-width:3; stroke-dasharray:6 4 }
+.ps-table.rotation { opacity:1; z-index:4 }
+
+/* Conflit avéré : deux réservations se chevauchent sur la même table. */
+.ps-table.conflit .ps-svg .tp-plateau { stroke:var(--annule); stroke-width:3 }
+.ps-table.conflit::after { content:"!"; position:absolute; top:-4px; right:-4px;
+  width:16px; height:16px; border-radius:50%; background:var(--annule); color:#fff;
+  font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;
+  z-index:5; box-shadow:0 1px 4px rgba(0,0,0,.25) }
+
+/* Légende du plan : rappel des deux nouveaux états */
+.ps-legende-rotation { display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--ink-soft) }
+.ps-legende-rotation::before { content:""; width:10px; height:10px; border-radius:3px;
+  border:2px dashed var(--ok) }
+.ps-legende-conflit { display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--annule); font-weight:600 }
+.ps-legende-conflit::before { content:"!"; width:14px; height:14px; border-radius:50%;
+  background:var(--annule); color:#fff; font-size:10px; font-weight:700;
+  display:flex; align-items:center; justify-content:center }
+
 /* ============ Affiche QR à imprimer (onglet Contacts) ============ */
 .qr-editeur { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin:12px 0 18px }
 .qr-champ { display:flex; flex-direction:column; gap:5px }

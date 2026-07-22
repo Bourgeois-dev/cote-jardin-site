@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTable } from "../../hooks/useTable";
 import { supabase, sendReservationEmail } from "../../lib/supabase";
-import type { Reservation, RestaurantTable, DiningArea, OpeningHour } from "../../lib/types";
+import type { Reservation, RestaurantTable, DiningArea, OpeningHour, ReservationSettings } from "../../lib/types";
 import { useConfirm } from "./Confirm";
 import TableSVG from "./TableSVG";
 
@@ -59,6 +59,7 @@ export default function PlanService({ initialDate, initialService }: { initialDa
   const { rows: tables } = useTable<RestaurantTable>("restaurant_tables", "label");
   const { rows: areas } = useTable<DiningArea>("dining_areas", "position");
   const { rows: hours } = useTable<OpeningHour>("opening_hours", "day_of_week");
+  const { rows: reglages } = useTable<ReservationSettings>("reservation_settings", "id");
   const [date, setDate] = useState(initialDate || ymd(new Date()));
   const [zoneId, setZoneId] = useState<string | null>(null);
   const [service, setService] = useState<"midi" | "soir">(initialService || "soir");
@@ -90,13 +91,52 @@ export default function PlanService({ initialDate, initialService }: { initialDa
     (r) => r.date === date && r.status !== "annule" && (service === "midi" ? estMidi(r.time) : !estMidi(r.time))
   );
   const attenteJour = resa.filter((r) => r.date === date && r.status === "attente");
+  // Durée d'occupation d'une table (minutes), réglable dans « Réservations & site ».
+  // check_availability lit exactement le même réglage côté base : la
+  // disponibilité affichée au client et la rotation dans le plan restent donc
+  // toujours cohérentes.
+  const DUREE_TABLE = reglages[0]?.table_duration || 90;
+  const enMinutes = (h: string) => {
+    const [a, b] = (h || "0:0").split(":").map(Number);
+    return (a || 0) * 60 + (b || 0);
+  };
+  // Deux réservations se chevauchent si moins de DUREE_TABLE les sépare.
+  const seChevauchent = (a: string, b: string) =>
+    Math.abs(enMinutes(a) - enMinutes(b)) < DUREE_TABLE;
+
+  const occupantes = duService.filter(
+    (r) => r.status === "confirme" || r.status === "no_show" || r.source === "telephone"
+  );
+
+  // Occupation « à l'instant du créneau consulté ». Sans créneau sélectionné on
+  // garde la vue d'ensemble du service (comportement historique).
   const tableOccupee: Record<string, Reservation> = {};
-  // On occupe une table uniquement si la résa est confirmée
-  // Les résa "attente" du site ont une table pré-assignée pour la dispo
-  // mais ne bloquent le plan visuellement qu'après confirmation
-  duService
-    .filter((r) => r.status === "confirme" || r.status === "no_show" || r.source === "telephone")
-    .forEach((r) => { (r.table_ids || []).forEach((tid) => { tableOccupee[tid] = r; }); });
+  occupantes.forEach((r) => {
+    if (creneauActif && !seChevauchent(r.time, creneauActif)) return;
+    (r.table_ids || []).forEach((tid) => { tableOccupee[tid] = r; });
+  });
+
+  // Conflits réels : deux réservations sur la même table à moins de 1h30.
+  const conflits = new Set<string>();
+  occupantes.forEach((r1, i) => {
+    occupantes.slice(i + 1).forEach((r2) => {
+      const communes = (r1.table_ids || []).filter((id) => (r2.table_ids || []).includes(id));
+      if (communes.length && seChevauchent(r1.time, r2.time)) {
+        communes.forEach((id) => conflits.add(id));
+        conflits.add(`resa:${r1.id}`); conflits.add(`resa:${r2.id}`);
+      }
+    });
+  });
+
+  // Heure de libération d'une table (pour l'afficher sur le plan).
+  const libereA = (r: Reservation) => {
+    const m = enMinutes(r.time) + DUREE_TABLE;
+    return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  };
+
+  // Une table est-elle disponible pour la résa en cours de placement ?
+  const librePour = (tableId: string, heure: string) =>
+    !occupantes.some((r) => (r.table_ids || []).includes(tableId) && seChevauchent(r.time, heure));
   const capaciteResa = (r: Reservation) =>
     (r.table_ids || []).reduce((s, tid) => s + (tables.find((t) => t.id === tid)?.capacity || 0), 0);
   const estPlacee = (r: Reservation) => (r.table_ids?.length || 0) > 0 && capaciteResa(r) >= r.covers;
@@ -152,8 +192,14 @@ export default function PlanService({ initialDate, initialService }: { initialDa
   }
   function onDrop(tableId: string) {
     if (!drag) return;
-    const occ = tableOccupee[tableId];
-    if (occ && occ.id !== drag) { setDrag(null); setSurvol(null); return; }
+    const r = resa.find((x) => x.id === drag);
+    // On refuse le dépôt seulement si la table est occupée AU MÊME MOMENT.
+    // Une table libérée avant l'heure visée (1h30 de service) reste attribuable :
+    // c'est la rotation de table, courante sur un service chargé.
+    if (r && !librePour(tableId, r.time)) {
+      const occ = tableOccupee[tableId];
+      if (!occ || occ.id !== drag) { setDrag(null); setSurvol(null); return; }
+    }
     toggleTable(drag, tableId);
     setDrag(null); setSurvol(null);
   }
@@ -463,6 +509,8 @@ export default function PlanService({ initialDate, initialService }: { initialDa
               <span><span className="ps-leg-dot occupee" /> Occupée</span>
               <span><span className="ps-leg-dot libre" /> Libre</span>
               <span><span className="ps-leg-dot eclairee" /> Sélection</span>
+              {drag && <span className="ps-legende-rotation">Rotation possible</span>}
+              {conflits.size > 0 && <span className="ps-legende-conflit">Chevauchement</span>}
             </div>
           </div>
 
@@ -480,15 +528,31 @@ export default function PlanService({ initialDate, initialService }: { initialDa
               const tier = t.capacity <= 2 ? "t-petite" : t.capacity <= 4 ? "t-moyenne" : "t-grande";
               const eclairee = resaEclairee && occ?.id === resaEclairee;
               const dejaDessus = drag && occ?.id === drag;
-              const prise = occ && drag && occ.id !== drag;
+              // Pendant un glisser-déposer, une table n'est « prise » que si elle
+              // est occupée AU MÊME MOMENT (fenêtre de 1h30). Une table libérée
+              // avant l'heure visée reste donc disponible : c'est ce qui permet
+              // de faire tourner une table sur deux services rapprochés.
+              const resaGlissee = drag ? resa.find((x) => x.id === drag) : null;
+              const prise = !!(drag && resaGlissee && occ && occ.id !== drag
+                && !librePour(t.id, resaGlissee.time));
+              // Table libre à l'heure visée alors qu'elle est occupée plus tôt :
+              // on la signale comme « rotation possible ».
+              const rotation = !!(drag && resaGlissee && occ && occ.id !== drag
+                && librePour(t.id, resaGlissee.time));
+              const enConflit = conflits.has(t.id);
               return (
                 <div key={t.id}
-                  className={`ps-table ${tier}${t.shape === "round" ? " ronde" : " carree"}${occ ? " occupee" : " libre"}${survol === t.id ? " survol" : ""}${prise ? " trop-petit" : ""}${dejaDessus ? " retrait" : ""}${eclairee ? " eclairee" : ""}${creneauActif ? (occ && occ.time === creneauActif ? " creneau-vise" : " creneau-hors") : ""}`}
+                  className={`ps-table ${tier}${t.shape === "round" ? " ronde" : " carree"}${occ ? " occupee" : " libre"}${survol === t.id ? " survol" : ""}${prise ? " trop-petit" : ""}${dejaDessus ? " retrait" : ""}${eclairee ? " eclairee" : ""}${creneauActif ? (occ && occ.time === creneauActif ? " creneau-vise" : " creneau-hors") : ""}${rotation ? " rotation" : ""}${enConflit ? " conflit" : ""}`}
                   style={{ left: t.pos_x, top: t.pos_y }}
                   onDragOver={(e) => { if (!prise) e.preventDefault(); setSurvol(t.id); }}
                   onDragLeave={() => setSurvol((s) => (s === t.id ? null : s))}
                   onDrop={() => onDrop(t.id)}
-                  onClick={() => { if (occ) setResaEclairee((c) => c === occ.id ? null : occ.id); }}>
+                  onClick={() => { if (occ) setResaEclairee((c) => c === occ.id ? null : occ.id); }}
+                  title={enConflit
+                    ? `Conflit : deux réservations se chevauchent sur ${t.label}.`
+                    : rotation && resaGlissee
+                      ? `Rotation possible : ${t.label} se libère à ${libereA(occ!)}, avant ${resaGlissee.time}.`
+                      : occ ? `${occ.customer_name} · ${occ.time} → ${libereA(occ)}` : `${t.label} — libre`}>
                   <TableSVG size={psTaille(t.capacity)} capacity={t.capacity} round={t.shape === "round"} className="ps-svg" />
                   <div className="ps-table-contenu">
                   <div className="ps-table-tete">
@@ -496,7 +560,10 @@ export default function PlanService({ initialDate, initialService }: { initialDa
                     <span className="ps-table-cap">{occ ? `${occ.covers} couv.` : `${t.capacity} pl.`}</span>
                   </div>
                   {occ ? (
-                    <div className="ps-table-client">{occ.customer_name.split(" ")[0]} · {occ.time}</div>
+                    <>
+                      <div className="ps-table-client">{occ.customer_name.split(" ")[0]} · {occ.time}</div>
+                      <div className="ps-table-jusqua">jusqu'à {libereA(occ)}</div>
+                    </>
                   ) : (
                     <div className="ps-table-libre">Libre</div>
                   )}

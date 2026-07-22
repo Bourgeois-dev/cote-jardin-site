@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useTable } from "../../hooks/useTable";
 import { supabase } from "../../lib/supabase";
-import type { RestaurantTable, DiningArea } from "../../lib/types";
+import type { RestaurantTable, DiningArea, ReservationSettings } from "../../lib/types";
 import { useConfirm } from "./Confirm";
 import TableSVG from "./TableSVG";
 
@@ -20,6 +20,7 @@ export default function TabPlan() {
   const confirm = useConfirm();
   const { rows, loading, reload, update, remove } = useTable<RestaurantTable>("restaurant_tables", "label");
   const areas = useTable<DiningArea>("dining_areas", "position");
+  const reglages = useTable<ReservationSettings>("reservation_settings", "id");
   const [zoneId, setZoneId] = useState<string | null>(null);
   const [selId, setSelId] = useState<string | null>(null);
   const [err, setErr] = useState("");
@@ -126,6 +127,12 @@ export default function TabPlan() {
     setZoneId(areas.rows.find((a) => a.id !== zoneActive.id)?.id || null);
   }
 
+  // Libellé lisible de la durée d'occupation (réglage « Réservations & site »)
+  const dureeMin = reglages.rows[0]?.table_duration || 90;
+  const dureeLisible = dureeMin % 60 === 0
+    ? `${dureeMin / 60} h`
+    : `${Math.floor(dureeMin / 60)} h ${String(dureeMin % 60).padStart(2, "0")}`;
+
   return (
     <>
       <div className="topbar">
@@ -209,7 +216,7 @@ export default function TabPlan() {
               <span><b>{tablesZone.length}</b> table{tablesZone.length > 1 ? "s" : ""}</span>
               <span className="tp-pied-sep">·</span>
               <span><b>{couvTotal}</b> couverts dans cette zone</span>
-              <span className="tp-pied-note">Chaque réservation occupe une table 1h30 — les services s'enchaînent automatiquement.</span>
+              <span className="tp-pied-note">Chaque réservation occupe une table {dureeLisible} — les services s'enchaînent automatiquement. Modifiable dans « Réservations &amp; site ».</span>
             </div>
           </div>
 
