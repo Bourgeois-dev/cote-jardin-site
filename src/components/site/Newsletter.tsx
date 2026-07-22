@@ -54,12 +54,23 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
     e.preventDefault();
     if (!email || !consent) return;
     setBusy(true); setErreur("");
-    const { error } = await supabase
-      .from("leads")
-      .upsert({ first_name: prenom, last_name: nom, email: email.trim().toLowerCase(), source: utm ? `newsletter:${utm}` : "newsletter", consent: true }, { onConflict: "email" });
+    // On passe par la fonction serveur inscrire_newsletter (SECURITY DEFINER)
+    // plutôt que par un .upsert() direct : PostgREST traduit un upsert en
+    // INSERT ... ON CONFLICT, ce qui exige un droit de SELECT sur `leads`.
+    // Or `anon` n'en a aucun (et ne doit surtout pas en avoir : la liste des
+    // emails serait publiquement lisible). Résultat, l'upsert échouait pour
+    // toute adresse DÉJÀ inscrite qui se réinscrivait.
+    const { data, error } = await supabase.rpc("inscrire_newsletter", {
+      p_email: email,
+      p_first_name: prenom,
+      p_last_name: nom,
+      p_source: utm ? `newsletter:${utm}` : "newsletter",
+    });
     setBusy(false);
-    if (error) {
-      setErreur("Une erreur est survenue. Merci de réessayer dans un instant.");
+    if (error || data === false) {
+      setErreur(error
+        ? "Une erreur est survenue. Merci de réessayer dans un instant."
+        : "Cette adresse e-mail ne semble pas valide. Merci de la vérifier.");
       return;
     }
     setSent(true);

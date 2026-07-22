@@ -272,11 +272,15 @@ export default function ReservationWidget({ hours, open, onClose, masquerFermer 
       customer_name: `${form.p} ${form.n}`, email: form.e, phone: form.t,
       date, time: slot || "", covers, notes: form.notes, status: "attente",
     };
-    // Opt-in newsletter (si proposé et coché) → alimente leads, sans bloquer si déjà inscrit
+    // Opt-in newsletter (si proposé et coché) → alimente leads.
+    // Via la fonction serveur inscrire_newsletter : un .upsert() direct échoue
+    // pour une adresse déjà inscrite (anon n'a pas de droit de SELECT sur
+    // `leads`, requis par ON CONFLICT). Un client fidèle qui réservait à
+    // nouveau n'était donc jamais réinscrit.
     if (proposeNewsletter && newsletterOptin) {
-      await supabase.from("leads").upsert({
-        first_name: form.p, last_name: form.n, email: form.e.trim().toLowerCase(), source: "reservation", consent: true,
-      }, { onConflict: "email" });
+      await supabase.rpc("inscrire_newsletter", {
+        p_email: form.e, p_first_name: form.p, p_last_name: form.n, p_source: "reservation",
+      });
     }
     // Accusé de réception au client (n'interrompt pas le flux si l'email échoue)
     sendReservationEmail("accuse", reservation);
