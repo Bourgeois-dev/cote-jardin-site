@@ -20,12 +20,26 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
   const [sent, setSent] = useState(false);
   const [utm] = useState(utmSource);
 
-  // Si le paramètre est dans le hash (#contact?utm_source=…), l'ancre native
-  // ne fonctionne plus : on scrolle nous-mêmes vers la section.
+  // Scroll vers la section quand l'URL cible #contact.
+  // Deux raisons de le faire nous-mêmes plutôt que de compter sur l'ancre native :
+  //  - la section est montée par React APRÈS le chargement initial, donc au
+  //    moment où le navigateur traite le hash l'élément n'existe pas encore ;
+  //  - avec le format #contact?utm_source=…, le hash ne correspond à aucun id.
+  // On attend que l'élément soit réellement présent (max ~2 s) au lieu d'un
+  // délai fixe, ce qui reste fiable même si les données du site sont lentes.
   useEffect(() => {
-    if (window.location.hash.startsWith("#contact?")) {
-      setTimeout(() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" }), 150);
-    }
+    const h = window.location.hash;
+    if (h !== "#contact" && !h.startsWith("#contact?")) return;
+    let annule = false;
+    let essais = 0;
+    const tick = () => {
+      if (annule) return;
+      const el = document.getElementById("contact");
+      if (el) { el.scrollIntoView({ behavior: "smooth" }); return; }
+      if (essais++ < 40) setTimeout(tick, 50);
+    };
+    tick();
+    return () => { annule = true; };
   }, []);
   const [prenom, setPrenom] = useState("");
   const [nom, setNom] = useState("");
