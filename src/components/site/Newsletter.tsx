@@ -1,10 +1,32 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import type { SocialLink } from "../../lib/types";
 import { SOCIAL_SVG } from "./socialIcons";
 
+// Lit ?utm_source=… dans l'URL, que le paramètre soit avant le hash
+// (…/?utm_source=instagram#contact — format standard, recommandé) ou dans le
+// hash (…/#contact?utm_source=instagram). Valeur nettoyée : [a-z0-9_-], 32 max.
+function utmSource(): string {
+  try {
+    const h = window.location.hash;
+    const dansHash = h.includes("?") ? h.slice(h.indexOf("?") + 1) : "";
+    const v = new URLSearchParams(window.location.search).get("utm_source")
+      || new URLSearchParams(dansHash).get("utm_source") || "";
+    return v.toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 32);
+  } catch { return ""; }
+}
+
 export default function Newsletter({ socials }: { socials: SocialLink[] }) {
   const [sent, setSent] = useState(false);
+  const [utm] = useState(utmSource);
+
+  // Si le paramètre est dans le hash (#contact?utm_source=…), l'ancre native
+  // ne fonctionne plus : on scrolle nous-mêmes vers la section.
+  useEffect(() => {
+    if (window.location.hash.startsWith("#contact?")) {
+      setTimeout(() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" }), 150);
+    }
+  }, []);
   const [prenom, setPrenom] = useState("");
   const [nom, setNom] = useState("");
   const [email, setEmail] = useState("");
@@ -20,7 +42,7 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
     setBusy(true); setErreur("");
     const { error } = await supabase
       .from("leads")
-      .upsert({ first_name: prenom, last_name: nom, email: email.trim().toLowerCase(), source: "newsletter", consent: true }, { onConflict: "email" });
+      .upsert({ first_name: prenom, last_name: nom, email: email.trim().toLowerCase(), source: utm ? `newsletter:${utm}` : "newsletter", consent: true }, { onConflict: "email" });
     setBusy(false);
     if (error) {
       setErreur("Une erreur est survenue. Merci de réessayer dans un instant.");
