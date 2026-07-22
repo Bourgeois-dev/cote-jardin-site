@@ -68,6 +68,7 @@ export default function PlanService({ initialDate, initialService }: { initialDa
   const [survol, setSurvol] = useState<string | null>(null);
   const [resaEclairee, setResaEclairee] = useState<string | null>(null);
   const [creneauActif, setCreneauActif] = useState<string | null>(null);
+  const [infoAuto, setInfoAuto] = useState("");
   const VIDE = { p: "", n: "", phone: "", email: "", time: "", covers: 2, notes: "" };
   const [saisie, setSaisie] = useState<typeof VIDE | null>(null);
   const [erreurSaisie, setErreurSaisie] = useState("");
@@ -76,6 +77,8 @@ export default function PlanService({ initialDate, initialService }: { initialDa
   useEffect(() => { if (!zoneId && areas.length > 0) setZoneId(areas[0].id); }, [areas, zoneId]);
   // Si le service affiché n'existe pas ce jour-là (ex. mercredi soir chez CJ),
   // basculer automatiquement sur celui qui est ouvert.
+  // Le bilan du placement automatique ne vaut que pour le service affiché.
+  useEffect(() => { setInfoAuto(""); }, [date, service]);
   useEffect(() => {
     const h = hours.find((x) => x.day_of_week === new Date(date + "T12:00:00").getDay());
     if (!h || h.is_closed) return;
@@ -161,6 +164,87 @@ export default function PlanService({ initialDate, initialService }: { initialDa
     const { error } = await supabase.from("reservations").update({ table_ids: ids }).eq("id", reservationId);
     if (!error) reload();
   }
+  // ── Placement automatique ────────────────────────────────────────────────
+  // Attribue une table à chaque réservation non placée du service affiché.
+  //
+  // Stratégie : on traite d'abord les groupes les plus difficiles à caser (les
+  // plus nombreux), puis les plus petits. Pour chacun, on retient la table
+  // libre la plus « juste » — celle qui gaspille le moins de places — afin de
+  // préserver les grandes tables pour les groupes suivants.
+  //
+  // La disponibilité tient compte de la rotation : une table libérée avant
+  // l'heure visée (DUREE_TABLE) est réutilisable. Les tables déjà attribuées
+  // manuellement ne sont jamais déplacées.
+  async function placerAuto() {
+    const aPlacer = duService
+      .filter((r) => !estPlacee(r) && r.status !== "no_show" && r.status !== "annule")
+      .sort((a, b) => b.covers - a.covers || a.time.localeCompare(b.time));
+    if (aPlacer.length === 0) return;
+
+    // Occupation simulée : on part du réel, et on ajoute au fur et à mesure les
+    // attributions décidées, pour éviter de placer deux groupes au même endroit.
+    const prises: Record<string, string[]> = {};
+    occupantes.forEach((r) => {
+      (r.table_ids || []).forEach((tid) => { (prises[tid] ||= []).push(r.time); });
+    });
+    const dispo = (tid: string, heure: string) =>
+      !(prises[tid] || []).some((h) => seChevauchent(h, heure));
+
+    const candidates = tables
+      .filter((t) => t.is_active)
+      .sort((a, b) => a.capacity - b.capacity);
+
+    const decisions: { id: string; ids: string[] }[] = [];
+    const nonPlaces: Reservation[] = [];
+
+    for (const r of aPlacer) {
+      const libres = candidates.filter((t) => dispo(t.id, r.time));
+
+      // 1) Une seule table suffisamment grande, au plus juste.
+      const seule = libres.find((t) => t.capacity >= r.covers);
+      if (seule) {
+        decisions.push({ id: r.id, ids: [seule.id] });
+        (prises[seule.id] ||= []).push(r.time);
+        continue;
+      }
+
+      // 2) Sinon regroupement : on prend les plus grandes d'abord pour limiter
+      //    le nombre de tables mobilisées.
+      const combinaison: string[] = [];
+      let total = 0;
+      for (const t of [...libres].sort((a, b) => b.capacity - a.capacity)) {
+        combinaison.push(t.id);
+        total += t.capacity;
+        if (total >= r.covers) break;
+      }
+      if (total >= r.covers) {
+        decisions.push({ id: r.id, ids: combinaison });
+        combinaison.forEach((tid) => { (prises[tid] ||= []).push(r.time); });
+      } else {
+        nonPlaces.push(r);
+      }
+    }
+
+    if (decisions.length === 0) {
+      setInfoAuto("Aucune table disponible pour les réservations restantes.");
+      return;
+    }
+
+    // Écriture groupée, puis un seul rechargement.
+    for (const d of decisions) {
+      await supabase.from("reservations").update({ table_ids: d.ids }).eq("id", d.id);
+    }
+    reload();
+
+    const n = decisions.length;
+    setInfoAuto(
+      `${n} réservation${n > 1 ? "s" : ""} placée${n > 1 ? "s" : ""}` +
+      (nonPlaces.length
+        ? ` — ${nonPlaces.length} sans table disponible (${nonPlaces.map((r) => r.time).join(", ")}).`
+        : ".")
+    );
+  }
+
   async function toggleTable(reservationId: string, tableId: string) {
     const r = resa.find((x) => x.id === reservationId);
     if (!r) return;
@@ -489,7 +573,16 @@ export default function PlanService({ initialDate, initialService }: { initialDa
               <>
                 {sansTable.length > 0 && (
                   <>
-                    <div className="ps-liste-titre aplacer">À placer <span className="ps-liste-nb">{sansTable.length}</span></div>
+                    <div className="ps-liste-titre aplacer">
+                      À placer <span className="ps-liste-nb">{sansTable.length}</span>
+                      <button className="ps-auto-btn" onClick={placerAuto}
+                        title="Attribue automatiquement la table la plus adaptée à chaque réservation non placée">
+                        Placer automatiquement
+                      </button>
+                    </div>
+                    {infoAuto && (
+                      <div className="ps-auto-info" onClick={() => setInfoAuto("")}>{infoAuto}</div>
+                    )}
                     {sansTable.map((r) => carteResa(r, false))}
                   </>
                 )}
