@@ -108,12 +108,28 @@ export default function PlanService({ initialDate, initialService }: { initialDa
     (r) => r.status === "confirme" || r.status === "no_show" || r.source === "telephone"
   );
 
-  // Occupation « à l'instant du créneau consulté ». Sans créneau sélectionné on
-  // garde la vue d'ensemble du service (comportement historique).
-  const tableOccupee: Record<string, Reservation> = {};
+  // TOUTES les réservations de chaque table, dans l'ordre horaire. Une table peut
+  // servir plusieurs fois dans un service (rotation) : il faut pouvoir les
+  // afficher toutes, sinon la 2e réservation devient introuvable sur le plan.
+  const tableServices: Record<string, Reservation[]> = {};
   occupantes.forEach((r) => {
-    if (creneauActif && !seChevauchent(r.time, creneauActif)) return;
-    (r.table_ids || []).forEach((tid) => { tableOccupee[tid] = r; });
+    (r.table_ids || []).forEach((tid) => {
+      (tableServices[tid] ||= []).push(r);
+    });
+  });
+  Object.values(tableServices).forEach((l) => l.sort((a, b) => a.time.localeCompare(b.time)));
+
+  // Réservation « principale » affichée sur la table : celle du créneau consulté
+  // si un créneau est sélectionné, sinon la première du service.
+  const tableOccupee: Record<string, Reservation> = {};
+  Object.entries(tableServices).forEach(([tid, liste]) => {
+    // Priorité à la réservation sélectionnée dans la liste : en cliquant sur
+    // « Marc · 13:30 », la table doit afficher Marc et non le service précédent.
+    const choisie =
+      liste.find((r) => r.id === resaEclairee)
+      || (creneauActif ? liste.find((r) => seChevauchent(r.time, creneauActif)) : undefined)
+      || liste[0];
+    if (choisie) tableOccupee[tid] = choisie;
   });
 
   // Conflits réels : deux réservations sur la même table à moins de 1h30.
@@ -524,9 +540,16 @@ export default function PlanService({ initialDate, initialService }: { initialDa
           <div className="ps-plan">
             {tablesZone.map((t) => {
               const occ = tableOccupee[t.id];
+              const services = tableServices[t.id] || [];
+              // Rotation : la table sert plusieurs fois dans ce service.
+              const nbServices = services.length;
+              const suivante = occ ? services.find((r) => r.time > occ.time) : undefined;
               // Taille par capacité : 2→petite, 3-4→moyenne, 5+→grande
               const tier = t.capacity <= 2 ? "t-petite" : t.capacity <= 4 ? "t-moyenne" : "t-grande";
-              const eclairee = resaEclairee && occ?.id === resaEclairee;
+              // La table s'illumine si N'IMPORTE laquelle de ses réservations est
+              // sélectionnée (pas seulement celle affichée) : sur une table en
+              // rotation, la 2e réservation doit rester localisable.
+              const eclairee = !!resaEclairee && services.some((r) => r.id === resaEclairee);
               const dejaDessus = drag && occ?.id === drag;
               // Pendant un glisser-déposer, une table n'est « prise » que si elle
               // est occupée AU MÊME MOMENT (fenêtre de 1h30). Une table libérée
@@ -542,18 +565,27 @@ export default function PlanService({ initialDate, initialService }: { initialDa
               const enConflit = conflits.has(t.id);
               return (
                 <div key={t.id}
-                  className={`ps-table ${tier}${t.shape === "round" ? " ronde" : " carree"}${occ ? " occupee" : " libre"}${survol === t.id ? " survol" : ""}${prise ? " trop-petit" : ""}${dejaDessus ? " retrait" : ""}${eclairee ? " eclairee" : ""}${creneauActif ? (occ && occ.time === creneauActif ? " creneau-vise" : " creneau-hors") : ""}${rotation ? " rotation" : ""}${enConflit ? " conflit" : ""}`}
+                  className={`ps-table ${tier}${t.shape === "round" ? " ronde" : " carree"}${occ ? " occupee" : " libre"}${survol === t.id ? " survol" : ""}${prise ? " trop-petit" : ""}${dejaDessus ? " retrait" : ""}${eclairee ? " eclairee" : ""}${creneauActif ? (occ && occ.time === creneauActif ? " creneau-vise" : " creneau-hors") : ""}${rotation ? " rotation" : ""}${enConflit ? " conflit" : ""}${nbServices > 1 ? " multi" : ""}${resaEclairee && services.some((r) => r.id === resaEclairee) ? " contient-eclairee" : ""}`}
                   style={{ left: t.pos_x, top: t.pos_y }}
                   onDragOver={(e) => { if (!prise) e.preventDefault(); setSurvol(t.id); }}
                   onDragLeave={() => setSurvol((s) => (s === t.id ? null : s))}
                   onDrop={() => onDrop(t.id)}
-                  onClick={() => { if (occ) setResaEclairee((c) => c === occ.id ? null : occ.id); }}
+                  onClick={() => {
+                    if (!services.length) return;
+                    // Clics successifs : parcourt les services de la table, puis
+                    // désélectionne — permet d'atteindre la 2e réservation.
+                    const i = services.findIndex((r) => r.id === resaEclairee);
+                    setResaEclairee(i < services.length - 1 ? services[i + 1].id : null);
+                  }}
                   title={enConflit
                     ? `Conflit : deux réservations se chevauchent sur ${t.label}.`
                     : rotation && resaGlissee
                       ? `Rotation possible : ${t.label} se libère à ${libereA(occ!)}, avant ${resaGlissee.time}.`
-                      : occ ? `${occ.customer_name} · ${occ.time} → ${libereA(occ)}` : `${t.label} — libre`}>
+                      : services.length
+                        ? services.map((r) => `${r.customer_name} · ${r.time} → ${libereA(r)}`).join("\n")
+                        : `${t.label} — libre`}>
                   <TableSVG size={psTaille(t.capacity)} capacity={t.capacity} round={t.shape === "round"} className="ps-svg" />
+                  {nbServices > 1 && <span className="ps-table-multi" aria-label={`${nbServices} services`}>×{nbServices}</span>}
                   <div className="ps-table-contenu">
                   <div className="ps-table-tete">
                     <span className="ps-table-label">{t.label}</span>
@@ -563,6 +595,11 @@ export default function PlanService({ initialDate, initialService }: { initialDa
                     <>
                       <div className="ps-table-client">{occ.customer_name.split(" ")[0]} · {occ.time}</div>
                       <div className="ps-table-jusqua">jusqu'à {libereA(occ)}</div>
+                      {suivante && (
+                        <div className="ps-table-suite">
+                          puis {suivante.customer_name.split(" ")[0]} · {suivante.time}
+                        </div>
+                      )}
                     </>
                   ) : (
                     <div className="ps-table-libre">Libre</div>

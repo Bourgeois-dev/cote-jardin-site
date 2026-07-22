@@ -395,6 +395,19 @@ tr:last-child td { border-bottom:none }
   font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;
   z-index:5; box-shadow:0 1px 4px rgba(0,0,0,.25) }
 
+/* Table utilisée plusieurs fois dans le même service (rotation) */
+.ps-table-multi { position:absolute; top:-5px; left:-5px; z-index:5;
+  min-width:19px; height:19px; padding:0 5px; border-radius:99px;
+  background:var(--admin-accent); color:#fff; font-size:10px; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 1px 4px rgba(0,0,0,.28) }
+.ps-table-suite { font-size:8.5px; font-weight:600; color:#fff; line-height:1.15;
+  margin-top:2px; padding-top:2px; border-top:1px solid rgba(255,255,255,.35) }
+.ps-table.t-petite .ps-table-suite { font-size:8px }
+/* La table contient la réservation sélectionnée dans la liste */
+.ps-table.contient-eclairee .ps-svg .tp-plateau { stroke:var(--admin-accent); stroke-width:3.5 }
+.ps-table.contient-eclairee { z-index:6 }
+
 /* Légende du plan : rappel des deux nouveaux états */
 .ps-legende-rotation { display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--ink-soft) }
 .ps-legende-rotation::before { content:""; width:10px; height:10px; border-radius:3px;
