@@ -362,23 +362,22 @@ export default function PlanService({ initialDate, initialService }: { initialDa
           service (où est le coup de feu), sans avoir à parcourir les tables. */}
       {creneaux.length > 0 && (
         <div className="ps-creneaux">
-          <div className="ps-creneaux-tete">
-            <span className="ps-creneaux-titre">Arrivées par créneau</span>
-            <span className="ps-creneaux-aide">Survolez un créneau pour repérer les tables concernées</span>
-          </div>
+          <span className="ps-creneaux-titre">Arrivées</span>
           <div className="ps-creneaux-liste">
             {creneaux.map((c) => (
               <button key={c.time}
                 className={`ps-creneau${creneauActif === c.time ? " actif" : ""}`}
+                title={`${c.time} — ${c.couv} couverts sur ${c.resa} réservation${c.resa > 1 ? "s" : ""}`}
                 onMouseEnter={() => setCreneauActif(c.time)}
                 onMouseLeave={() => setCreneauActif(null)}
                 onClick={() => setCreneauActif(creneauActif === c.time ? null : c.time)}>
-                <span className="ps-creneau-h">{c.time}</span>
-                <span className="ps-creneau-barre">
-                  <i style={{ height: `${creneauMax ? Math.max(12, Math.round(c.couv / creneauMax * 100)) : 0}%` }} />
+                <span className="ps-creneau-ligne">
+                  <span className="ps-creneau-h">{c.time}</span>
+                  <span className="ps-creneau-couv">{c.couv}</span>
                 </span>
-                <span className="ps-creneau-couv">{c.couv}</span>
-                <span className="ps-creneau-resa">{c.resa} résa</span>
+                <span className="ps-creneau-barre">
+                  <i style={{ width: `${creneauMax ? Math.max(8, Math.round(c.couv / creneauMax * 100)) : 0}%` }} />
+                </span>
               </button>
             ))}
           </div>
