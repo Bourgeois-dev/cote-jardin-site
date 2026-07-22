@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useTable } from "../../hooks/useTable";
 import type { Lead, SocialLink } from "../../lib/types";
 import Chargement from "./Chargement";
+import QrAffiche from "./QrAffiche";
 
 // Libellé lisible d'une source brute :
 // "newsletter" → Site · "reservation" → Réservation · "newsletter:instagram" → Instagram
@@ -94,6 +95,8 @@ export default function TabContacts() {
             </div>
           </div>
         </div>
+
+        <QrAffiche lien={lien} />
 
         <div className="bloc">
           <div className="bloc-tete">
