@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTable } from "../../hooks/useTable";
-import { supabase, sendReservationEmail, notifyWaitlist } from "../../lib/supabase";
+import { supabase, sendReservationEmail } from "../../lib/supabase";
 import type { Reservation, RestaurantTable, DiningArea, OpeningHour } from "../../lib/types";
 import { useConfirm } from "./Confirm";
 import TableSVG from "./TableSVG";
@@ -123,7 +123,8 @@ export default function PlanService({ initialDate, initialService }: { initialDa
     });
     if (!ok) return;
     const { error } = await supabase.from("reservations").update({ status: "annule", table_ids: [] }).eq("id", r.id);
-    if (!error) { notifyWaitlist(r.date, r.time); reload(); }
+    // Notification waitlist : gérée par le trigger trg_waitlist_liberation.
+    if (!error) reload();
   }
   async function enregistrerSaisie() {
     if (!saisie) return;

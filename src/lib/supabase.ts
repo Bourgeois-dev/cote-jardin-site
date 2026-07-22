@@ -28,8 +28,16 @@ export async function fetchContent(sectionKey: string): Promise<any | null> {
   return data?.content ?? null;
 }
 
-// Envoi d'un email de réservation via l'Edge Function (accusé de réception ou confirmation).
-// N'interrompt jamais le flux : en cas d'échec, on logue sans bloquer l'utilisateur.
+// Notification manuelle de la liste d'attente pour un créneau donné.
+//
+// ⚠️ Plus appelée par l'interface depuis 2026-07 : la notification est
+// déclenchée côté base par le trigger `trg_waitlist_liberation` sur
+// `reservations`, qui couvre TOUS les cas de libération (annulation par le
+// restaurateur, annulation par le client via le lien email, passage en
+// no_show, mise à jour SQL directe). Appeler cette fonction en plus du
+// trigger enverrait un email en double.
+//
+// Conservée pour un éventuel déclenchement manuel/diagnostic.
 export async function notifyWaitlist(date: string, time: string) {
   try {
     await supabase.functions.invoke("reservation-reminders", {

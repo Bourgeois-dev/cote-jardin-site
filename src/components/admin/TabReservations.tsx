@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTable } from "../../hooks/useTable";
-import { sendReservationEmail, notifyWaitlist } from "../../lib/supabase";
+import { sendReservationEmail } from "../../lib/supabase";
 import type { Reservation, RestaurantTable } from "../../lib/types";
 import PlanService from "./PlanService";
 import { useToast } from "./Toast";
@@ -47,7 +47,10 @@ export default function TabReservations({ initialDate, initialService }: { initi
       toast.ok(`Réservation de ${r.customer_name} confirmée${r.email ? " — e-mail envoyé" : ""}`);
     }
   }
-  async function annuler(r: Reservation) { const ok = await update(r.id, { status: "annule" }); if (ok) notifyWaitlist(r.date, r.time); }
+  // La notification de la liste d'attente est déclenchée côté base par le
+  // trigger trg_waitlist_liberation (couvre aussi l'annulation client et le
+  // no_show). Ne pas rappeler notifyWaitlist() ici : doublon d'email.
+  async function annuler(r: Reservation) { await update(r.id, { status: "annule" }); }
 
   return (
     <>
