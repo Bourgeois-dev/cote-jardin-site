@@ -331,6 +331,47 @@ tr:last-child td { border-bottom:none }
 .ps-liste-nb { background:var(--admin-accent); color:#fff; font-size:9px; font-weight:700; padding:2px 7px; border-radius:99px; letter-spacing:0 }
 .ps-vide-mini { font-size:13px; color:var(--ink-soft); padding:16px 2px; font-style:italic }
 
+/* ============ Plan de service : arrivées par créneau ============ */
+/* Sur un service complet, lire l'heure table par table ne dit pas où se situe
+   le coup de feu. Cette frise donne la répartition des couverts par horaire ;
+   survoler un créneau isole les tables concernées sur le plan. */
+.ps-creneaux { background:#fff; border:1px solid var(--line); border-radius:14px;
+  padding:14px 18px 16px; margin:0 24px 16px }
+.ps-creneaux-tete { display:flex; align-items:baseline; justify-content:space-between;
+  gap:12px; flex-wrap:wrap; margin-bottom:10px }
+.ps-creneaux-titre { font-size:11px; font-weight:700; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-soft) }
+.ps-creneaux-aide { font-size:11.5px; color:var(--ink-soft); font-style:italic }
+.ps-creneaux-liste { display:flex; gap:6px; align-items:flex-end; overflow-x:auto; padding-bottom:2px }
+.ps-creneau { flex:1 1 0; min-width:54px; background:none; border:1px solid transparent;
+  border-radius:10px; padding:6px 4px 7px; cursor:pointer; display:flex;
+  flex-direction:column; align-items:center; gap:4px; transition:background .15s, border-color .15s }
+.ps-creneau:hover, .ps-creneau.actif { background:var(--a06); border-color:var(--a25) }
+.ps-creneau-h { font-size:11.5px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums }
+.ps-creneau-barre { width:100%; height:46px; background:var(--cream); border-radius:6px;
+  display:flex; align-items:flex-end; overflow:hidden }
+.ps-creneau-barre i { display:block; width:100%; background:var(--admin-accent);
+  border-radius:6px 6px 0 0; opacity:.75; transition:opacity .15s }
+.ps-creneau:hover .ps-creneau-barre i, .ps-creneau.actif .ps-creneau-barre i { opacity:1 }
+.ps-creneau-couv { font-size:14px; font-weight:700; color:var(--admin-accent); line-height:1 }
+.ps-creneau-resa { font-size:9.5px; color:var(--ink-soft) }
+
+/* Mise en évidence des tables du créneau visé */
+.ps-table.creneau-hors { opacity:.28 }
+.ps-table.creneau-vise .ps-svg .tp-plateau { stroke:var(--admin-accent); stroke-width:3 }
+.ps-table.creneau-vise { z-index:4 }
+
+/* Jour sans service */
+.ps-service-ferme { grid-column:1 / -1; text-align:center; padding:16px;
+  font-size:13px; color:var(--ink-soft); font-style:italic;
+  background:#fff; border:1px dashed var(--line); border-radius:14px }
+.ps-services-solo { grid-template-columns:1fr }
+
+@media (max-width: 640px) {
+  .ps-creneau { min-width:48px }
+  .ps-creneaux-aide { display:none }
+}
+
 /* ============ Affiche QR à imprimer (onglet Contacts) ============ */
 .qr-editeur { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin:12px 0 18px }
 .qr-champ { display:flex; flex-direction:column; gap:5px }

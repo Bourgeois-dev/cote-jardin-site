@@ -66,12 +66,21 @@ export default function PlanService({ initialDate, initialService }: { initialDa
   const [drag, setDrag] = useState<string | null>(null);
   const [survol, setSurvol] = useState<string | null>(null);
   const [resaEclairee, setResaEclairee] = useState<string | null>(null);
+  const [creneauActif, setCreneauActif] = useState<string | null>(null);
   const VIDE = { p: "", n: "", phone: "", email: "", time: "", covers: 2, notes: "" };
   const [saisie, setSaisie] = useState<typeof VIDE | null>(null);
   const [erreurSaisie, setErreurSaisie] = useState("");
   const [avertSaisie, setAvertSaisie] = useState("");
 
   useEffect(() => { if (!zoneId && areas.length > 0) setZoneId(areas[0].id); }, [areas, zoneId]);
+  // Si le service affiché n'existe pas ce jour-là (ex. mercredi soir chez CJ),
+  // basculer automatiquement sur celui qui est ouvert.
+  useEffect(() => {
+    const h = hours.find((x) => x.day_of_week === new Date(date + "T12:00:00").getDay());
+    if (!h || h.is_closed) return;
+    if (service === "soir" && !h.dinner_open && h.lunch_open) setService("midi");
+    else if (service === "midi" && !h.lunch_open && h.dinner_open) setService("soir");
+  }, [date, hours, service]);
 
   function decalerJour(n: number) {
     const d = new Date(date + "T12:00:00"); d.setDate(d.getDate() + n); setDate(ymd(d));
@@ -149,6 +158,13 @@ export default function PlanService({ initialDate, initialService }: { initialDa
     setDrag(null); setSurvol(null);
   }
 
+  // Services réellement ouverts ce jour-là (Côté Jardin ne sert pas le soir le
+  // mercredi, par exemple). On ne doit pas proposer un service inexistant :
+  // afficher « SOIR 0/60 » un jour de fermeture est trompeur.
+  const hDuJour = hours.find((h) => h.day_of_week === new Date(date + "T12:00:00").getDay());
+  const midiOuvert = !!(hDuJour && !hDuJour.is_closed && hDuJour.lunch_open);
+  const soirOuvert = !!(hDuJour && !hDuJour.is_closed && hDuJour.dinner_open);
+
   const duJourEntier = resa.filter((r) => r.date === date && r.status !== "annule");
   const passeStatut = (r: Reservation) => filtreStatut === "toutes" || r.status === filtreStatut;
   const capacite = tables.filter((t) => t.is_active).reduce((s, t) => s + (t.capacity || 0), 0);
@@ -160,6 +176,22 @@ export default function PlanService({ initialDate, initialService }: { initialDa
     midi: { resa: midiResa.length, couv: couvMidi, pct: capacite ? Math.min(100, Math.round(couvMidi / capacite * 100)) : 0 },
     soir: { resa: soirResa.length, couv: couvSoir, pct: capacite ? Math.min(100, Math.round(couvSoir / capacite * 100)) : 0 },
   };
+  // Répartition des arrivées par créneau : sur un service complet, savoir que
+  // 12h30 concentre 18 couverts est plus utile que de lire les heures table
+  // par table. Regroupe les réservations du service affiché par horaire.
+  const creneaux = (() => {
+    const m = new Map<string, { couv: number; resa: number }>();
+    duService.filter(passeStatut).forEach((r) => {
+      const c = m.get(r.time) || { couv: 0, resa: 0 };
+      c.couv += r.covers; c.resa += 1;
+      m.set(r.time, c);
+    });
+    return [...m.entries()]
+      .map(([time, v]) => ({ time, ...v }))
+      .sort((a, b) => a.time.localeCompare(b.time));
+  })();
+  const creneauMax = creneaux.reduce((m, c) => Math.max(m, c.couv), 0);
+
   const sansTable = duJourEntier
     .filter((r) => !estPlacee(r) && r.status !== "no_show" && passeStatut(r))
     .sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
@@ -295,8 +327,9 @@ export default function PlanService({ initialDate, initialService }: { initialDa
         </div>
       )}
 
-      {/* Bandeau Midi / Soir */}
-      <div className="ps-services">
+      {/* Bandeau Midi / Soir — seuls les services réellement ouverts sont affichés */}
+      <div className={`ps-services${midiOuvert && soirOuvert ? "" : " ps-services-solo"}`}>
+        {midiOuvert && (
         <div className={`ps-service-bloc${service === "midi" ? " actif" : ""}`} onClick={() => setService("midi")}>
           <div className="ps-service-haut">
             <div className="ps-service-gauche">
@@ -307,6 +340,8 @@ export default function PlanService({ initialDate, initialService }: { initialDa
           </div>
           <div className="ps-service-jauge"><div style={{ width: `${recap.midi.pct}%` }} /></div>
         </div>
+        )}
+        {soirOuvert && (
         <div className={`ps-service-bloc${service === "soir" ? " actif" : ""}`} onClick={() => setService("soir")}>
           <div className="ps-service-haut">
             <div className="ps-service-gauche">
@@ -317,7 +352,38 @@ export default function PlanService({ initialDate, initialService }: { initialDa
           </div>
           <div className="ps-service-jauge"><div style={{ width: `${recap.soir.pct}%` }} /></div>
         </div>
+        )}
+        {!midiOuvert && !soirOuvert && (
+          <div className="ps-service-ferme">Le restaurant est fermé ce jour-là.</div>
+        )}
       </div>
+
+      {/* Répartition des arrivées par créneau : lecture immédiate du rythme du
+          service (où est le coup de feu), sans avoir à parcourir les tables. */}
+      {creneaux.length > 0 && (
+        <div className="ps-creneaux">
+          <div className="ps-creneaux-tete">
+            <span className="ps-creneaux-titre">Arrivées par créneau</span>
+            <span className="ps-creneaux-aide">Survolez un créneau pour repérer les tables concernées</span>
+          </div>
+          <div className="ps-creneaux-liste">
+            {creneaux.map((c) => (
+              <button key={c.time}
+                className={`ps-creneau${creneauActif === c.time ? " actif" : ""}`}
+                onMouseEnter={() => setCreneauActif(c.time)}
+                onMouseLeave={() => setCreneauActif(null)}
+                onClick={() => setCreneauActif(creneauActif === c.time ? null : c.time)}>
+                <span className="ps-creneau-h">{c.time}</span>
+                <span className="ps-creneau-barre">
+                  <i style={{ height: `${creneauMax ? Math.max(12, Math.round(c.couv / creneauMax * 100)) : 0}%` }} />
+                </span>
+                <span className="ps-creneau-couv">{c.couv}</span>
+                <span className="ps-creneau-resa">{c.resa} résa</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Grille : liste (gauche) + plan (droite, large) */}
       <div className="ps-grid">
@@ -418,7 +484,7 @@ export default function PlanService({ initialDate, initialService }: { initialDa
               const prise = occ && drag && occ.id !== drag;
               return (
                 <div key={t.id}
-                  className={`ps-table ${tier}${t.shape === "round" ? " ronde" : " carree"}${occ ? " occupee" : " libre"}${survol === t.id ? " survol" : ""}${prise ? " trop-petit" : ""}${dejaDessus ? " retrait" : ""}${eclairee ? " eclairee" : ""}`}
+                  className={`ps-table ${tier}${t.shape === "round" ? " ronde" : " carree"}${occ ? " occupee" : " libre"}${survol === t.id ? " survol" : ""}${prise ? " trop-petit" : ""}${dejaDessus ? " retrait" : ""}${eclairee ? " eclairee" : ""}${creneauActif ? (occ && occ.time === creneauActif ? " creneau-vise" : " creneau-hors") : ""}`}
                   style={{ left: t.pos_x, top: t.pos_y }}
                   onDragOver={(e) => { if (!prise) e.preventDefault(); setSurvol(t.id); }}
                   onDragLeave={() => setSurvol((s) => (s === t.id ? null : s))}
