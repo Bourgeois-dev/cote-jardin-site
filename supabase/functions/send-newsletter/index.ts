@@ -57,52 +57,62 @@ async function getVipEmails(): Promise<Set<string>> {
   return set;
 }
 
-// Emails des clients dont la dernière venue tombe dans une TRANCHE fermée [minMois, maxMois].
-// Ex. (1,2) = venus il y a 1 ou 2 mois. Les tranches ne se chevauchent pas : un contact
-// ne peut recevoir qu'une seule relance. Cohérent avec newsletter_segment_counts().
-async function getInactifTrancheEmails(minMois: number, maxMois: number): Promise<Set<string>> {
+// Emails des clients absents depuis au moins minMois, et depuis moins de
+// maxMois s'il est fourni. Sans maxMois, la tranche est OUVERTE (7 mois et
+// plus) : personne ne sort du radar, quelle que soit l'ancienneté.
+// Doit rester cohérent avec newsletter_segment_counts() côté base.
+async function getInactifEmails(minMois: number, maxMois?: number): Promise<Set<string>> {
   const borneRecente = new Date();          // last_visit <= aujourd'hui - minMois
   borneRecente.setMonth(borneRecente.getMonth() - minMois);
-  const borneAncienne = new Date();         // last_visit >  aujourd'hui - (maxMois + 1)
-  borneAncienne.setMonth(borneAncienne.getMonth() - (maxMois + 1));
-  const { data } = await db.from("customers")
+  let q = db.from("customers")
     .select("email,last_visit")
     .not("last_visit", "is", null)
-    .lte("last_visit", borneRecente.toISOString().slice(0, 10))
-    .gt("last_visit", borneAncienne.toISOString().slice(0, 10));
+    .lte("last_visit", borneRecente.toISOString().slice(0, 10));
+  if (maxMois !== undefined) {
+    const borneAncienne = new Date();       // last_visit > aujourd'hui - maxMois
+    borneAncienne.setMonth(borneAncienne.getMonth() - maxMois);
+    q = q.gt("last_visit", borneAncienne.toISOString().slice(0, 10));
+  }
+  const { data } = await q;
   const set = new Set<string>();
   (data || []).forEach((r: any) => { const e = (r.email||"").trim().toLowerCase(); if (e) set.add(e); });
   return set;
 }
 
-// Emails des inscrits jamais venus (aucune réservation honorée).
-async function getJamaisVenuEmails(): Promise<Set<string>> {
-  const { data } = await db.from("customers").select("email,last_visit");
-  const avecVisite = new Set<string>();
-  (data || []).forEach((r: any) => {
-    const e = (r.email||"").trim().toLowerCase();
-    if (e && r.last_visit) avecVisite.add(e);
-  });
-  return avecVisite; // on renverra le complément côté getRecipients
+// Emails des clients selon leur nombre de réservations honorées.
+// (min, max) inclusifs ; max omis = pas de limite haute.
+async function getParVisitesEmails(min: number, max?: number): Promise<Set<string>> {
+  let q = db.from("customers").select("email,bookings_count").gte("bookings_count", min);
+  if (max !== undefined) q = q.lte("bookings_count", max);
+  const { data } = await q;
+  const set = new Set<string>();
+  (data || []).forEach((r: any) => { const e = (r.email||"").trim().toLowerCase(); if (e) set.add(e); });
+  return set;
 }
 
 async function getRecipients(segment: string): Promise<{ email: string; name: string; token: string }[]> {
   const optin = await getOptinRecipients();
   if (segment === "optin") return optin;
   if (segment === "optin_vip") { const vip = await getVipEmails(); return optin.filter(r => vip.has(r.email)); }
-  const tranches: Record<string, [number, number]> = {
-    inactif_1_2: [1, 2],
-    inactif_3_4: [3, 4],
-    inactif_5_6: [5, 6],
-  };
-  if (tranches[segment]) {
-    const [min, max] = tranches[segment];
-    const emails = await getInactifTrancheEmails(min, max);
+  // Absence notable, relance encore facile (3 à 6 mois révolus)
+  if (segment === "inactif_3_6") {
+    const emails = await getInactifEmails(3, 7);
     return optin.filter(r => emails.has(r.email));
   }
-  if (segment === "jamais_venu") {
-    const avecVisite = await getJamaisVenuEmails();
-    return optin.filter(r => !avecVisite.has(r.email));
+  // Reconquête : 7 mois et plus, sans limite haute
+  if (segment === "inactif_7") {
+    const emails = await getInactifEmails(7);
+    return optin.filter(r => emails.has(r.email));
+  }
+  // Habitués : 3 réservations honorées ou plus
+  if (segment === "habitues") {
+    const emails = await getParVisitesEmails(3);
+    return optin.filter(r => emails.has(r.email));
+  }
+  // Ont testé une seule fois et ne sont pas revenus
+  if (segment === "une_visite") {
+    const emails = await getParVisitesEmails(1, 1);
+    return optin.filter(r => emails.has(r.email));
   }
   return [];
 }
