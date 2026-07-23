@@ -15,8 +15,11 @@ export function useTable<T = any>(table: string, orderBy = "position", realtime 
     setLoading(true);
     let q = supabase.from(table).select("*");
     if (filter) q = (q as any)[filter.op](filter.column, filter.value);
-    let { data, error } = await q.order(orderBy, { ascending: true });
-    if (error) {
+    // `data` est réassigné plus bas en cas de repli, `error` non : on les
+    // sépare pour que chacun ait la bonne déclaration (let / const).
+    const premier = await q.order(orderBy, { ascending: true });
+    let data = premier.data;
+    if (premier.error) {
       let q2 = supabase.from(table).select("*");
       if (filter) q2 = (q2 as any)[filter.op](filter.column, filter.value);
       const res = await q2;

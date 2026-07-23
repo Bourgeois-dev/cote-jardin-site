@@ -11,9 +11,11 @@ export const supabase = createClient(url, anonKey);
 
 // Helpers communs ------------------------------------------------------------
 export async function fetchActive<T = any>(table: string, orderBy = "position"): Promise<T[]> {
-  let { data, error } = await supabase.from(table).select("*").order(orderBy, { ascending: true });
+  // `data` est réassigné en cas de repli, `error` non : déclarations séparées.
+  const premier = await supabase.from(table).select("*").order(orderBy, { ascending: true });
+  let data = premier.data;
   // Repli : si la colonne de tri n'existe pas sur cette table, on refait la requête sans tri
-  if (error) {
+  if (premier.error) {
     const res = await supabase.from(table).select("*");
     if (res.error) { console.error(`fetch ${table}`, res.error); return []; }
     data = res.data;
