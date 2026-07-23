@@ -186,11 +186,22 @@ function blocCta(label: string, url: string, largeur = 200): string {
   </td></tr>`;
 }
 
-// Paragraphes : chaque saut de ligne devient un bloc de texte
+// Paragraphes. Deux niveaux de séparation, comme dans un traitement de texte :
+//   • LIGNE VIDE  -> nouveau paragraphe (bloc espacé)
+//   • saut simple -> retour à la ligne DANS le paragraphe (<br/>)
+// Auparavant `split(/\n+/)` fusionnait les lignes vides : impossible d'obtenir
+// un espacement marqué ni un retour à la ligne court (adresse, horaires...).
 function blocParas(texte: string, largeur: number): string {
-  return String(texte || "").split(/\n+/).filter((t: string) => t.trim())
-    .map((t: string) => `<div style="display:block; max-width:${largeur}px; text-align:left; width:100%; line-height:initial; padding:14px 0 0 0;">
-      <font style="font-family:Arial,sans-serif; font-size:14px; line-height:22px; color:${INK}">${esc(t)}</font></div>`).join("");
+  return String(texte || "")
+    .replace(/\r\n?/g, "\n")
+    .split(/\n\s*\n/)                      // paragraphes = séparés par une ligne vide
+    .filter((bloc: string) => bloc.trim())
+    .map((bloc: string) => {
+      const lignes = bloc.split("\n").filter((l: string) => l.trim())
+        .map((l: string) => esc(l)).join("<br/>");
+      return `<div style="display:block; max-width:${largeur}px; text-align:left; width:100%; line-height:initial; padding:14px 0 0 0;">
+      <font style="font-family:Arial,sans-serif; font-size:14px; line-height:22px; color:${INK}">${lignes}</font></div>`;
+    }).join("");
 }
 
 // Bloc pleine largeur : image ? titre ? texte ? CTA ?
@@ -385,8 +396,17 @@ function renderTemplate(template: string, c: any, name: string, logoUrl: string,
   // vie_resto (et repli pour tout template inconnu)
   const hb = `<tr><td align="center" style="padding:30px 44px 32px 44px;background-color:${ACCENT_COLOR};"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td align="center" style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.75);padding-bottom:10px;">${esc(c.eyebrow||"Vie du restaurant")}</td></tr><tr><td align="center" class="h1" style="font-family:Georgia,serif;font-size:30px;line-height:38px;color:#FFFFFF;font-weight:normal;">${esc(c.titre||"Actualité")}</td></tr></table></td></tr>`;
   // Texte multi-paragraphes : chaque saut de ligne devient un paragraphe
-  const paras = String(c.texte||"").split(/\n+/).filter((p: string) => p.trim())
-    .map((p: string) => `<p style="margin:0 0 18px 0;font-size:16px;line-height:26px;color:#4A4A45;">${esc(p)}</p>`).join("");
+  // Même règle que les campagnes libres : ligne vide = paragraphe,
+  // saut simple = retour à la ligne dans le paragraphe.
+  const paras = String(c.texte||"")
+    .replace(/\r\n?/g, "\n")
+    .split(/\n\s*\n/)
+    .filter((bloc: string) => bloc.trim())
+    .map((bloc: string) => {
+      const lignes = bloc.split("\n").filter((l: string) => l.trim())
+        .map((l: string) => esc(l)).join("<br/>");
+      return `<p style="margin:0 0 18px 0;font-size:16px;line-height:26px;color:#4A4A45;">${lignes}</p>`;
+    }).join("");
   const aRetenir = c.a_retenir ? `<tr><td class="px" style="padding:0 44px 8px 44px;background-color:#FFFFFF;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="background-color:#f3f0e7;border-radius:10px;padding:20px 22px;border-left:4px solid ${ACCENT_COLOR};"><p style="margin:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:${ACCENT_DARK};">À retenir</p><p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;line-height:24px;color:#3A4A2C;">${esc(c.a_retenir)}</p></td></tr></table></td></tr>` : "";
   const b = `${heroImage(c.titre||"",c.image_url)}<tr><td class="px" style="padding:36px 44px 6px 44px;background-color:#FFFFFF;font-family:Arial,sans-serif;">${prenom?`<p style="margin:0 0 18px 0;font-family:Georgia,serif;font-size:20px;color:#3A4A2C;">Bonjour ${esc(prenom)},</p>`:""}${paras}</td></tr>${aRetenir}${c.cta_label&&c.cta_url?ctaBtn(c.cta_label,c.cta_url):""}${signoff()}`;
   return layout({ preheader: c.preheader||c.titre||RESTO_NAME, title: c.titre||RESTO_NAME, headerBand: hb, body: b, footerHtml: ft, logoUrl });

@@ -50,9 +50,15 @@ type Bloc =
   | { type: "deux_colonnes"; colonnes: [Colonne, Colonne] };
 
 function blocVide(type: "pleine_largeur" | "deux_colonnes"): Bloc {
+  // Lien de réservation pré-rempli : c'est la destination attendue dans la
+  // grande majorité des campagnes. Le LIBELLÉ reste vide — sans libellé, aucun
+  // bouton n'est rendu dans l'email. Le restaurateur choisit donc d'afficher le
+  // bouton en nommant simplement l'action, sans avoir à retrouver l'URL.
+  const base = (import.meta.env.VITE_SITE_URL || "").replace(/\/+$/, "");
+  const resa = base ? { cta_url: `${base}/#reserver` } : {};
   return type === "deux_colonnes"
-    ? { type, colonnes: [{}, {}] }
-    : { type };
+    ? { type, colonnes: [{ ...resa }, { ...resa }] }
+    : { type, ...resa };
 }
 
 // Welcome n'apparaît pas dans TEMPLATES (pas de formulaire, déclenché
@@ -123,9 +129,17 @@ function BlocsCanvas({ subject, content, restoName, logoUrl }: {
       )}
       <div style={{ padding: petit ? "12px 14px" : "18px 24px" }}>
         {v.titre && <div style={{ fontSize: petit ? 13 : 15, fontWeight: 700, color: INK, marginBottom: 6 }}>{v.titre}</div>}
-        {String(v.texte || "").split(/\n+/).filter(Boolean).map((t: string, i: number) => (
-          <div key={i} style={{ fontSize: petit ? 11.5 : 13, lineHeight: 1.6, color: INK, marginBottom: 8 }}>{t}</div>
-        ))}
+        {/* Même règle que le rendu email : ligne vide = nouveau paragraphe,
+            saut simple = retour à la ligne. L'aperçu doit être fidèle. */}
+        {String(v.texte || "").replace(/\r\n?/g, "\n").split(/\n\s*\n/)
+          .filter((bloc: string) => bloc.trim())
+          .map((bloc: string, i: number) => (
+            <div key={i} style={{ fontSize: petit ? 11.5 : 13, lineHeight: 1.6, color: INK, marginBottom: 8 }}>
+              {bloc.split("\n").filter((l: string) => l.trim()).map((l: string, j: number, arr: string[]) => (
+                <span key={j}>{l}{j < arr.length - 1 && <br />}</span>
+              ))}
+            </div>
+          ))}
         <Cta label={v.cta_label} />
       </div>
     </>
@@ -256,6 +270,23 @@ function tailleImage(file: File): Promise<{ w: number; h: number }> {
 
 /* Champs d'un bloc (ou d'une colonne) : titre, texte, image, CTA.
    Tout est optionnel — le restaurateur ne remplit que ce dont il a besoin. */
+// Liens proposés sous le champ « Bouton — lien ».
+// Dans une newsletter de restaurant, le bouton renvoie presque toujours vers le
+// site : autant éviter au restaurateur de retenir ou recopier les URL.
+// `#reserver` ouvre directement le formulaire de réservation (voir Site.tsx).
+function liensSuggeres(): { label: string; url: string }[] {
+  const base = (import.meta.env.VITE_SITE_URL || "").replace(/\/+$/, "");
+  if (!base) return [];
+  return [
+    { label: "Réserver une table", url: `${base}/#reserver` },
+    { label: "Voir la carte",      url: `${base}/#carte` },
+    { label: "Plat du jour",       url: `${base}/#jour` },
+    { label: "Galerie photos",     url: `${base}/#galerie` },
+    { label: "Nous contacter",     url: `${base}/#contact` },
+    { label: "Page d'accueil",     url: base },
+  ];
+}
+
 function ChampsBloc({ val, onChange, onUpload }: {
   val: { titre?: string; texte?: string; image?: string; image_alt?: string; cta_label?: string; cta_url?: string };
   onChange: (champs: Record<string, any>) => void;
@@ -295,8 +326,11 @@ function ChampsBloc({ val, onChange, onUpload }: {
       </div>
       <div className="champ">
         <label>Texte</label>
-        <textarea rows={3} value={val.texte || ""} onChange={(e) => onChange({ texte: e.target.value })} maxLength={2000}
-          placeholder="Un paragraphe par ligne" />
+        <textarea rows={4} value={val.texte || ""} onChange={(e) => onChange({ texte: e.target.value })} maxLength={2000}
+          placeholder={"Votre texte…\n\nUne ligne vide sépare deux paragraphes."} />
+        <span className="aide" style={{ fontSize: 11.5 }}>
+          Entrée = retour à la ligne · Entrée deux fois = nouveau paragraphe.
+        </span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         <div className="champ">
@@ -306,6 +340,23 @@ function ChampsBloc({ val, onChange, onUpload }: {
         <div className="champ">
           <label>Bouton — lien</label>
           <input value={val.cta_url || ""} onChange={(e) => onChange({ cta_url: e.target.value })} placeholder="https://…" />
+          {liensSuggeres().length > 0 && (
+            <div className="nl-liens">
+              {liensSuggeres().map((l) => (
+                <button key={l.url} type="button"
+                  className={`nl-lien${val.cta_url === l.url ? " actif" : ""}`}
+                  title={l.url}
+                  onClick={() => onChange({
+                    cta_url: l.url,
+                    // Le libellé n'est proposé que s'il est encore vide :
+                    // on ne remplace jamais un texte déjà saisi.
+                    ...(val.cta_label ? {} : { cta_label: l.label }),
+                  })}>
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -604,11 +655,15 @@ function NouveauForm({ onSaved, initial }: {
                   </div>
 
                   {b.type === "pleine_largeur" ? (
-                    <ChampsBloc
-                      val={b}
-                      onChange={(champs) => majBloc(i, champs)}
-                      onUpload={uploadImage}
-                    />
+                    // Même habillage que les colonnes (fond crème, coins arrondis) :
+                    // les deux types de blocs se lisent ainsi de la même façon.
+                    <div style={{ background: "var(--cream)", borderRadius: 8, padding: 10 }}>
+                      <ChampsBloc
+                        val={b}
+                        onChange={(champs) => majBloc(i, champs)}
+                        onUpload={uploadImage}
+                      />
+                    </div>
                   ) : (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                       {[0, 1].map((n) => (

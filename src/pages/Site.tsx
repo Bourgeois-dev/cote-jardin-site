@@ -92,6 +92,19 @@ export default function Site() {
   };
   const reserveLabel = resaEnabled ? "Réserver" : "Appeler";
 
+  // Ouverture du widget depuis un lien externe (#reserver), typiquement le
+  // bouton « Réserver » d'une newsletter. Sans cela, le lien amènerait sur la
+  // page d'accueil sans ouvrir le formulaire — promesse non tenue.
+  useEffect(() => {
+    if (!resaEnabled) return;
+    const ouvrirSiAncre = () => {
+      if (window.location.hash.replace(/\?.*$/, "") === "#reserver") setWidgetOpen(true);
+    };
+    ouvrirSiAncre();
+    window.addEventListener("hashchange", ouvrirSiAncre);
+    return () => window.removeEventListener("hashchange", ouvrirSiAncre);
+  }, [resaEnabled]);
+
   return (
     <>
       <Navbar onReserve={reserve} reserveLabel={reserveLabel} flags={{
