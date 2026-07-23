@@ -81,6 +81,24 @@ export default function Site() {
     })();
   }, []);
 
+  // Ouverture du widget depuis un lien externe (#reserver), typiquement le
+  // bouton « Réserver » d'une newsletter. Sans cela, le lien amènerait sur la
+  // page d'accueil sans ouvrir le formulaire — promesse non tenue.
+  //
+  // ⚠️ Cet effet doit rester AVANT le `return` conditionnel ci-dessous : React
+  // exige que tous les Hooks soient appelés dans le même ordre à chaque rendu.
+  // Placé après, il n'était pas exécuté pendant le chargement puis l'était
+  // ensuite — incohérence qui casse le rendu de toute la page.
+  useEffect(() => {
+    if (!resaEnabled) return;
+    const ouvrirSiAncre = () => {
+      if (window.location.hash.replace(/\?.*$/, "") === "#reserver") setWidgetOpen(true);
+    };
+    ouvrirSiAncre();
+    window.addEventListener("hashchange", ouvrirSiAncre);
+    return () => window.removeEventListener("hashchange", ouvrirSiAncre);
+  }, [resaEnabled]);
+
   if (loading) return <div className="loading">Chargement…</div>;
 
   const phone = import.meta.env.VITE_RESTO_PHONE || "";
@@ -91,19 +109,6 @@ export default function Site() {
     else if (phone) window.location.href = phoneHref;
   };
   const reserveLabel = resaEnabled ? "Réserver" : "Appeler";
-
-  // Ouverture du widget depuis un lien externe (#reserver), typiquement le
-  // bouton « Réserver » d'une newsletter. Sans cela, le lien amènerait sur la
-  // page d'accueil sans ouvrir le formulaire — promesse non tenue.
-  useEffect(() => {
-    if (!resaEnabled) return;
-    const ouvrirSiAncre = () => {
-      if (window.location.hash.replace(/\?.*$/, "") === "#reserver") setWidgetOpen(true);
-    };
-    ouvrirSiAncre();
-    window.addEventListener("hashchange", ouvrirSiAncre);
-    return () => window.removeEventListener("hashchange", ouvrirSiAncre);
-  }, [resaEnabled]);
 
   return (
     <>
