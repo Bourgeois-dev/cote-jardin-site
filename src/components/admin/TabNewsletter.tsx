@@ -62,13 +62,18 @@ const TYPE_DISPLAY: Record<string, { label: string; icon: string }> = {
   ...Object.fromEntries(Object.entries(TEMPLATES).map(([k, t]) => [k, { label: t.label, icon: t.icon }])),
 };
 
+// Segments de ciblage. Chacun correspond à une intention distincte : inutile de
+// multiplier les tranches d'inactivité, le message de reconquête est le même.
+// Toute modification ici doit être répercutée dans newsletter_segment_counts()
+// (base) ET dans send-newsletter/index.ts (envoi réel) — les trois doivent
+// rester cohérents, sinon le décompte annoncé ne correspond pas aux envois.
 const SEGMENTS: Record<string, { label: string; desc: string }> = {
   optin:       { label: "Opt-in newsletter", desc: "Tous les inscrits — via le formulaire newsletter ou l'opt-in proposé à la réservation" },
   optin_vip:   { label: "VIP",               desc: "Inscrits newsletter marqués VIP dans le CRM" },
-  inactif_1_2: { label: "Pas venus depuis 1 à 2 mois", desc: "Inscrits dont la dernière venue remonte à 1 ou 2 mois" },
-  inactif_3_4: { label: "Pas venus depuis 3 à 4 mois", desc: "Inscrits dont la dernière venue remonte à 3 ou 4 mois" },
-  inactif_5_6: { label: "Pas venus depuis 5 à 6 mois", desc: "Inscrits dont la dernière venue remonte à 5 ou 6 mois" },
-  jamais_venu: { label: "Jamais venus",                desc: "Inscrits newsletter sans aucune venue enregistrée" },
+  habitues:    { label: "Habitués",          desc: "Inscrits venus au moins 3 fois — vos meilleurs clients" },
+  une_visite:  { label: "Venus une seule fois", desc: "Ont testé le restaurant mais ne sont jamais revenus" },
+  inactif_3_6: { label: "Pas venus depuis 3 à 6 mois", desc: "Absence notable — une relance peut suffire à les faire revenir" },
+  inactif_7:   { label: "Pas venus depuis plus de 6 mois", desc: "Reconquête — dernière venue il y a 7 mois ou davantage" },
 };
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
