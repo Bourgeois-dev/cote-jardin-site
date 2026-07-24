@@ -170,6 +170,19 @@ export default function ReservationWidget({ hours, open, onClose, masquerFermer 
     });
   }, [dayInfo, date, minAdvance]);
 
+  // Une fermeture SANS service précisé ferme la journée entière ; avec un
+  // service ("midi" ou "soir"), l'autre reste ouvert. Cette distinction est
+  // essentielle : sans elle, fermer le midi bloquait aussi le soir.
+  const fermetureTotale = !!dayInfo?.inClosure && !dayInfo.inClosure.service;
+  // L'autre service existe-t-il réellement ce jour-là ? (le mercredi soir chez
+  // CJ n'existe pas : inutile d'annoncer qu'il « reste disponible »)
+  const autreServiceOuvert = useMemo(() => {
+    if (!dayInfo?.h || !dayInfo.inClosure?.service) return false;
+    return dayInfo.inClosure.service === "midi"
+      ? !!dayInfo.h.dinner_open
+      : !!dayInfo.h.lunch_open;
+  }, [dayInfo]);
+
   // Vrai si le jour est ouvert mais que tous les créneaux sont déjà passés (délai mini)
   const tropTardAujourdhui = useMemo(() => {
     if (!dayInfo || dayInfo.closed || !dayInfo.h) return false;
@@ -358,10 +371,18 @@ export default function ReservationWidget({ hours, open, onClose, masquerFermer 
                    dayInfo.inClosure.service === "soir" ? "Service du soir fermé" :
                    "Fermeture exceptionnelle"}
                   {dayInfo.inClosure.reason ? ` — ${dayInfo.inClosure.reason}` : "."}
+                  {/* Fermeture partielle : l'autre service reste ouvert, il faut
+                      le dire — sinon le visiteur croit la journée perdue. */}
+                  {!fermetureTotale && autreServiceOuvert && (
+                    <> Le service {dayInfo.inClosure.service === "midi" ? "du soir" : "du midi"} reste disponible.</>
+                  )}
                 </div>
               )}
               {groupe && <div className="alerte"><b>Réservation par téléphone</b><br />Pour les groupes de plus de {phoneThreshold}, contactez-nous.{phone && <div style={{ marginTop: 10 }}><a className="btn btn-accent" href={`tel:${phone}`}>Appeler</a></div>}</div>}
-              <div className="pan-actions"><button className="btn btn-accent" disabled={dayInfo?.closed || !!dayInfo?.inClosure || groupe || !date} onClick={() => setStep(2)}>Choisir un créneau</button></div>
+              {/* Seule une fermeture TOTALE (sans service précisé) empêche de
+                  continuer. Une fermeture partielle laisse l'autre service
+                  réservable : les créneaux concernés sont déjà filtrés plus bas. */}
+              <div className="pan-actions"><button className="btn btn-accent" disabled={dayInfo?.closed || fermetureTotale || groupe || !date} onClick={() => setStep(2)}>Choisir un créneau</button></div>
             </div>
           )}
 
