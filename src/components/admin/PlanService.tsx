@@ -206,8 +206,9 @@ export default function PlanService({ initialDate, initialService }: { initialDa
     // Le restaurateur seul sait s'il ouvre la terrasse ce jour-là.
     // On ne demande QUE si le choix a un sens : plusieurs zones actives, et pas
     // de décision déjà prise pour cet appel.
+    // Une zone fermée n'est pas proposée : elle est hors service ce jour-là.
     const zonesActives = areas.filter((a) =>
-      tables.some((t) => t.is_active && t.area_id === a.id));
+      a.is_active !== false && tables.some((t) => t.is_active && t.area_id === a.id));
     if (zoneChoisie === undefined && zonesActives.length > 1) {
       setDemandeZone(true);
       return;
@@ -224,8 +225,10 @@ export default function PlanService({ initialDate, initialService }: { initialDa
       !(prises[tid] || []).some((h) => seChevauchent(h, heure));
 
     // zoneChoisie === null : toutes zones (le restaurateur a choisi « partout »)
+    const zonesFermees = new Set(areas.filter((a) => a.is_active === false).map((a) => a.id));
     const candidates = tables
-      .filter((t) => t.is_active && (!zoneChoisie || t.area_id === zoneChoisie))
+      .filter((t) => t.is_active && !zonesFermees.has(t.area_id || "")
+        && (!zoneChoisie || t.area_id === zoneChoisie))
       .sort((a, b) => a.capacity - b.capacity);
 
     const decisions: { id: string; ids: string[] }[] = [];
@@ -653,7 +656,8 @@ export default function PlanService({ initialDate, initialService }: { initialDa
                         <div className="ps-zone-choix-titre">Où placer ces réservations ?</div>
                         <div className="ps-zone-choix-liste">
                           {areas
-                            .filter((a) => tables.some((t) => t.is_active && t.area_id === a.id))
+                            .filter((a) => a.is_active !== false
+                              && tables.some((t) => t.is_active && t.area_id === a.id))
                             .map((a) => {
                               const places = tables
                                 .filter((t) => t.is_active && t.area_id === a.id)
@@ -697,7 +701,7 @@ export default function PlanService({ initialDate, initialService }: { initialDa
               {areas.length > 1 ? (
                 <div className="zones-barre">
                   {areas.map((a) => (
-                    <button key={a.id} className={`zone-onglet${a.id === zoneId ? " active" : ""}`} onClick={() => setZoneId(a.id)}>{a.name}</button>
+                    <button key={a.id} className={`zone-onglet${a.id === zoneId ? " active" : ""}${a.is_active === false ? " fermee" : ""}`} onClick={() => setZoneId(a.id)}>{a.name}</button>
                   ))}
                 </div>
               ) : (

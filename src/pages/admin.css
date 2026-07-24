@@ -425,6 +425,15 @@ tr:last-child td { border-bottom:none }
   border:1px solid var(--line); border-left:3px solid var(--ok); border-radius:8px;
   padding:8px 11px; margin-bottom:10px; cursor:pointer; line-height:1.45 }
 
+/* Zone temporairement fermée (terrasse sous la pluie, salle privatisée) */
+.tp-zone-fermee { display:inline-flex; align-items:center; font-size:10.5px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--annule);
+  background:rgba(163,67,58,.1); border:1px solid rgba(163,67,58,.3);
+  border-radius:99px; padding:2px 9px; margin-left:10px }
+/* Onglet d'une zone fermée dans le plan de service */
+.zone-onglet.fermee { opacity:.55 }
+.zone-onglet.fermee::after { content:" · fermée"; font-size:10px; font-weight:600; color:var(--annule) }
+
 /* Choix de la zone avant placement automatique (plusieurs zones actives) */
 .ps-zone-choix { background:var(--a06); border:1px solid var(--a25); border-radius:10px;
   padding:11px 13px; margin-bottom:10px }

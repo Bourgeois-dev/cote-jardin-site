@@ -117,6 +117,22 @@ export default function TabPlan() {
     setZoneModal(null);
   }
 
+  // Ferme ou rouvre la zone. Les tables et les réservations déjà placées sont
+  // conservées : c'est une fermeture temporaire, pas une suppression.
+  async function basculerZone() {
+    if (!zoneActive) return;
+    const ferme = zoneActive.is_active !== false;
+    if (ferme) {
+      const ok = await confirm({
+        titre: `Fermer « ${zoneActive.name} » ?`,
+        message: "Les réservations en ligne ne pourront plus utiliser cette zone tant qu'elle est fermée. Les tables et les réservations déjà placées sont conservées.",
+        confirmer: "Fermer la zone",
+      });
+      if (!ok) return;
+    }
+    await areas.update(zoneActive.id, { is_active: !ferme });
+  }
+
   async function supprimerZone() {
     if (!zoneActive) return;
     if (tablesZone.length > 0) { setErr("Videz la zone de ses tables avant de la supprimer."); return; }
@@ -174,8 +190,20 @@ export default function TabPlan() {
               <div className="tp-zone-entete-gauche">
                 <h2 className="tp-zone-nom">{zoneActive?.name || "—"}</h2>
                 <span className="tp-zone-stats">{tablesZone.length} tables · {couvTotal} couverts</span>
+                {zoneActive && zoneActive.is_active === false && (
+                  <span className="tp-zone-fermee">Fermée</span>
+                )}
               </div>
               <div className="tp-zone-entete-actions">
+                {/* Fermeture temporaire (terrasse sous la pluie, salle privatisée).
+                    Une zone fermée sort du calcul de disponibilité : le site cesse
+                    d'accepter des réservations sur cette capacité. Les tables ne
+                    sont pas supprimées, la réouverture est immédiate. */}
+                {zoneActive && (
+                  <button className="btn btn-ligne btn-mini" onClick={basculerZone}>
+                    {zoneActive.is_active === false ? "Rouvrir la zone" : "Fermer la zone"}
+                  </button>
+                )}
                 {zoneActive && <button className="btn btn-ligne btn-mini" onClick={ouvrirRenommage}>Renommer</button>}
                 {zoneActive && <button className="btn btn-ligne btn-mini" onClick={supprimerZone}>Supprimer la zone</button>}
                 <button className="btn btn-accent" onClick={ajouter}>+ Ajouter une table</button>

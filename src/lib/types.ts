@@ -7,7 +7,7 @@ export interface OpeningHour { id: string; day_of_week: number; is_closed: boole
 export interface ClosurePeriod { id: string; start_date: string; end_date: string; reason: string; blocks_reservations: boolean; service: 'midi' | 'soir' | null; note_interne: string; custom_message: string; }
 export interface PromoBanner { id: string; title: string; subtitle: string; message: string; cta_label: string; cta_url: string; event_date: string | null; image_url: string; is_active: boolean; }
 export interface RestaurantTable { id: string; label: string; capacity: number; online_limit: number; pos_x: number; pos_y: number; shape: string; is_active: boolean; area_id: string | null; }
-export interface DiningArea { id: string; name: string; position: number; }
+export interface DiningArea { id: string; name: string; position: number; is_active: boolean; }
 export interface Reservation { id: string; customer_name: string; email: string; phone: string; date: string; time: string; covers: number; table_id: string | null; table_ids: string[]; status: string; notes: string; source: string; created_at: string; customer_id: string | null; }
 export interface Customer { id: string; name: string; email: string; phone: string; is_vip: boolean; notes: string; bookings_count: number; covers_total: number; no_show_count: number; cancelled_count: number; first_visit: string | null; last_visit: string | null; created_at: string; }
 export interface Lead { id: string; first_name: string; last_name: string; email: string; source: string; consent: boolean; created_at: string; }
