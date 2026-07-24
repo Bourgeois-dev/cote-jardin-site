@@ -70,6 +70,7 @@ export default function PlanService({ initialDate, initialService }: { initialDa
   const [creneauActif, setCreneauActif] = useState<string | null>(null);
   const [infoAuto, setInfoAuto] = useState("");
   const [rappelsOuverts, setRappelsOuverts] = useState(false);
+  const [demandeZone, setDemandeZone] = useState(false);
   // Référence de la carte sélectionnée, pour la faire défiler dans la liste
   // quand la sélection vient du plan (clic sur une table).
   const carteRef = useRef<HTMLDivElement | null>(null);
@@ -194,11 +195,24 @@ export default function PlanService({ initialDate, initialService }: { initialDa
   // La disponibilité tient compte de la rotation : une table libérée avant
   // l'heure visée (DUREE_TABLE) est réutilisable. Les tables déjà attribuées
   // manuellement ne sont jamais déplacées.
-  async function placerAuto() {
+  async function placerAuto(zoneChoisie?: string | null) {
     const aPlacer = duService
       .filter((r) => !estPlacee(r) && r.status !== "no_show" && r.status !== "annule")
       .sort((a, b) => b.covers - a.covers || a.time.localeCompare(b.time));
     if (aPlacer.length === 0) return;
+
+    // Plusieurs zones : on demande AVANT de placer, car l'algorithme remplirait
+    // sinon une zone au hasard (en pratique la première par ordre alphabétique).
+    // Le restaurateur seul sait s'il ouvre la terrasse ce jour-là.
+    // On ne demande QUE si le choix a un sens : plusieurs zones actives, et pas
+    // de décision déjà prise pour cet appel.
+    const zonesActives = areas.filter((a) =>
+      tables.some((t) => t.is_active && t.area_id === a.id));
+    if (zoneChoisie === undefined && zonesActives.length > 1) {
+      setDemandeZone(true);
+      return;
+    }
+    setDemandeZone(false);
 
     // Occupation simulée : on part du réel, et on ajoute au fur et à mesure les
     // attributions décidées, pour éviter de placer deux groupes au même endroit.
@@ -209,8 +223,9 @@ export default function PlanService({ initialDate, initialService }: { initialDa
     const dispo = (tid: string, heure: string) =>
       !(prises[tid] || []).some((h) => seChevauchent(h, heure));
 
+    // zoneChoisie === null : toutes zones (le restaurateur a choisi « partout »)
     const candidates = tables
-      .filter((t) => t.is_active)
+      .filter((t) => t.is_active && (!zoneChoisie || t.area_id === zoneChoisie))
       .sort((a, b) => a.capacity - b.capacity);
 
     const decisions: { id: string; ids: string[] }[] = [];
@@ -256,8 +271,12 @@ export default function PlanService({ initialDate, initialService }: { initialDa
     reload();
 
     const n = decisions.length;
+    const nomZone = zoneChoisie
+      ? areas.find((a) => a.id === zoneChoisie)?.name
+      : null;
     setInfoAuto(
       `${n} réservation${n > 1 ? "s" : ""} placée${n > 1 ? "s" : ""}` +
+      (nomZone ? ` en ${nomZone.toLowerCase()}` : "") +
       (nonPlaces.length
         ? ` — ${nonPlaces.length} sans table disponible (${nonPlaces.map((r) => r.time).join(", ")}).`
         : ".")
@@ -619,11 +638,39 @@ export default function PlanService({ initialDate, initialService }: { initialDa
                   <>
                     <div className="ps-liste-titre aplacer">
                       À placer <span className="ps-liste-nb">{sansTable.length}</span>
-                      <button className="ps-auto-btn" onClick={placerAuto}
+                      <button className="ps-auto-btn" onClick={() => placerAuto()}
                         title="Attribue automatiquement la table la plus adaptée à chaque réservation non placée">
                         Placer automatiquement
                       </button>
                     </div>
+                    {/* Choix de la zone. Affiché seulement si plusieurs zones
+                        sont exploitables : sans cela, l'algorithme remplirait
+                        une zone au hasard (la première par ordre alphabétique)
+                        alors que seul le restaurateur sait s'il ouvre la
+                        terrasse aujourd'hui. */}
+                    {demandeZone && (
+                      <div className="ps-zone-choix">
+                        <div className="ps-zone-choix-titre">Où placer ces réservations ?</div>
+                        <div className="ps-zone-choix-liste">
+                          {areas
+                            .filter((a) => tables.some((t) => t.is_active && t.area_id === a.id))
+                            .map((a) => {
+                              const places = tables
+                                .filter((t) => t.is_active && t.area_id === a.id)
+                                .reduce((s, t) => s + (t.capacity || 0), 0);
+                              return (
+                                <button key={a.id} className="ps-zone-btn" onClick={() => placerAuto(a.id)}>
+                                  {a.name}<span className="ps-zone-btn-nb">{places} places</span>
+                                </button>
+                              );
+                            })}
+                          <button className="ps-zone-btn partout" onClick={() => placerAuto(null)}>
+                            Partout<span className="ps-zone-btn-nb">au plus juste</span>
+                          </button>
+                        </div>
+                        <button className="ps-zone-annuler" onClick={() => setDemandeZone(false)}>Annuler</button>
+                      </div>
+                    )}
                     {infoAuto && (
                       <div className="ps-auto-info" onClick={() => setInfoAuto("")}>{infoAuto}</div>
                     )}
