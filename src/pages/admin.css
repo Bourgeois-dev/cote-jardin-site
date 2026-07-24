@@ -484,6 +484,14 @@ tr:last-child td { border-bottom:none }
   @page { margin:16mm }
 }
 
+/* Réglages dépendant d'un interrupteur (ex. confirmation automatique) :
+   indentés et sur fond crème pour montrer qu'ils lui sont subordonnés. */
+.sous-reglages { margin:2px 0 14px 0; padding:12px 14px; background:var(--cream);
+  border:1px solid var(--line); border-radius:10px;
+  display:flex; flex-direction:column; gap:12px }
+.sous-reglages .champ { margin:0 }
+.sous-reglages .ligne-toggle { margin:0 }
+
 /* Suggestions de liens sous le champ « Bouton — lien » (éditeur newsletter) */
 .nl-liens { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px }
 .nl-lien { font-family:inherit; font-size:11px; font-weight:600; color:var(--ink-soft);

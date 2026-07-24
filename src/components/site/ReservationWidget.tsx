@@ -105,6 +105,8 @@ export default function ReservationWidget({ hours, open, onClose, masquerFermer 
   const [consent, setConsent] = useState(false);
   const [newsletterOptin, setNewsletterOptin] = useState(false);
   const [done, setDone] = useState(false);
+  // Le message final diffère selon que la table est confirmée d'emblée ou non.
+  const [autoConfirme, setAutoConfirme] = useState(false);
   const [showWaitlist, setShowWaitlist] = useState(false);
   const [closureMsg, setClosureMsg] = useState("");
   const [calMonth, setCalMonth] = useState<{ y: number; m: number }>(() => {
@@ -269,9 +271,14 @@ export default function ReservationWidget({ hours, open, onClose, masquerFermer 
       }
       return;
     }
+    // La décision de confirmer est prise CÔTÉ SERVEUR (reserve_table) : le
+    // client ne peut pas l'influencer. On se contente de lire le résultat.
+    const autoConfirme = result?.auto_confirmed === true;
     const reservation = {
       customer_name: `${form.p} ${form.n}`, email: form.e, phone: form.t,
-      date, time: slot || "", covers, notes: form.notes, status: "attente",
+      date, time: slot || "", covers, notes: form.notes,
+      status: autoConfirme ? "confirme" : "attente",
+      cancel_token: result?.cancel_token || null,
     };
     // Opt-in newsletter (si proposé et coché) → alimente leads.
     // Via la fonction serveur inscrire_newsletter : un .upsert() direct échoue
@@ -283,8 +290,11 @@ export default function ReservationWidget({ hours, open, onClose, masquerFermer 
         p_email: form.e, p_first_name: form.p, p_last_name: form.n, p_source: "reservation",
       });
     }
-    // Accusé de réception au client (n'interrompt pas le flux si l'email échoue)
-    sendReservationEmail("accuse", reservation);
+    // Table confirmée d'emblée → vraie confirmation (avec lien d'annulation).
+    // Sinon → accusé de réception, la validation reste à venir.
+    // N'interrompt pas le flux si l'e-mail échoue.
+    sendReservationEmail(autoConfirme ? "confirmation_immediate" : "accuse", reservation);
+    setAutoConfirme(autoConfirme);
     setDone(true);
   }
 
@@ -296,9 +306,13 @@ export default function ReservationWidget({ hours, open, onClose, masquerFermer 
       ) : done ? (
         <div className="confirm-ok">
           <div className="rond">✓</div>
-          <h3>Réservation enregistrée</h3>
+          <h3>{autoConfirme ? "Votre table est réservée" : "Réservation enregistrée"}</h3>
           <p>{fmtFR(new Date(date + "T12:00:00"))} à {slot?.replace(":", "h")} — {covers} couvert{covers > 1 ? "s" : ""}</p>
-          <p className="rgpd">Votre demande sera confirmée par le restaurant.</p>
+          <p className="rgpd">
+            {autoConfirme
+              ? "C'est confirmé, nous vous attendons. Un e-mail récapitulatif vient de vous être envoyé."
+              : "Votre demande sera confirmée par le restaurant."}
+          </p>
           <button className="btn btn-accent" onClick={onClose}>Fermer</button>
         </div>
       ) : (

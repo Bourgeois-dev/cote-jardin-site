@@ -38,7 +38,7 @@ export default function TabParametres() {
 
   async function save() {
     if (!s) return;
-    await supabase.from("reservation_settings").update({ enabled: s.enabled, phone_threshold: s.phone_threshold, min_advance_hours: s.min_advance_hours, booking_horizon_days: s.booking_horizon_days, newsletter_optin: s.newsletter_optin, max_covers_per_slot: s.max_covers_per_slot || null, waitlist_enabled: s.waitlist_enabled, reminder_enabled: s.reminder_enabled, table_duration: s.table_duration || 90 }).eq("id", s.id);
+    await supabase.from("reservation_settings").update({ enabled: s.enabled, phone_threshold: s.phone_threshold, min_advance_hours: s.min_advance_hours, booking_horizon_days: s.booking_horizon_days, newsletter_optin: s.newsletter_optin, max_covers_per_slot: s.max_covers_per_slot || null, waitlist_enabled: s.waitlist_enabled, reminder_enabled: s.reminder_enabled, table_duration: s.table_duration || 90, auto_confirm: s.auto_confirm, auto_confirm_max_covers: s.auto_confirm_max_covers || 6, auto_confirm_same_day: s.auto_confirm_same_day, auto_confirm_block_noshow: s.auto_confirm_block_noshow ?? 1 }).eq("id", s.id);
     sInitial.current = JSON.stringify(s);
     dirty.set(false);
     toast.ok("Réglages enregistrés");
@@ -110,6 +110,32 @@ export default function TabParametres() {
             </select>
             <span className="champ-aide">Combien de temps une table reste occupée par une réservation. Détermine quand elle redevient disponible — pour les réservations en ligne comme pour la rotation des tables dans le plan de service.</span>
           </div>
+          <label className="ligne-toggle">
+            <div className="lib"><b>Confirmation automatique</b>
+              <span>Les réservations en ligne sont confirmées immédiatement, sans validation manuelle. La disponibilité est déjà vérifiée par le système : horaires, fermetures, capacité et tables libres. Le client reçoit une confirmation ferme au lieu d'un simple accusé de réception.</span>
+            </div>
+            <input type="checkbox" checked={!!s.auto_confirm} onChange={(e) => setS({ ...s, auto_confirm: e.target.checked })} />
+          </label>
+          {s.auto_confirm && (
+            <div className="sous-reglages">
+              <div className="champ"><label>Sauf au-delà de … couverts</label>
+                <input type="number" min="1" max="50" value={s.auto_confirm_max_covers || 6}
+                  onChange={(e) => setS({ ...s, auto_confirm_max_covers: Number(e.target.value) })} />
+                <span className="champ-aide">Les grands groupes restent en attente : ils méritent un regard.</span>
+              </div>
+              <label className="ligne-toggle">
+                <div className="lib"><b>Confirmer aussi le jour même</b>
+                  <span>Déconseillé si votre mise en place est déjà lancée le matin.</span>
+                </div>
+                <input type="checkbox" checked={!!s.auto_confirm_same_day} onChange={(e) => setS({ ...s, auto_confirm_same_day: e.target.checked })} />
+              </label>
+              <div className="champ"><label>Repasser en validation manuelle à partir de … absences</label>
+                <input type="number" min="0" max="10" value={s.auto_confirm_block_noshow ?? 1}
+                  onChange={(e) => setS({ ...s, auto_confirm_block_noshow: Number(e.target.value) })} />
+                <span className="champ-aide">Un client déjà absent sans prévenir repasse en validation manuelle. Il est reconnu par son e-mail ou son téléphone. 0 pour désactiver.</span>
+              </div>
+            </div>
+          )}
           <label className="ligne-toggle"><div className="lib"><b>Liste d'attente</b><span>Quand un créneau est complet, propose au client de s'inscrire sur la liste d'attente.</span></div><span className="toggle"><input type="checkbox" checked={s.waitlist_enabled || false} onChange={(e) => setS({ ...s, waitlist_enabled: e.target.checked })} /><span className="piste" /></span></label>
           <label className="ligne-toggle"><div className="lib"><b>Rappel J-1 automatique</b><span>Envoie un email de rappel la veille de chaque réservation (inclut un lien d'annulation).</span></div><span className="toggle"><input type="checkbox" checked={s.reminder_enabled !== false} onChange={(e) => setS({ ...s, reminder_enabled: e.target.checked })} /><span className="piste" /></span></label>
         </div>

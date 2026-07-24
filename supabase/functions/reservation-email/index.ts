@@ -3,6 +3,9 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const FROM_EMAIL = Deno.env.get("RESERVATION_FROM_EMAIL") || "onboarding@resend.dev";
 const RESTO_NAME = Deno.env.get("RESTO_NAME") || "Le restaurant";
+// Nécessaire au lien d'annulation des confirmations immédiates : un client
+// confirmé sans avoir été rappelé doit pouvoir se désister en un clic.
+const SITE_URL = (Deno.env.get("SITE_URL") || "").replace(/\/+$/, "");
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -25,6 +28,21 @@ function buildEmail(type: string, r: any): { subject: string; html: string } {
   const couverts = `${r.covers} couvert${r.covers > 1 ? "s" : ""}`;
   const nom = esc(r.customer_name);
   const recap = `<table style="margin:18px 0;font-size:15px;color:#1A2238"><tr><td style="padding:4px 16px 4px 0;color:#6B7280">Date</td><td><b>${esc(date)}</b></td></tr><tr><td style="padding:4px 16px 4px 0;color:#6B7280">Heure</td><td><b>${esc(heure)}</b></td></tr><tr><td style="padding:4px 16px 4px 0;color:#6B7280">Couverts</td><td><b>${esc(couverts)}</b></td></tr></table>`;
+
+  // Confirmation IMMÉDIATE (réservation en ligne auto-confirmée).
+  // Différent de "confirmation" : le client n'a pas attendu de validation, le
+  // message doit être direct. Le lien d'annulation est essentiel — sans lui,
+  // confirmer sans examen humain augmenterait mécaniquement les no-shows.
+  if (type === "confirmation_immediate") {
+    const cancelUrl = SITE_URL && r.cancel_token ? `${SITE_URL}/annuler?token=${r.cancel_token}` : null;
+    const blocAnnul = cancelUrl
+      ? `<p style="color:#4A5066;font-size:14px;margin-top:20px">Un empêchement ? <a href="${cancelUrl}" style="color:#8B1A1A">Annulez votre réservation en un clic</a> — cela nous permet de proposer la table à quelqu'un d'autre.</p>`
+      : `<p style="color:#4A5066;font-size:14px;margin-top:20px">En cas d'empêchement, merci de nous prévenir.</p>`;
+    return {
+      subject: `Votre table est réservée — ${RESTO_NAME}`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px"><h1 style="font-size:22px;color:#1A2238">Votre table vous attend ✓</h1><p style="color:#4A5066;font-size:15px">Bonjour ${nom},</p><p style="color:#4A5066;font-size:15px">Votre réservation chez <b>${esc(RESTO_NAME)}</b> est <b>confirmée</b>. Aucune démarche supplémentaire n'est nécessaire.</p>${recap}<p style="color:#4A5066;font-size:15px">Nous nous réjouissons de vous accueillir.</p>${blocAnnul}<p style="color:#6B7280;font-size:13px;margin-top:24px">${esc(RESTO_NAME)}</p></div>`,
+    };
+  }
 
   if (type === "confirmation") {
     return {
