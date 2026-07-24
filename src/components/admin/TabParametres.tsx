@@ -111,10 +111,10 @@ export default function TabParametres() {
             <span className="champ-aide">Combien de temps une table reste occupée par une réservation. Détermine quand elle redevient disponible — pour les réservations en ligne comme pour la rotation des tables dans le plan de service.</span>
           </div>
           <label className="ligne-toggle">
-            <div className="lib"><b>Confirmation automatique</b>
+            <span className="lib"><b>Confirmation automatique</b>
               <span>Les réservations en ligne sont confirmées immédiatement, sans validation manuelle. La disponibilité est déjà vérifiée par le système : horaires, fermetures, capacité et tables libres. Le client reçoit une confirmation ferme au lieu d'un simple accusé de réception.</span>
-            </div>
-            <input type="checkbox" checked={!!s.auto_confirm} onChange={(e) => setS({ ...s, auto_confirm: e.target.checked })} />
+            </span>
+            <span className="toggle"><input type="checkbox" checked={!!s.auto_confirm} onChange={(e) => setS({ ...s, auto_confirm: e.target.checked })} /><span className="piste" /></span>
           </label>
           {s.auto_confirm && (
             <div className="sous-reglages">
@@ -124,10 +124,10 @@ export default function TabParametres() {
                 <span className="champ-aide">Les grands groupes restent en attente : ils méritent un regard.</span>
               </div>
               <label className="ligne-toggle">
-                <div className="lib"><b>Confirmer aussi le jour même</b>
+                <span className="lib"><b>Confirmer aussi le jour même</b>
                   <span>Déconseillé si votre mise en place est déjà lancée le matin.</span>
-                </div>
-                <input type="checkbox" checked={!!s.auto_confirm_same_day} onChange={(e) => setS({ ...s, auto_confirm_same_day: e.target.checked })} />
+                </span>
+                <span className="toggle"><input type="checkbox" checked={!!s.auto_confirm_same_day} onChange={(e) => setS({ ...s, auto_confirm_same_day: e.target.checked })} /><span className="piste" /></span>
               </label>
               <div className="champ"><label>Repasser en validation manuelle à partir de … absences</label>
                 <input type="number" min="0" max="10" value={s.auto_confirm_block_noshow ?? 1}
