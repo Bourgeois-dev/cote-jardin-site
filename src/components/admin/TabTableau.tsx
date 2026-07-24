@@ -102,6 +102,54 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
   const nbRecurrents = [...parTel.values()].filter((n) => n > 1).length;
   const tauxRecurrence = nbClientsUniques ? Math.round((nbRecurrents / nbClientsUniques) * 100) : 0;
 
+  // ── Taux de remplissage (30 derniers jours) ──────────────────────────────
+  // Couverts servis ÷ capacité réellement offerte. Le dénominateur ne compte
+  // que les services OUVERTS : un restaurant fermé le dimanche ne doit pas voir
+  // son taux baisser à cause d'un jour où il ne sert pas.
+  // Comparé aux 30 jours précédents pour donner une tendance — un pourcentage
+  // seul ne dit pas si l'affaire progresse.
+  const tauxRemplissage = (debut: string, fin: string) => {
+    const rs = resa.filter((r) => r.date >= debut && r.date <= fin && r.status !== "annule");
+    const couverts = sumCovers(rs);
+    let offerts = 0;
+    for (let d = new Date(debut); d.toISOString().slice(0, 10) <= fin; d.setDate(d.getDate() + 1)) {
+      const h = hours.find((x) => x.day_of_week === d.getDay());
+      if (!h || h.is_closed) continue;
+      if (h.lunch_open) offerts += capacite;
+      if (h.dinner_open) offerts += capacite;
+    }
+    return offerts ? Math.round((couverts / offerts) * 100) : 0;
+  };
+  const d60 = new Date(); d60.setDate(d60.getDate() - 60);
+  const d60Str = d60.toISOString().slice(0, 10);
+  const d31 = new Date(); d31.setDate(d31.getDate() - 31);
+  const d31Str = d31.toISOString().slice(0, 10);
+  const remplissage30 = tauxRemplissage(d30Str, todayStr);
+  const remplissage30Prec = tauxRemplissage(d60Str, d31Str);
+  const ecartRemplissage = remplissage30 - remplissage30Prec;
+
+  // ── Couverts réservés sur les 7 prochains jours ──────────────────────────
+  // Sert à décider des commandes et du planning : c'est ce qui est DÉJÀ acquis
+  // pour la semaine, à la différence des KPI du jour.
+  const d7 = new Date(); d7.setDate(d7.getDate() + 7);
+  const d7Str = d7.toISOString().slice(0, 10);
+  const resaSemaine = resa.filter(
+    (r) => r.date >= todayStr && r.date <= d7Str && r.status !== "annule" && r.status !== "no_show"
+  );
+  const couvertsSemaine = sumCovers(resaSemaine);
+
+  // ── Occupation des tables (30 derniers jours) ────────────────────────────
+  // Différent du remplissage en couverts : mesure si les tables sont bien
+  // dimensionnées. Un écart important entre les deux signale des tables de 4
+  // occupées par 2 personnes — donc de la capacité perdue.
+  const placesUtilisees = periode
+    .filter((r) => r.status !== "annule" && (r.table_ids?.length || 0) > 0)
+    .reduce((s, r) => s + (r.table_ids || []).reduce(
+      (c, tid) => c + (tables.find((t) => t.id === tid)?.capacity || 0), 0), 0);
+  const couvertsPlaces = sumCovers(periode.filter(
+    (r) => r.status !== "annule" && (r.table_ids?.length || 0) > 0));
+  const tauxOccupTable = placesUtilisees ? Math.round((couvertsPlaces / placesUtilisees) * 100) : 0;
+
   const JOURS_LONG = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
   // Quand les clients réservent-ils EN LIGNE (heure de création de la demande) ?
   // Basé sur created_at — pertinent uniquement pour source='site' (une saisie
@@ -203,6 +251,9 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
       <div className="topbar"><div><h1>Tableau de bord</h1><div className="sous">Vue d'ensemble de votre activité</div></div></div>
       <div className="contenu">
         {loading && resa.length === 0 && <Chargement />}
+        {/* Cartes du haut : ce qui concerne AUJOURD'HUI et appelle une action.
+            Les indicateurs de fond (santé de l'affaire) sont dans le bloc
+            « Indicateurs » plus bas. */}
         <div className="cartes-stat cartes-stat-kpi">
           <div className="stat"><div className="lib">Couverts aujourd'hui</div><div className="val">{couvAujTotal}</div><div className="det">{nbResaAuj} réservation(s)</div></div>
           <div className="stat"><div className="lib">Disponibles ce midi</div><div className="val" style={{ color: jours[0].midiDispo === 0 ? "var(--annule)" : "var(--ok)" }}>{jours[0].sertMidi ? jours[0].midiDispo : "—"}</div><div className="det">{jours[0].sertMidi ? `sur ${capacite} couverts` : "pas de service midi"}</div></div>
@@ -231,7 +282,9 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
             <div className="val" style={{ color: aPlacer > 0 ? "var(--attente)" : "var(--ink)" }}>{aPlacer}</div>
             <div className="det">{aPlacer > 0 ? "sans table attribuée →" : "sans table attribuée"}</div>
           </div>
-          <div className="stat"><div className="lib">Contacts récoltés</div><div className="val">{leads.length}</div><div className="det">newsletter + réservations</div></div>
+          {/* Ce qui est déjà acquis pour la semaine : sert aux commandes et au
+              planning. Complète les chiffres du jour, qui ne disent rien de la suite. */}
+          <div className="stat"><div className="lib">Couverts à venir</div><div className="val">{couvertsSemaine}</div><div className="det">sur les 7 prochains jours</div></div>
         </div>
 
         {/* Vue semaine — 7 jours glissants depuis aujourd'hui */}
@@ -329,11 +382,28 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
         <div className="bloc">
           <div className="bloc-tete"><div><h2>Indicateurs</h2><div className="desc">Sur les 30 derniers jours, sauf clients récurrents et jour le plus demandé (historique complet).</div></div></div>
           <div className="cartes-stat">
+            <div className="stat">
+              <div className="lib">Taux de remplissage</div>
+              <div className="val">{remplissage30}%</div>
+              <div className="det">
+                {ecartRemplissage === 0
+                  ? "stable vs 30 j. précédents"
+                  : `${ecartRemplissage > 0 ? "+" : ""}${ecartRemplissage} pts vs 30 j. précédents`}
+              </div>
+            </div>
+            <div className="stat">
+              <div className="lib">Occupation des tables</div>
+              <div className="val">{tauxOccupTable}%</div>
+              <div className="det">places réellement utilisées</div>
+            </div>
             <div className="stat"><div className="lib">Taux d'annulation</div><div className="val" style={{ color: tauxAnnulation >= 20 ? "var(--annule)" : "var(--ink)" }}>{tauxAnnulation}%</div><div className="det">{nbAnnulePeriode} sur {periode.length} réservation(s)</div></div>
             <div className="stat"><div className="lib">Taux de no-show</div><div className="val" style={{ color: tauxNoShow >= 10 ? "var(--annule)" : "var(--ink)" }}>{tauxNoShow}%</div><div className="det">{nbNoShowPeriode} absence(s) constatée(s)</div></div>
             <div className="stat"><div className="lib">Taille de groupe moy.</div><div className="val">{tailleMoyenne.toLocaleString("fr-FR", { maximumFractionDigits: 1 })}</div><div className="det">couverts par réservation</div></div>
             <div className="stat"><div className="lib">Clients récurrents</div><div className="val">{tauxRecurrence}%</div><div className="det">{nbRecurrents} sur {nbClientsUniques} client(s)</div></div>
             <div className="stat"><div className="lib">Jour le plus demandé</div><div className="val" style={{ fontSize: jourTop ? undefined : 18 }}>{jourTop || "—"}</div><div className="det">{jourTop ? `${maxCouvJour} couverts cumulés` : "pas encore assez de données"}</div></div>
+            {/* Déplacé depuis les cartes du haut : n'appelle aucune action
+                immédiate, c'est un indicateur de fond. */}
+            <div className="stat"><div className="lib">Contacts récoltés</div><div className="val">{leads.length}</div><div className="det">newsletter + réservations</div></div>
           </div>
         </div>
 
