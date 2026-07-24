@@ -291,17 +291,36 @@ tr:last-child td { border-bottom:none }
 .ps-btn-resa { background:var(--admin-accent); color:#fff; border:none; font-size:14px; font-weight:600; padding:11px 20px; border-radius:10px; cursor:pointer; transition:.15s; white-space:nowrap }
 .ps-btn-resa:hover { background:var(--admin-accent-dark) }
 
-.ps-attente-rappel { display:flex; align-items:center; flex-wrap:wrap; gap:8px;
-  background:rgba(193,138,46,.08); border:1px solid rgba(193,138,46,.25);
-  border-radius:10px; padding:10px 14px; margin:0 24px 12px; flex-shrink:0 }
-.ps-attente-rappel-lab { font-size:12px; font-weight:700; color:var(--attente); text-transform:uppercase; letter-spacing:.04em }
-.ps-attente-jour { display:inline-flex; align-items:center; gap:8px; background:#fff;
-  border:1px solid var(--attente); color:var(--attente); border-radius:999px;
-  padding:4px 12px; font-size:13px; font-weight:600; cursor:pointer; font-family:var(--font-body); transition:.15s }
-.ps-attente-jour:hover { background:var(--attente); color:#fff }
-.ps-attente-jour-nb { background:var(--attente); color:#fff; border-radius:999px;
-  min-width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; padding:0 5px }
-.ps-attente-jour:hover .ps-attente-jour-nb { background:#fff; color:var(--attente) }
+/* Rappels des autres jours à traiter — UNE seule ligne.
+   Avec du volume, l'ancienne version listait tous les jours concernés
+   (24 pastilles sur 3 lignes) : illisible, et le plan était repoussé hors
+   écran. Ici : 3 jours par catégorie + un compteur dépliable. */
+.ps-rappels { display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  background:rgba(193,138,46,.07); border:1px solid rgba(193,138,46,.22);
+  border-radius:10px; padding:7px 14px; margin:0 24px 12px; flex-shrink:0 }
+.ps-rappel-groupe { display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0 }
+.ps-rappel-lab { font-size:10px; font-weight:700; color:var(--attente);
+  text-transform:uppercase; letter-spacing:.1em; flex-shrink:0 }
+.ps-rappel-jour { display:inline-flex; align-items:center; gap:5px; background:#fff;
+  border:1px solid var(--line); color:var(--ink-soft); border-radius:999px;
+  padding:3px 9px; font-size:12px; font-weight:600; cursor:pointer;
+  font-family:var(--font-body); transition:.15s; white-space:nowrap }
+.ps-rappel-jour:hover { border-color:var(--attente); color:var(--attente) }
+/* Les demandes en attente sont plus urgentes : elles gardent la couleur */
+.ps-rappel-jour.attente { border-color:var(--attente); color:var(--attente) }
+.ps-rappel-jour.attente:hover { background:var(--attente); color:#fff }
+.ps-rappel-jour.attente:hover .ps-rappel-nb { background:#fff; color:var(--attente) }
+.ps-rappel-nb { background:var(--attente); color:#fff; border-radius:999px;
+  min-width:16px; height:16px; display:inline-flex; align-items:center;
+  justify-content:center; font-size:10px; font-weight:700; padding:0 4px }
+.ps-rappel-plus, .ps-rappel-replier { background:none; border:1px dashed var(--a25);
+  color:var(--ink-soft); border-radius:999px; padding:3px 10px; font-size:11.5px;
+  font-weight:600; cursor:pointer; font-family:var(--font-body); white-space:nowrap }
+.ps-rappel-plus:hover, .ps-rappel-replier:hover { border-color:var(--attente); color:var(--attente) }
+.ps-rappel-replier { margin-left:auto }
+@media (max-width: 640px) {
+  .ps-rappels { margin:0 16px 10px; gap:10px }
+}
 
 .ps-services { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:4px 24px 16px; flex-shrink:0 }
 .ps-service-bloc { padding:16px 20px; cursor:pointer; transition:.2s; user-select:none; background:#fff; border:1px solid var(--line); border-radius:14px }

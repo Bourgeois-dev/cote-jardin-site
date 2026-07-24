@@ -69,6 +69,7 @@ export default function PlanService({ initialDate, initialService }: { initialDa
   const [resaEclairee, setResaEclairee] = useState<string | null>(null);
   const [creneauActif, setCreneauActif] = useState<string | null>(null);
   const [infoAuto, setInfoAuto] = useState("");
+  const [rappelsOuverts, setRappelsOuverts] = useState(false);
   // Référence de la carte sélectionnée, pour la faire défiler dans la liste
   // quand la sélection vient du plan (clic sur une table).
   const carteRef = useRef<HTMLDivElement | null>(null);
@@ -468,27 +469,51 @@ export default function PlanService({ initialDate, initialService }: { initialDa
         </div>
       </div>
 
-      {/* Rappel jours en attente */}
-      {joursAttente.length > 0 && (
-        <div className="ps-attente-rappel">
-          <span className="ps-attente-rappel-lab">En attente :</span>
-          {joursAttente.map((j) => (
-            <button key={j.date} className="ps-attente-jour" onClick={() => { setDate(j.date); setService(j.svc); }}>
-              {libelleDateCourt(j.date)}<span className="ps-attente-jour-nb">{j.n}</span>
+      {/* Rappel des autres jours à traiter — une seule ligne compacte.
+          Avec beaucoup de réservations, lister TOUS les jours concernés (24
+          pastilles sur 3 lignes) devenait illisible et repoussait le plan vers
+          le bas. On n'affiche donc que les 3 jours les plus proches de chaque
+          catégorie : ce sont les seuls sur lesquels on agit réellement. Le
+          reste est résumé par un compteur, dépliable au clic. */}
+      {(joursAttente.length > 0 || joursAPlacer.length > 0) && (
+        <div className="ps-rappels">
+          {joursAttente.length > 0 && (
+            <div className="ps-rappel-groupe">
+              <span className="ps-rappel-lab">En attente</span>
+              {(rappelsOuverts ? joursAttente : joursAttente.slice(0, 3)).map((j) => (
+                <button key={j.date} className="ps-rappel-jour attente"
+                  onClick={() => { setDate(j.date); setService(j.svc); }}>
+                  {libelleDateCourt(j.date)}<span className="ps-rappel-nb">{j.n}</span>
+                </button>
+              ))}
+              {!rappelsOuverts && joursAttente.length > 3 && (
+                <button className="ps-rappel-plus" onClick={() => setRappelsOuverts(true)}>
+                  +{joursAttente.length - 3}
+                </button>
+              )}
+            </div>
+          )}
+          {joursAPlacer.length > 0 && (
+            <div className="ps-rappel-groupe">
+              <span className="ps-rappel-lab">À placer</span>
+              {(rappelsOuverts ? joursAPlacer : joursAPlacer.slice(0, 3)).map((j) => (
+                <button key={j.date} className="ps-rappel-jour"
+                  onClick={() => { setDate(j.date); setService(j.svc); }}>
+                  {libelleDateCourt(j.date)}<span className="ps-rappel-nb">{j.n}</span>
+                </button>
+              ))}
+              {!rappelsOuverts && joursAPlacer.length > 3 && (
+                <button className="ps-rappel-plus" onClick={() => setRappelsOuverts(true)}>
+                  +{joursAPlacer.length - 3}
+                </button>
+              )}
+            </div>
+          )}
+          {rappelsOuverts && (
+            <button className="ps-rappel-replier" onClick={() => setRappelsOuverts(false)}>
+              Replier
             </button>
-          ))}
-        </div>
-      )}
-
-      {/* Même mécanique pour les réservations non placées des autres jours */}
-      {joursAPlacer.length > 0 && (
-        <div className="ps-attente-rappel">
-          <span className="ps-attente-rappel-lab">À placer :</span>
-          {joursAPlacer.map((j) => (
-            <button key={j.date} className="ps-attente-jour" onClick={() => { setDate(j.date); setService(j.svc); }}>
-              {libelleDateCourt(j.date)}<span className="ps-attente-jour-nb">{j.n}</span>
-            </button>
-          ))}
+          )}
         </div>
       )}
 
