@@ -36,14 +36,23 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
       .filter((r) => r.date === dateStr && r.status !== "annule" && (service === "midi" ? estMidi(r.time) : !estMidi(r.time)))
       .reduce((s, r) => s + (r.covers || 0), 0);
 
-  const att = resa.filter((r) => r.status === "attente").length;
+  // Uniquement les demandes À VENIR : une réservation en attente pour un service
+  // déjà passé n'a plus à être confirmée (même raison que « À placer » ci-dessous).
+  const att = resa.filter((r) => r.status === "attente" && r.date >= todayStr).length;
 
   // « À placer » : réservation active dont aucune table n'est assignée, ou dont les tables
   // assignées ne couvrent pas les couverts. Même règle que le plan de service (estPlacee).
+  //
+  // ⚠️ Uniquement les réservations À VENIR. Le tableau de bord charge une fenêtre
+  // de J-90 (pour les statistiques) : sans ce filtre, une réservation passée non
+  // placée gonflait le compteur indéfiniment, et le clic ouvrait le plan sur un
+  // service terminé — donc un écran vide. Placer une table pour un service déjà
+  // passé n'a aucun sens.
   const capaciteResa = (r: Reservation) =>
     (r.table_ids || []).reduce((s, tid) => s + (tables.find((t) => t.id === tid)?.capacity || 0), 0);
   const listeAPlacer = resa.filter(
-    (r) => r.status !== "annule" && r.status !== "no_show" && !((r.table_ids?.length || 0) > 0 && capaciteResa(r) >= r.covers)
+    (r) => r.date >= todayStr && r.status !== "annule" && r.status !== "no_show"
+      && !((r.table_ids?.length || 0) > 0 && capaciteResa(r) >= r.covers)
   );
   const aPlacer = listeAPlacer.length;
 
@@ -55,7 +64,7 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
   const dateAPlacer = triParDate(listeAPlacer)[0]?.date;
   const serviceAPlacer: "midi" | "soir" | undefined = triParDate(listeAPlacer)[0]
     ? (estMidi(triParDate(listeAPlacer)[0].time) ? "midi" : "soir") : undefined;
-  const listeAConfirmer = resa.filter((r) => r.status === "attente");
+  const listeAConfirmer = resa.filter((r) => r.status === "attente" && r.date >= todayStr);
   const dateAConfirmer = triParDate(listeAConfirmer)[0]?.date;
   const serviceAConfirmer: "midi" | "soir" | undefined = triParDate(listeAConfirmer)[0]
     ? (estMidi(triParDate(listeAConfirmer)[0].time) ? "midi" : "soir") : undefined;
