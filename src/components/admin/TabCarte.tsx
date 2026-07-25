@@ -5,6 +5,7 @@ import { supabase, fetchContent, messageUpload } from "../../lib/supabase";
 import type { MenuItem } from "../../lib/types";
 import { useConfirm } from "./Confirm";
 import Chargement from "./Chargement";
+import ScanArdoise from "./ScanArdoise";
 
 const CAT_BASE = ["Entrées", "Plats", "Desserts", "Menus", "Boissons"];
 const TYPES_OK = ["application/pdf", "image/png", "image/jpeg"];
@@ -64,6 +65,7 @@ export default function TabCarte() {
   const [q, setQ] = useState("");                       // recherche
   const [catFiltre, setCatFiltre] = useState("");       // filtre catégorie ("" = toutes)
   const [prixEdit, setPrixEdit] = useState<{ id: string; val: string } | null>(null); // prix inline
+  const [scanOuvert, setScanOuvert] = useState(false); // modale de scan d'ardoise
   const dragId = useRef<string | null>(null);
 
   // Ordre global : plats triés par position ; catégories dans l'ordre de 1re apparition.
@@ -140,6 +142,19 @@ export default function TabCarte() {
   }
 
   function nouveau() { setEdit({ name: "", category: catsOrdre[0] || "Plats", description: "", price: 0, is_active: true }); setNewCat(false); setCatText(""); }
+
+  // Insertion en masse des plats validés depuis le scan d'ardoise. Les plats
+  // arrivent MASQUÉS (is_active=false) : le restaurateur les rend visibles quand
+  // il le souhaite, ce qui évite d'exposer une lecture non relue sur le site.
+  async function insererDepuisScan(nouveaux: { name: string; category: string; description: string; price: number }[]) {
+    const lignes = nouveaux.map((p) => ({
+      name: p.name, category: p.category, description: p.description || "",
+      price: p.price || 0, is_active: false, position: 9999,
+    }));
+    const { error } = await supabase.from("menu_items").insert(lignes);
+    if (error) throw error;
+    await reload();
+  }
   function modifier(m: MenuItem) { setEdit({ ...m }); setNewCat(false); setCatText(""); }
 
   async function save() {
@@ -195,7 +210,12 @@ export default function TabCarte() {
       <div className="topbar"><div><h1>La carte</h1><div className="sous">Vos plats, dans l'ordre du site — glissez-déposez pour réordonner</div></div></div>
       <div className="contenu">
         {loading && rows.length === 0 && <Chargement />}<div className="bloc">
-        <div className="bloc-tete"><div><h2>Vos plats</h2></div><button className="btn btn-accent" onClick={nouveau}>+ Ajouter un plat</button></div>
+        <div className="bloc-tete"><div><h2>Vos plats</h2></div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button className="btn btn-ligne" onClick={() => setScanOuvert(true)}>📷 Scanner une ardoise</button>
+            <button className="btn btn-accent" onClick={nouveau}>+ Ajouter un plat</button>
+          </div>
+        </div>
 
         <div className="carte-outils">
           <input className="carnet-search" placeholder="Rechercher un plat…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -284,6 +304,14 @@ export default function TabCarte() {
         )}
         {upErr && <div className="alerte" style={{ marginTop: 10 }}>{upErr}</div>}
       </div></div>
+
+      {scanOuvert && (
+        <ScanArdoise
+          categoriesConnues={catsOrdre}
+          onValider={insererDepuisScan}
+          onFermer={() => setScanOuvert(false)}
+        />
+      )}
     </>
   );
 }
