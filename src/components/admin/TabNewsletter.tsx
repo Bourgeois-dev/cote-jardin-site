@@ -62,13 +62,6 @@ function blocVide(type: "pleine_largeur" | "deux_colonnes"): Bloc {
     : { type, ...resa };
 }
 
-// Welcome n'apparaît pas dans TEMPLATES (pas de formulaire, déclenché
-// automatiquement) mais doit être nommé/filtrable dans la liste des campagnes.
-const TYPE_DISPLAY: Record<string, { label: string; icon: string }> = {
-  welcome: { label: "Bienvenue", icon: "💌" },
-  ...Object.fromEntries(Object.entries(TEMPLATES).map(([k, t]) => [k, { label: t.label, icon: t.icon }])),
-};
-
 // Segments de ciblage. Chacun correspond à une intention distincte : inutile de
 // multiplier les tranches d'inactivité, le message de reconquête est le même.
 // Toute modification ici doit être répercutée dans newsletter_segment_counts()
@@ -1149,9 +1142,8 @@ function dateRef(c: Campaign): string {
                     : <span>{fmtDatetime(c.sent_at || c.scheduled_at) || "—"}</span>;
                   return (
                     <div className="nl-carte" key={c.id}>
-                      {/* En-tête : icône + objet + menu ⋯ */}
+                      {/* En-tête : objet + menu ⋯ */}
                       <div className="nl-carte-tete">
-                        <span className="nl-carte-ico">{TYPE_DISPLAY[c.template]?.icon || "📧"}</span>
                         <div className="nl-carte-titre">
                           <b title={c.subject}>{c.subject}</b>
                         </div>

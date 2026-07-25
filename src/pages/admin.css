@@ -1379,7 +1379,6 @@ tr:hover .drag-poignee { color:var(--ink-soft) }
 .nl-carte:hover { border-color:var(--a25); box-shadow:0 3px 14px rgba(0,0,0,.05) }
 
 .nl-carte-tete { display:flex; align-items:flex-start; gap:9px }
-.nl-carte-ico { font-size:20px; line-height:1.2; flex-shrink:0 }
 .nl-carte-titre { min-width:0; flex:1 }
 .nl-carte-titre b {
   display:block; font-size:14px; line-height:1.3; color:var(--ink);
