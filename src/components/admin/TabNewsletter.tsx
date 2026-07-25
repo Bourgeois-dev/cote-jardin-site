@@ -92,6 +92,23 @@ function fmtDatetime(dt: string | null): string {
 // ── Canvas de prévisualisation — Événementiel ───────────────────────────────
 // Rendu fidèle (au pixel près dans la logique, simplifié en React/CSS pour
 // l'écran) du template HTML envoyé par l'edge function send-newsletter.
+// Renvoie l'URL de la première image trouvée dans les blocs d'une campagne
+// (bloc pleine largeur -> .image ; bloc deux colonnes -> colonnes[].image),
+// ou null si aucune. Utilisé pour la vignette d'aperçu sur les cartes.
+function premiereImage(content: any): string | null {
+  const blocs: any[] = Array.isArray(content?.blocs) ? content.blocs : [];
+  for (const b of blocs) {
+    if (b?.type === "deux_colonnes") {
+      for (const col of (b.colonnes || [])) {
+        if (col?.image) return col.image;
+      }
+    } else if (b?.image) {
+      return b.image;
+    }
+  }
+  return null;
+}
+
 // Couleurs : variables admin par défaut, remplacées par la charte du client
 // une fois ACCENT_COLOR/ACCENT_DARK configurés côté secrets (non visibles ici).
 // Aperçu unique : rend n'importe quelle composition de blocs.
@@ -1140,8 +1157,13 @@ function dateRef(c: Campaign): string {
                   const dateLbl = c.status === "scheduled" && c.scheduled_at
                     ? <span style={{ color: "var(--admin-accent)", fontWeight: 700 }}>→ {fmtDatetime(c.scheduled_at)}</span>
                     : <span>{fmtDatetime(c.sent_at || c.scheduled_at) || "—"}</span>;
+                  const img = premiereImage(c.content);
                   return (
                     <div className="nl-carte" key={c.id}>
+                      {/* Vignette : première image du contenu, ou placeholder discret */}
+                      <div className={`nl-carte-vignette ${img ? "" : "vide"}`}>
+                        {img ? <img src={img} alt="" loading="lazy" /> : <span>Pas d'image</span>}
+                      </div>
                       {/* En-tête : objet + menu ⋯ */}
                       <div className="nl-carte-tete">
                         <div className="nl-carte-titre">
