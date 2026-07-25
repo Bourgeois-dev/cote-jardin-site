@@ -149,6 +149,18 @@ tr:last-child td { border-bottom:none }
   font-family:var(--font-body); font-weight:600; font-size:14px; padding:10px 18px; border-radius:8px; transition:.13s }
 .app .btn-accent,.login-wrap .btn-accent { background:var(--admin-accent); color:#fff }
 .app .btn-accent:hover,.login-wrap .btn-accent:hover { background:var(--admin-accent-dark) }
+
+/* Focus-visible : app.css (partagé site+admin) définit un outline vert (--accent,
+   charte du site). Dans l'ADMIN, on le repasse en bordeaux (--admin-accent). Couvre
+   les 3 scopes admin : .app (connecté), .login-wrap (login) et .modal-in (modales,
+   rendues hors .app par le provider). Le site conserve son focus vert. */
+.app :focus-visible,
+.login-wrap :focus-visible,
+.modal-in :focus-visible { outline-color:var(--admin-accent) }
+/* Bordure de focus des champs de la modale (style inline sans classe .champ) */
+.modal-in input:focus,
+.modal-in textarea:focus,
+.modal-in select:focus { outline:none; border-color:var(--admin-accent); box-shadow:0 0 0 2px var(--a12) }
 .btn-ligne { background:#fff; border:1px solid var(--line); color:var(--ink) }
 .btn-ligne:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
 .btn-mini { font-size:12.5px; padding:5px 10px; border-radius:6px }
@@ -668,7 +680,7 @@ tr:last-child td { border-bottom:none }
 .ps-saisie-fermer { background:transparent; border:none; font-size:18px; cursor:pointer; color:var(--ink-soft); line-height:1; padding:2px 6px }
 .ps-saisie-date { font-size:12px; color:var(--ink-soft); margin-bottom:12px; font-weight:500; display:flex; align-items:center; gap:8px; flex-wrap:wrap }
 .ps-saisie-nav { width:26px; height:26px; border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer; font-size:15px; line-height:1; color:var(--ink) }
-.ps-saisie-nav:hover { border-color:var(--accent); color:var(--accent) }
+.ps-saisie-nav:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
 .ps-saisie-datefield { border:1px solid var(--line); border-radius:6px; padding:4px 8px; font-size:12px; font-family:inherit }
 .ps-saisie-row { display:grid; grid-template-columns:1fr 1fr; gap:10px }
 
@@ -1059,7 +1071,7 @@ a.cli-coord-val:hover { text-decoration:underline }
   width:24px; height:24px; border:1px solid var(--line); background:#fff;
   border-radius:6px; cursor:pointer; font-size:10px; line-height:1; color:var(--ink-soft);
 }
-.carte-cat-fleches button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent) }
+.carte-cat-fleches button:hover:not(:disabled) { border-color:var(--admin-accent); color:var(--admin-accent) }
 .carte-cat-fleches button:disabled { opacity:.35; cursor:default }
 .carte-plat-masque { opacity:.5 }
 .drag-poignee { color:var(--line); font-size:14px; user-select:none }
@@ -1069,7 +1081,7 @@ tr:hover .drag-poignee { color:var(--ink-soft) }
   padding:4px 8px; cursor:pointer; font:inherit; color:var(--ink);
 }
 .prix-btn:hover { border-color:var(--line); background:var(--cream) }
-.prix-inline { width:80px; border:1px solid var(--accent); border-radius:6px; padding:4px 8px; font:inherit }
+.prix-inline { width:80px; border:1px solid var(--admin-accent); border-radius:6px; padding:4px 8px; font:inherit }
 
 /* Onglets de zones dans le plan de service (Salle / Terrasse…) */
 .zones-barre { display:flex; align-items:center; gap:6px; flex-wrap:wrap }
