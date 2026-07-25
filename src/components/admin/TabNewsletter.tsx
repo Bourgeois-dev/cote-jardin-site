@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase, messageUpload } from "../../lib/supabase";
 import { useConfirm } from "./Confirm";
 import { useDirty } from "./Dirty";
@@ -30,6 +30,7 @@ interface Campaign {
   sent_count: number;
   error_message: string | null;
   created_at: string;
+  folder: string | null;
 }
 
 // ── Constantes ──────────────────────────────────────────────────────────────
@@ -847,6 +848,8 @@ export default function TabNewsletter() {
   const [filtreType, setFiltreType] = useState<string>("tous"); // "tous" | clé de TEMPLATES | "welcome"
   const [dateDebut, setDateDebut] = useState("");
   const [dateFin, setDateFin] = useState("");
+  const [filtreDossier, setFiltreDossier] = useState<string>("tous"); // "tous" | "__sans__" | nom de dossier
+  const [menuOuvert, setMenuOuvert] = useState<string | null>(null);   // id de campagne dont le menu ⋯ est ouvert
   // Pré-remplissage du formulaire : dupliquer (sans id) ou reprendre un brouillon (avec id)
   const [prefill, setPrefill] = useState<{ id?: string; template: string; segment: string; subject: string; content: Record<string, string> } | undefined>(undefined);
   const confirm = useConfirm();
@@ -872,6 +875,18 @@ export default function TabNewsletter() {
   }
 
   useEffect(() => { charger(); }, []);
+
+  // Ferme le menu ⋯ au clic extérieur ou touche Échap.
+  useEffect(() => {
+    if (!menuOuvert) return;
+    const onClic = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest(".carte-menu")) setMenuOuvert(null);
+    };
+    const onEchap = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOuvert(null); };
+    document.addEventListener("mousedown", onClic);
+    document.addEventListener("keydown", onEchap);
+    return () => { document.removeEventListener("mousedown", onClic); document.removeEventListener("keydown", onEchap); };
+  }, [menuOuvert]);
 
   // Realtime
   useEffect(() => {
@@ -906,6 +921,20 @@ export default function TabNewsletter() {
     charger();
   }
 
+  // Range une campagne dans un dossier (ou l'en retire si dossier vide).
+  async function deplacer(c: Campaign, dossier: string | null) {
+    await supabase.from("newsletter_campaigns").update({ folder: dossier || null }).eq("id", c.id);
+    setMenuOuvert(null);
+    charger();
+  }
+
+  // Crée un dossier à la volée en y rangeant la campagne (saisie libre).
+  async function deplacerVersNouveau(c: Campaign) {
+    const nom = window.prompt("Nom du dossier :", c.folder || "")?.trim();
+    if (nom === undefined) return;      // annulé
+    await deplacer(c, nom || null);      // vide → retire du dossier
+  }
+
   async function envoyer(c: Campaign) {
     const ok = await confirm({
       titre: "Envoyer maintenant ?",
@@ -933,11 +962,18 @@ function dateRef(c: Campaign): string {
   const affichees = campagnes.filter((c) => {
     if (filtre !== "toutes" && c.status !== filtre) return false;
     if (filtreType !== "tous" && c.template !== filtreType) return false;
+    if (filtreDossier === "__sans__" && c.folder) return false;
+    if (filtreDossier !== "tous" && filtreDossier !== "__sans__" && c.folder !== filtreDossier) return false;
     const ref = dateRef(c);
     if (dateDebut && ref && ref.slice(0, 10) < dateDebut) return false;
     if (dateFin && ref && ref.slice(0, 10) > dateFin) return false;
     return true;
   });
+
+  // Dossiers existants (déduits des campagnes) + compteur par dossier.
+  const dossiers = Array.from(new Set(campagnes.map((c) => c.folder).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, "fr"));
+  const nbSansDossier = campagnes.filter((c) => !c.folder).length;
+  const compteDossier = (nom: string) => campagnes.filter((c) => c.folder === nom).length;
 
   const typesPresents = Array.from(new Set(campagnes.map((c) => c.template)));
   const filtresDateActifs = !!dateDebut || !!dateFin || filtreType !== "tous";
@@ -1015,6 +1051,25 @@ function dateRef(c: Campaign): string {
               </div>
             )}
 
+            {/* Barre de dossiers : n'apparaît que si au moins un dossier existe */}
+            {dossiers.length > 0 && (
+              <div className="nl-dossiers">
+                <button className={`nl-doss-puce ${filtreDossier === "tous" ? "on" : ""}`} onClick={() => setFiltreDossier("tous")}>
+                  Tous <span className="ps-pip">{campagnes.length}</span>
+                </button>
+                {dossiers.map((d) => (
+                  <button key={d} className={`nl-doss-puce ${filtreDossier === d ? "on" : ""}`} onClick={() => setFiltreDossier(d)}>
+                    📁 {d} <span className="ps-pip">{compteDossier(d)}</span>
+                  </button>
+                ))}
+                {nbSansDossier > 0 && (
+                  <button className={`nl-doss-puce ${filtreDossier === "__sans__" ? "on" : ""}`} onClick={() => setFiltreDossier("__sans__")}>
+                    Sans dossier <span className="ps-pip">{nbSansDossier}</span>
+                  </button>
+                )}
+              </div>
+            )}
+
             {loading && <p className="vide">Chargement…</p>}
 
             {!loading && affichees.length === 0 && (
@@ -1042,82 +1097,84 @@ function dateRef(c: Campaign): string {
             )}
 
             {!loading && affichees.length > 0 && (
-              <div className="bloc" style={{ padding: 0 }}>
-                <table className="tbl-cartes">
-                  <thead>
-                    <tr>
-                      <th>Campagne</th>
-                      <th>Segment</th>
-                      <th>Envoi</th>
-                      <th>Résultat</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {affichees.map((c) => {
-                      const st = STATUS_LABELS[c.status] || { label: c.status, cls: "" };
-                      return (
-                        <tr key={c.id}>
-                          <td data-label="Campagne">
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <span style={{ fontSize: 18 }}>{TYPE_DISPLAY[c.template]?.icon || "📧"}</span>
-                              <div>
-                                <b style={{ fontSize: 14 }}>{c.subject}</b>
-                                <div className="sub-desc">{TYPE_DISPLAY[c.template]?.label || c.template}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td data-label="Segment" style={{ fontSize: 13 }}>
-                            {SEGMENTS[c.segment]?.label || c.segment}
-                            {c.status === "sent" && c.recipients_count != null && (
-                              <div className="sub-desc" style={{ fontSize: 11, marginTop: 2 }}>
-                                {c.recipients_count} destinataire{c.recipients_count > 1 ? "s" : ""}
-                              </div>
-                            )}
-                          </td>
-                          {/* Une seule colonne : date d'envoi effective, ou envoi à venir mis en avant */}
-                          <td data-label="Envoi" style={{ fontSize: 13 }}>
-                            {c.status === "scheduled" && c.scheduled_at ? (
-                              <span style={{ color: "var(--admin-accent)", fontWeight: 700 }}>→ {fmtDatetime(c.scheduled_at)}</span>
-                            ) : (
-                              <span style={{ color: "var(--ink-soft)" }}>{fmtDatetime(c.sent_at || c.scheduled_at)}</span>
-                            )}
-                          </td>
-                          <td data-label="Résultat">
-                            <span className={`tag ${st.cls}`} style={{ fontSize: 11 }}>{st.label}</span>
-                            {c.status === "sent" && c.sent_count != null && c.recipients_count != null && c.sent_count < c.recipients_count && (
-                              <div style={{ fontSize: 11, color: "var(--annule)", marginTop: 4 }}>
-                                ⚠ {c.sent_count} / {c.recipients_count} envoyés
-                              </div>
-                            )}
-                            {c.error_message && (
-                              <div style={{ fontSize: 11, color: "var(--annule)", marginTop: 2 }}>⚠ {c.error_message.slice(0, 60)}</div>
-                            )}
-                          </td>
-                          <td className="td-actions">
-                            <div className="actions-ligne">
-                              {(c.status === "draft") && (
+              <div className="nl-grille">
+                {affichees.map((c) => {
+                  const st = STATUS_LABELS[c.status] || { label: c.status, cls: "" };
+                  const cibles = c.recipients_count;
+                  // Date de référence lisible selon le statut.
+                  const dateLbl = c.status === "scheduled" && c.scheduled_at
+                    ? <span style={{ color: "var(--admin-accent)", fontWeight: 700 }}>→ {fmtDatetime(c.scheduled_at)}</span>
+                    : <span>{fmtDatetime(c.sent_at || c.scheduled_at) || "—"}</span>;
+                  return (
+                    <div className="nl-carte" key={c.id}>
+                      {/* En-tête : icône + objet + menu ⋯ */}
+                      <div className="nl-carte-tete">
+                        <span className="nl-carte-ico">{TYPE_DISPLAY[c.template]?.icon || "📧"}</span>
+                        <div className="nl-carte-titre">
+                          <b title={c.subject}>{c.subject}</b>
+                          <div className="sub-desc">{TYPE_DISPLAY[c.template]?.label || c.template}</div>
+                        </div>
+                        <div className="carte-menu">
+                          <button className="nl-menu-btn" aria-label="Actions" aria-haspopup="true"
+                            aria-expanded={menuOuvert === c.id}
+                            onClick={() => setMenuOuvert(menuOuvert === c.id ? null : c.id)}>⋯</button>
+                          {menuOuvert === c.id && (
+                            <div className="nl-menu" role="menu">
+                              {c.status === "draft" && (
                                 <>
-                                  <button className="btn btn-mini btn-ligne" onClick={() => reprendre(c)}>✎ Reprendre</button>
-                                  <button className="btn btn-mini btn-ok" onClick={() => envoyer(c)}>⚡ Envoyer</button>
+                                  <button role="menuitem" onClick={() => { setMenuOuvert(null); reprendre(c); }}>✎ Reprendre</button>
+                                  <button role="menuitem" onClick={() => { setMenuOuvert(null); envoyer(c); }}>⚡ Envoyer</button>
                                 </>
                               )}
                               {c.status === "scheduled" && (
-                                <button className="btn btn-mini btn-ligne" onClick={() => annuler(c)}>Annuler l'envoi</button>
+                                <button role="menuitem" onClick={() => { setMenuOuvert(null); annuler(c); }}>Annuler l'envoi</button>
                               )}
                               {TEMPLATES[c.template] && (
-                                <button className="btn btn-mini btn-ligne" onClick={() => dupliquer(c)}>⧉ Dupliquer</button>
+                                <button role="menuitem" onClick={() => { setMenuOuvert(null); dupliquer(c); }}>⧉ Dupliquer</button>
+                              )}
+                              <div className="nl-menu-sep" />
+                              {dossiers.filter((d) => d !== c.folder).map((d) => (
+                                <button role="menuitem" key={d} onClick={() => deplacer(c, d)}>📁 Ranger dans « {d} »</button>
+                              ))}
+                              <button role="menuitem" onClick={() => deplacerVersNouveau(c)}>📁＋ Nouveau dossier…</button>
+                              {c.folder && (
+                                <button role="menuitem" onClick={() => deplacer(c, null)}>↩ Retirer du dossier</button>
                               )}
                               {(c.status === "draft" || c.status === "failed") && (
-                                <button className="btn btn-mini btn-danger" onClick={() => supprimer(c)}>Supprimer</button>
+                                <>
+                                  <div className="nl-menu-sep" />
+                                  <button role="menuitem" className="danger" onClick={() => { setMenuOuvert(null); supprimer(c); }}>Supprimer</button>
+                                </>
                               )}
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Ciblage mis en avant */}
+                      <div className="nl-carte-cible">
+                        <span className="nl-cible-nb">{cibles != null ? cibles : "—"}</span>
+                        <span className="nl-cible-lbl">
+                          {cibles != null ? `destinataire${cibles > 1 ? "s" : ""}` : "à envoyer"}
+                          <span className="sub-desc"> · {SEGMENTS[c.segment]?.label || c.segment}</span>
+                        </span>
+                      </div>
+
+                      {/* Pied : statut + date + dossier */}
+                      <div className="nl-carte-pied">
+                        <span className={`tag ${st.cls}`}>{st.label}</span>
+                        <span className="nl-carte-date">{dateLbl}</span>
+                      </div>
+                      {c.folder && <span className="nl-carte-dossier">📁 {c.folder}</span>}
+                      {c.status === "sent" && c.sent_count != null && cibles != null && c.sent_count < cibles && (
+                        <div className="nl-carte-alerte">⚠ {c.sent_count} / {cibles} envoyés</div>
+                      )}
+                      {c.error_message && (
+                        <div className="nl-carte-alerte">⚠ {c.error_message.slice(0, 60)}</div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </>

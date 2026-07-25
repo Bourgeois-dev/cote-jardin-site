@@ -303,6 +303,7 @@ create table if not exists public.newsletter_campaigns (
   recipients_count int,
   sent_count       int default 0,
   error_message    text,
+  folder           text,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
 );
@@ -329,6 +330,7 @@ create unique index if not exists customers_email_uidx            on public.cust
 create unique index if not exists customers_phone_uidx            on public.customers (phone)         where (phone <> '');
 create unique index if not exists leads_unsubscribe_token_idx     on public.leads (unsubscribe_token);
 create index        if not exists newsletter_campaigns_status_idx on public.newsletter_campaigns (status, scheduled_at);
+create index        if not exists newsletter_campaigns_folder_idx on public.newsletter_campaigns (folder);
 create index        if not exists newsletter_sends_campaign_idx   on public.newsletter_sends (campaign_id);
 create index        if not exists partners_display_order          on public.partners (featured desc, position);
 create unique index if not exists reservations_cancel_token_idx   on public.reservations (cancel_token);
