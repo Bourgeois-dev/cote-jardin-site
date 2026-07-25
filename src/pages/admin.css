@@ -1458,6 +1458,23 @@ tr:hover .drag-poignee { color:var(--ink-soft) }
 
 /* Barre de dossiers (puces filtrantes) */
 .nl-dossiers { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px }
+
+/* Section « Automatisation » — l'email de bienvenue (trigger) présenté à part */
+.nl-trigger {
+  border:1px solid var(--line); border-radius:14px; background:rgba(122,31,36,.03);
+  margin-bottom:22px; overflow:hidden;
+}
+.nl-trigger-tete { display:flex; align-items:center; gap:18px; flex-wrap:wrap; padding:16px 18px }
+.nl-trigger-info { display:flex; align-items:center; gap:12px; flex:1; min-width:220px }
+.nl-trigger-pastille {
+  flex-shrink:0; font-size:11px; font-weight:700; color:var(--admin-accent);
+  background:var(--a08); border-radius:999px; padding:5px 11px; white-space:nowrap;
+}
+.nl-trigger-info b { font-size:14px; color:var(--ink) }
+.nl-trigger-stat { display:flex; align-items:baseline; gap:8px }
+.nl-trigger-nb { font-size:24px; font-weight:800; color:var(--admin-accent); line-height:1 }
+.nl-trigger-lbl { font-size:12.5px; color:var(--ink-soft) }
+.nl-trigger-apercu { padding:20px 18px 24px; border-top:1px solid var(--line); background:#faf8f4 }
 .nl-doss-puce {
   display:inline-flex; align-items:center; gap:7px;
   font-size:13px; font-weight:600; cursor:pointer;

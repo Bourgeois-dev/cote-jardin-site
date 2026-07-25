@@ -849,6 +849,52 @@ function NouveauForm({ onSaved, initial }: {
 }
 
 // ── Onglet principal ────────────────────────────────────────────────────────
+
+// Aperçu fidèle de l'email de bienvenue (transactionnel, codé dans l'edge function
+// send-newsletter, template "welcome"). Reflète sa structure : bandeau accent,
+// salutation, texte d'accueil, bouton, signature. Seul c.message est variable.
+function ApercuWelcome({ restoName, logoUrl }: { restoName: string; logoUrl: string }) {
+  const accent = "var(--accent, #5a7d4f)";
+  const INK = "#4A4A45";
+  const nom = restoName || "votre restaurant";
+  return (
+    <div className="welcome-apercu">
+      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(80,100,60,.12)", maxWidth: 500, margin: "0 auto" }}>
+        {/* Logo */}
+        <div style={{ textAlign: "center", padding: "20px 30px 6px" }}>
+          {logoUrl
+            ? <img src={logoUrl} alt={nom} style={{ height: 40, maxWidth: 180, objectFit: "contain", margin: "0 auto", display: "block" }} />
+            : <span style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink)" }}>{nom}</span>}
+        </div>
+        {/* Bandeau accent */}
+        <div style={{ background: accent, color: "#fff", textAlign: "center", padding: "26px 30px" }}>
+          <div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", opacity: .8, marginBottom: 8 }}>Bienvenue</div>
+          <div style={{ fontFamily: "var(--font-display, Georgia, serif)", fontSize: 24, lineHeight: 1.2 }}>Bienvenue chez {nom} !</div>
+        </div>
+        {/* Corps */}
+        <div style={{ padding: "26px 30px 6px" }}>
+          <p style={{ fontFamily: "var(--font-display, Georgia, serif)", fontSize: 18, color: "#3A4A2C", margin: "0 0 16px" }}>Bonjour [Prénom],</p>
+          <p style={{ fontSize: 14, lineHeight: 1.7, color: INK, margin: 0 }}>
+            Merci de votre inscription. Vous faites maintenant partie de nos proches et serez les premiers informés de nos actualités, nouveaux menus et événements.
+          </p>
+        </div>
+        {/* Bouton */}
+        <div style={{ textAlign: "center", padding: "20px 30px 6px" }}>
+          <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 14, fontWeight: 700, padding: "12px 34px", borderRadius: 28 }}>Découvrir le restaurant</span>
+        </div>
+        {/* Signature */}
+        <div style={{ padding: "16px 30px 32px" }}>
+          <p style={{ fontSize: 14, color: INK, margin: "0 0 4px" }}>À très bientôt,</p>
+          <p style={{ fontFamily: "var(--font-display, Georgia, serif)", fontSize: 16, fontStyle: "italic", color: "#3A4A2C", margin: 0 }}>{nom}</p>
+        </div>
+      </div>
+      <div style={{ fontSize: 11.5, color: "var(--ink-soft)", textAlign: "center", marginTop: 12, fontStyle: "italic" }}>
+        [Prénom] est remplacé par le prénom de l'inscrit s'il est connu. Ce message n'est pas modifiable ici.
+      </div>
+    </div>
+  );
+}
+
 export default function TabNewsletter() {
   const confirmDirty = useConfirm();
   const [campagnes, setCampagnes] = useState<Campaign[]>([]);
@@ -860,6 +906,13 @@ export default function TabNewsletter() {
   const [filtreDossier, setFiltreDossier] = useState<string>("tous"); // "tous" | "__sans__" | nom de dossier
   const [menuOuvert, setMenuOuvert] = useState<string | null>(null);   // id de campagne dont le menu ⋯ est ouvert
   const [registreDossiers, setRegistreDossiers] = useState<string[]>([]); // dossiers déclarés (table), incl. vides
+  const [welcomeOuvert, setWelcomeOuvert] = useState(false); // accordéon d'aperçu de l'email de bienvenue
+  const restoName = import.meta.env.VITE_RESTO_NAME || "";
+  const [logoUrl, setLogoUrl] = useState(""); // logo newsletter, pour l'aperçu du Welcome
+  useEffect(() => {
+    supabase.from("site_content").select("content").eq("section_key", "newsletter_logo").maybeSingle()
+      .then(({ data }) => { if (data?.content?.url) setLogoUrl(data.content.url); });
+  }, []);
   // Pré-remplissage du formulaire : dupliquer (sans id) ou reprendre un brouillon (avec id)
   const [prefill, setPrefill] = useState<{ id?: string; template: string; segment: string; subject: string; content: Record<string, string> } | undefined>(undefined);
   const confirm = useConfirm();
@@ -1010,7 +1063,16 @@ function dateRef(c: Campaign): string {
     return c.sent_at || c.scheduled_at || c.created_at;
   }
 
-  const affichees = campagnes.filter((c) => {
+  // Le Welcome est un email transactionnel (déclenché à l'inscription), présenté à
+  // part dans la section « Automatisation ». On l'exclut donc de la grille des campagnes.
+  const campagnesGrille = campagnes.filter((c) => c.template !== "welcome");
+  // Stats agrégées du Welcome : chaque inscription crée une ligne welcome → le nombre
+  // de lignes (et la somme des sent_count) donne le nombre d'envois.
+  const welcomeLignes = campagnes.filter((c) => c.template === "welcome");
+  const welcomeEnvois = welcomeLignes.reduce((n, c) => n + (c.sent_count || 0), 0) || welcomeLignes.length;
+  const welcomeDernier = welcomeLignes.map((c) => c.sent_at).filter(Boolean).sort().slice(-1)[0] || null;
+
+  const affichees = campagnesGrille.filter((c) => {
     if (filtre !== "toutes" && c.status !== filtre) return false;
     if (filtreDossier === "__sans__" && c.folder) return false;
     if (filtreDossier !== "tous" && filtreDossier !== "__sans__" && c.folder !== filtreDossier) return false;
@@ -1024,23 +1086,23 @@ function dateRef(c: Campaign): string {
   // réellement portés par des campagnes. Triée alphabétiquement (FR).
   const dossiers = Array.from(new Set([
     ...registreDossiers,
-    ...(campagnes.map((c) => c.folder).filter(Boolean) as string[]),
+    ...(campagnesGrille.map((c) => c.folder).filter(Boolean) as string[]),
   ])).sort((a, b) => a.localeCompare(b, "fr"));
-  const nbSansDossier = campagnes.filter((c) => !c.folder).length;
-  const compteDossier = (nom: string) => campagnes.filter((c) => c.folder === nom).length;
+  const nbSansDossier = campagnesGrille.filter((c) => !c.folder).length;
+  const compteDossier = (nom: string) => campagnesGrille.filter((c) => c.folder === nom).length;
 
   const filtresDateActifs = !!dateDebut || !!dateFin;
 
-  const nbScheduled = campagnes.filter((c) => c.status === "scheduled").length;
-  const nbDraft     = campagnes.filter((c) => c.status === "draft").length;
-  const nbSent      = campagnes.filter((c) => c.status === "sent").length;
+  const nbScheduled = campagnesGrille.filter((c) => c.status === "scheduled").length;
+  const nbDraft     = campagnesGrille.filter((c) => c.status === "draft").length;
+  const nbSent      = campagnesGrille.filter((c) => c.status === "sent").length;
 
   return (
     <div className="contenu">
       <div className="topbar">
         <div>
           <h1>Newsletter</h1>
-          <p className="sous">Campagnes email — {campagnes.length} au total</p>
+          <p className="sous">Campagnes email — {campagnesGrille.length} au total</p>
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           {mode === "liste" && (
@@ -1070,7 +1132,7 @@ function dateRef(c: Campaign): string {
             {/* Filtres */}
             <div className="filtres-resa" style={{ marginBottom: 20 }}>
               <button className={`puce-mini${filtre === "toutes" ? " active" : ""}`} onClick={() => setFiltre("toutes")}>
-                Toutes{campagnes.length > 0 ? ` (${campagnes.length})` : ""}
+                Toutes{campagnesGrille.length > 0 ? ` (${campagnesGrille.length})` : ""}
               </button>
               <button className={`puce-mini${filtre === "scheduled" ? " active" : ""}`} onClick={() => setFiltre("scheduled")}>
                 Planifiées {nbScheduled > 0 && <span className="ps-pip">{nbScheduled}</span>}
@@ -1082,6 +1144,38 @@ function dateRef(c: Campaign): string {
                 Envoyées{nbSent > 0 ? ` (${nbSent})` : ""}
               </button>
             </div>
+
+            {/* Section « Automatisation » : le Welcome, email transactionnel envoyé
+                automatiquement à chaque inscription. Présenté à part, avec compteur
+                agrégé et aperçu complet déroulant. */}
+            {welcomeLignes.length > 0 && (
+              <div className="nl-trigger">
+                <div className="nl-trigger-tete">
+                  <div className="nl-trigger-info">
+                    <span className="nl-trigger-pastille">⚡ Automatique</span>
+                    <div>
+                      <b>Email de bienvenue</b>
+                      <div className="sub-desc">Envoyé automatiquement à chaque nouvelle inscription à la newsletter.</div>
+                    </div>
+                  </div>
+                  <div className="nl-trigger-stat">
+                    <span className="nl-trigger-nb">{welcomeEnvois}</span>
+                    <span className="nl-trigger-lbl">
+                      envoi{welcomeEnvois > 1 ? "s" : ""}
+                      {welcomeDernier && <span className="sub-desc"> · dernier {fmtDatetime(welcomeDernier)}</span>}
+                    </span>
+                  </div>
+                  <button className="btn btn-mini btn-ligne" onClick={() => setWelcomeOuvert((v) => !v)}>
+                    {welcomeOuvert ? "▲ Masquer l'aperçu" : "▼ Voir l'aperçu"}
+                  </button>
+                </div>
+                {welcomeOuvert && (
+                  <div className="nl-trigger-apercu">
+                    <ApercuWelcome restoName={restoName} logoUrl={logoUrl} />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Filtre par période d'envoi/planification */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
