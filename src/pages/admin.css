@@ -1439,6 +1439,16 @@ tr:hover .drag-poignee { color:var(--ink-soft) }
 .nl-doss-puce:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
 .nl-doss-puce.on { background:var(--admin-accent); color:#fff; border-color:var(--admin-accent) }
 .nl-doss-puce.on .ps-pip { background:#fff; color:var(--admin-accent) }
+/* Puce composée (nom + suppression) : les boutons internes héritent du style */
+.nl-doss-nom, .nl-doss-x {
+  border:none; background:transparent; cursor:pointer; color:inherit;
+  font-size:inherit; font-weight:inherit; padding:0; display:inline-flex; align-items:center; gap:7px;
+}
+.nl-doss-x {
+  font-size:11px; opacity:0; width:0; overflow:hidden; transition:opacity .12s, width .12s, margin .12s;
+}
+.nl-doss-puce:hover .nl-doss-x { opacity:.6; width:14px; margin-left:2px }
+.nl-doss-x:hover { opacity:1 !important }
 
 /* Responsive : 5 → 4 → 3 → 2 → 1 colonnes */
 @media(max-width:1400px) { .nl-grille { grid-template-columns:repeat(4,1fr) } }

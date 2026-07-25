@@ -845,11 +845,11 @@ export default function TabNewsletter() {
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<"liste" | "nouveau">("liste");
   const [filtre, setFiltre] = useState<"toutes" | "draft" | "scheduled" | "sent">("toutes");
-  const [filtreType, setFiltreType] = useState<string>("tous"); // "tous" | clé de TEMPLATES | "welcome"
   const [dateDebut, setDateDebut] = useState("");
   const [dateFin, setDateFin] = useState("");
   const [filtreDossier, setFiltreDossier] = useState<string>("tous"); // "tous" | "__sans__" | nom de dossier
   const [menuOuvert, setMenuOuvert] = useState<string | null>(null);   // id de campagne dont le menu ⋯ est ouvert
+  const [registreDossiers, setRegistreDossiers] = useState<string[]>([]); // dossiers déclarés (table), incl. vides
   // Pré-remplissage du formulaire : dupliquer (sans id) ou reprendre un brouillon (avec id)
   const [prefill, setPrefill] = useState<{ id?: string; template: string; segment: string; subject: string; content: Record<string, string> } | undefined>(undefined);
   const confirm = useConfirm();
@@ -866,11 +866,12 @@ export default function TabNewsletter() {
 
   async function charger() {
     setLoading(true);
-    const { data } = await supabase
-      .from("newsletter_campaigns")
-      .select("*")
-      .order("created_at", { ascending: false });
-    setCampagnes(data || []);
+    const [{ data: camps }, { data: fold }] = await Promise.all([
+      supabase.from("newsletter_campaigns").select("*").order("created_at", { ascending: false }),
+      supabase.from("newsletter_folders").select("name").order("name"),
+    ]);
+    setCampagnes(camps || []);
+    setRegistreDossiers((fold || []).map((f: { name: string }) => f.name));
     setLoading(false);
   }
 
@@ -928,11 +929,51 @@ export default function TabNewsletter() {
     charger();
   }
 
-  // Crée un dossier à la volée en y rangeant la campagne (saisie libre).
+  // Crée un dossier à la volée (modale stylée) et y range la campagne.
   async function deplacerVersNouveau(c: Campaign) {
-    const nom = window.prompt("Nom du dossier :", c.folder || "")?.trim();
-    if (nom === undefined) return;      // annulé
-    await deplacer(c, nom || null);      // vide → retire du dossier
+    setMenuOuvert(null);
+    const nom = await confirm({
+      titre: "Nouveau dossier",
+      confirmer: "Créer et ranger",
+      saisie: { label: "Nom du dossier", placeholder: "ex. Événements, Menus, Promotions", valeurInitiale: c.folder || "" },
+    });
+    if (typeof nom !== "string" || !nom.trim()) return;
+    await declarerDossier(nom.trim());
+    await deplacer(c, nom.trim());
+  }
+
+  // Déclare un dossier dans le registre (idempotent) → permet les dossiers vides.
+  async function declarerDossier(nom: string) {
+    await supabase.from("newsletter_folders").upsert({ name: nom }, { onConflict: "name" });
+  }
+
+  // Crée un dossier vide depuis le bandeau (modale stylée).
+  async function nouveauDossier() {
+    const nom = await confirm({
+      titre: "Nouveau dossier",
+      message: "Créez un dossier pour y ranger vos campagnes ensuite.",
+      confirmer: "Créer le dossier",
+      saisie: { label: "Nom du dossier", placeholder: "ex. Événements, Menus, Promotions" },
+    });
+    if (typeof nom !== "string" || !nom.trim()) return;
+    await declarerDossier(nom.trim());
+    setFiltreDossier(nom.trim());
+    charger();
+  }
+
+  // Supprime un dossier du registre (les campagnes qui y étaient repassent « sans dossier »).
+  async function supprimerDossier(nom: string) {
+    const ok = await confirm({
+      titre: "Supprimer ce dossier ?",
+      message: `Le dossier « ${nom} » sera supprimé. Les campagnes qu'il contient ne seront pas supprimées : elles repasseront « sans dossier ».`,
+      confirmer: "Supprimer le dossier",
+      danger: true,
+    });
+    if (!ok) return;
+    await supabase.from("newsletter_folders").delete().eq("name", nom);
+    await supabase.from("newsletter_campaigns").update({ folder: null }).eq("folder", nom);
+    if (filtreDossier === nom) setFiltreDossier("tous");
+    charger();
   }
 
   async function envoyer(c: Campaign) {
@@ -961,7 +1002,6 @@ function dateRef(c: Campaign): string {
 
   const affichees = campagnes.filter((c) => {
     if (filtre !== "toutes" && c.status !== filtre) return false;
-    if (filtreType !== "tous" && c.template !== filtreType) return false;
     if (filtreDossier === "__sans__" && c.folder) return false;
     if (filtreDossier !== "tous" && filtreDossier !== "__sans__" && c.folder !== filtreDossier) return false;
     const ref = dateRef(c);
@@ -970,13 +1010,16 @@ function dateRef(c: Campaign): string {
     return true;
   });
 
-  // Dossiers existants (déduits des campagnes) + compteur par dossier.
-  const dossiers = Array.from(new Set(campagnes.map((c) => c.folder).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, "fr"));
+  // Liste des dossiers = union du registre (table, inclut les vides) et des dossiers
+  // réellement portés par des campagnes. Triée alphabétiquement (FR).
+  const dossiers = Array.from(new Set([
+    ...registreDossiers,
+    ...(campagnes.map((c) => c.folder).filter(Boolean) as string[]),
+  ])).sort((a, b) => a.localeCompare(b, "fr"));
   const nbSansDossier = campagnes.filter((c) => !c.folder).length;
   const compteDossier = (nom: string) => campagnes.filter((c) => c.folder === nom).length;
 
-  const typesPresents = Array.from(new Set(campagnes.map((c) => c.template)));
-  const filtresDateActifs = !!dateDebut || !!dateFin || filtreType !== "tous";
+  const filtresDateActifs = !!dateDebut || !!dateFin;
 
   const nbScheduled = campagnes.filter((c) => c.status === "scheduled").length;
   const nbDraft     = campagnes.filter((c) => c.status === "draft").length;
@@ -989,15 +1032,20 @@ function dateRef(c: Campaign): string {
           <h1>Newsletter</h1>
           <p className="sous">Campagnes email — {campagnes.length} au total</p>
         </div>
-        <button className="btn btn-accent" onClick={async () => {
-          if (mode === "nouveau") {
-            const ok = await confirmDirty({ titre: "Quitter la campagne ?", message: "Les modifications non sauvegardées en brouillon seront perdues.", confirmer: "Quitter", annuler: "Rester", danger: true });
-            if (!ok) return;
-          }
-          setPrefill(undefined); setMode(mode === "nouveau" ? "liste" : "nouveau");
-        }}>
-          {mode === "nouveau" ? "← Retour à la liste" : "+ Nouvelle campagne"}
-        </button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {mode === "liste" && (
+            <button className="btn btn-ligne" onClick={nouveauDossier}>📁 + Nouveau dossier</button>
+          )}
+          <button className="btn btn-accent" onClick={async () => {
+            if (mode === "nouveau") {
+              const ok = await confirmDirty({ titre: "Quitter la campagne ?", message: "Les modifications non sauvegardées en brouillon seront perdues.", confirmer: "Quitter", annuler: "Rester", danger: true });
+              if (!ok) return;
+            }
+            setPrefill(undefined); setMode(mode === "nouveau" ? "liste" : "nouveau");
+          }}>
+            {mode === "nouveau" ? "← Retour à la liste" : "+ Nouvelle campagne"}
+          </button>
+        </div>
       </div>
 
       <div className="contenu" style={{ paddingTop: 20 }}>
@@ -1025,31 +1073,22 @@ function dateRef(c: Campaign): string {
               </button>
             </div>
 
-            {/* Filtres secondaires : type de campagne + période d'envoi/planification */}
-            {typesPresents.length > 1 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
-                <select value={filtreType} onChange={(e) => setFiltreType(e.target.value)}
-                  style={{ width: "auto", padding: "8px 12px", fontSize: 13, borderRadius: 8, border: "1px solid var(--line)", background: "#fff", color: "var(--ink)" }}>
-                  <option value="tous">Tous les types</option>
-                  {typesPresents.map((t) => (
-                    <option key={t} value={t}>{TYPE_DISPLAY[t]?.icon || "📧"} {TYPE_DISPLAY[t]?.label || t}</option>
-                  ))}
-                </select>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--ink-soft)" }}>
-                  du
-                  <input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)}
-                    style={{ width: "auto", padding: "7px 10px", fontSize: 13, borderRadius: 8, border: "1px solid var(--line)", background: "#fff", color: "var(--ink)" }} />
-                  au
-                  <input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)}
-                    style={{ width: "auto", padding: "7px 10px", fontSize: 13, borderRadius: 8, border: "1px solid var(--line)", background: "#fff", color: "var(--ink)" }} />
-                </div>
-                {filtresDateActifs && (
-                  <button className="btn btn-mini btn-ligne" onClick={() => { setFiltreType("tous"); setDateDebut(""); setDateFin(""); }}>
-                    ✕ Réinitialiser
-                  </button>
-                )}
+            {/* Filtre par période d'envoi/planification */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--ink-soft)" }}>
+                du
+                <input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)}
+                  style={{ width: "auto", padding: "7px 10px", fontSize: 13, borderRadius: 8, border: "1px solid var(--line)", background: "#fff", color: "var(--ink)" }} />
+                au
+                <input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)}
+                  style={{ width: "auto", padding: "7px 10px", fontSize: 13, borderRadius: 8, border: "1px solid var(--line)", background: "#fff", color: "var(--ink)" }} />
               </div>
-            )}
+              {filtresDateActifs && (
+                <button className="btn btn-mini btn-ligne" onClick={() => { setDateDebut(""); setDateFin(""); }}>
+                  ✕ Réinitialiser
+                </button>
+              )}
+            </div>
 
             {/* Barre de dossiers : n'apparaît que si au moins un dossier existe */}
             {dossiers.length > 0 && (
@@ -1058,9 +1097,12 @@ function dateRef(c: Campaign): string {
                   Tous <span className="ps-pip">{campagnes.length}</span>
                 </button>
                 {dossiers.map((d) => (
-                  <button key={d} className={`nl-doss-puce ${filtreDossier === d ? "on" : ""}`} onClick={() => setFiltreDossier(d)}>
-                    📁 {d} <span className="ps-pip">{compteDossier(d)}</span>
-                  </button>
+                  <span key={d} className={`nl-doss-puce ${filtreDossier === d ? "on" : ""}`}>
+                    <button className="nl-doss-nom" onClick={() => setFiltreDossier(d)}>
+                      📁 {d} <span className="ps-pip">{compteDossier(d)}</span>
+                    </button>
+                    <button className="nl-doss-x" aria-label={`Supprimer le dossier ${d}`} onClick={() => supprimerDossier(d)}>✕</button>
+                  </span>
                 ))}
                 {nbSansDossier > 0 && (
                   <button className={`nl-doss-puce ${filtreDossier === "__sans__" ? "on" : ""}`} onClick={() => setFiltreDossier("__sans__")}>
@@ -1087,7 +1129,7 @@ function dateRef(c: Campaign): string {
                   <>
                     <p className="vide" style={{ marginBottom: filtresDateActifs ? 12 : 0 }}>Aucune campagne dans ce filtre.</p>
                     {filtresDateActifs && (
-                      <button className="btn btn-mini btn-ligne" onClick={() => { setFiltreType("tous"); setDateDebut(""); setDateFin(""); }}>
+                      <button className="btn btn-mini btn-ligne" onClick={() => { setDateDebut(""); setDateFin(""); }}>
                         ✕ Réinitialiser les filtres
                       </button>
                     )}
@@ -1112,7 +1154,6 @@ function dateRef(c: Campaign): string {
                         <span className="nl-carte-ico">{TYPE_DISPLAY[c.template]?.icon || "📧"}</span>
                         <div className="nl-carte-titre">
                           <b title={c.subject}>{c.subject}</b>
-                          <div className="sub-desc">{TYPE_DISPLAY[c.template]?.label || c.template}</div>
                         </div>
                         <div className="carte-menu">
                           <button className="nl-menu-btn" aria-label="Actions" aria-haspopup="true"

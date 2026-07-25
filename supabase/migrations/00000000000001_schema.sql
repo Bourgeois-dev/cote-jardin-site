@@ -308,6 +308,12 @@ create table if not exists public.newsletter_campaigns (
   updated_at       timestamptz not null default now()
 );
 
+create table if not exists public.newsletter_folders (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null unique,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.newsletter_sends (
   id          uuid primary key default gen_random_uuid(),
   campaign_id uuid not null references public.newsletter_campaigns(id) on delete cascade,
@@ -367,6 +373,7 @@ alter table public.reservations         enable row level security;
 alter table public.waitlist             enable row level security;
 alter table public.leads                enable row level security;
 alter table public.newsletter_campaigns enable row level security;
+alter table public.newsletter_folders    enable row level security;
 alter table public.newsletter_sends     enable row level security;
 
 -- — admin_users ————————————————————————————————————————————
@@ -597,6 +604,8 @@ drop policy if exists "admin_all_newsletter_campaigns" on public.newsletter_camp
 create policy "admin_all_newsletter_campaigns" on public.newsletter_campaigns for all to authenticated using (is_admin()) with check (is_admin());
 drop policy if exists "admin_all_newsletter_sends" on public.newsletter_sends;
 create policy "admin_all_newsletter_sends" on public.newsletter_sends for all to authenticated using (is_admin()) with check (is_admin());
+drop policy if exists "admin_all_newsletter_folders" on public.newsletter_folders;
+create policy "admin_all_newsletter_folders" on public.newsletter_folders for all to authenticated using (is_admin()) with check (is_admin());
 
 -- ============================================================
 -- 5. Fonctions métier
