@@ -614,6 +614,15 @@ Deno.serve(async (req: Request) => {
         to: [r.email],
         subject: remplacerPrenom(camp.subject || "", r.prenom, repliPrenom),
         html: renderTemplate(camp.template, personnaliser(camp.content, r.prenom, repliPrenom), r.name, logoUrl, r.token),
+        // Bouton « Se désabonner » natif de Gmail/Yahoo (exigé depuis 2024 pour
+        // les expéditeurs en masse). Le POST one-click (RFC 8058) arrive sur
+        // newsletter-unsubscribe avec le token en query string. Sans ce bouton,
+        // l'utilisateur pressé clique « Signaler comme spam » à la place — et un
+        // signalement pèse bien plus lourd qu'une désinscription.
+        ...(r.token ? { headers: {
+          "List-Unsubscribe": `<${SUPABASE_URL}/functions/v1/newsletter-unsubscribe?token=${r.token}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        } } : {}),
       }));
       const result = await sendBatch(emails);
       if (result.ok) { totalSent += batch.length; batch.forEach((r) => sendRecords.push({ campaign_id, email: r.email, name: r.name })); }

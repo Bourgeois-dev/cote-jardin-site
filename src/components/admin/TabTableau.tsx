@@ -12,9 +12,17 @@ function estMidi(time: string): boolean {
   return h < 16;
 }
 
+// Date au format AAAA-MM-JJ en heure LOCALE. Surtout pas toISOString(), qui
+// renvoie la date UTC : entre minuit et 2 h (heure française), « aujourd'hui »
+// serait encore « hier » — toutes les bornes de période glisseraient d'un jour.
+// Les dates en base (colonne `date` des réservations) sont des dates locales.
+function ymdLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, date?: string, service?: "midi" | "soir") => void } = {}) {
   // Fenêtre glissante J-90/+horizon — évite de charger tout l'historique
-  const dateMinTdb = (() => { const d = new Date(); d.setDate(d.getDate() - 90); return d.toISOString().slice(0,10); })();
+  const dateMinTdb = (() => { const d = new Date(); d.setDate(d.getDate() - 90); return ymdLocal(d); })();
   const { rows: resa, loading } = useTable<Reservation>("reservations", "date", true, { column: "date", op: "gte", value: dateMinTdb });
   const { rows: allLeads } = useTable<Lead>("leads", "created_at");
   const leads = allLeads.filter((l) => l.consent === true);
@@ -27,7 +35,7 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
   const [semaine, setSemaine] = useState(0);
 
   const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10);
+  const todayStr = ymdLocal(today);
   const capacite = tables.filter((t) => t.is_active).reduce((s, t) => s + (t.capacity || 0), 0);
 
   // Couverts réservés (hors annulés) pour une date + un service
@@ -79,7 +87,7 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
   const pctSite = actives.length ? 100 - pctTel : 0;
 
   // --- Indicateurs (30 derniers jours, sauf clients récurrents et affluence qui regardent tout l'historique) ---
-  function ymd(d: Date) { return d.toISOString().slice(0, 10); }
+  const ymd = ymdLocal;
   const d30 = new Date(today); d30.setDate(today.getDate() - 29);
   const d30Str = ymd(d30);
   const sumCovers = (l: Reservation[]) => l.reduce((s, r) => s + (r.covers || 0), 0);
@@ -112,7 +120,7 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
     const rs = resa.filter((r) => r.date >= debut && r.date <= fin && r.status !== "annule");
     const couverts = sumCovers(rs);
     let offerts = 0;
-    for (let d = new Date(debut); d.toISOString().slice(0, 10) <= fin; d.setDate(d.getDate() + 1)) {
+    for (let d = new Date(debut); ymdLocal(d) <= fin; d.setDate(d.getDate() + 1)) {
       const h = hours.find((x) => x.day_of_week === d.getDay());
       if (!h || h.is_closed) continue;
       if (h.lunch_open) offerts += capacite;
@@ -121,9 +129,9 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
     return offerts ? Math.round((couverts / offerts) * 100) : 0;
   };
   const d60 = new Date(); d60.setDate(d60.getDate() - 60);
-  const d60Str = d60.toISOString().slice(0, 10);
+  const d60Str = ymdLocal(d60);
   const d31 = new Date(); d31.setDate(d31.getDate() - 31);
-  const d31Str = d31.toISOString().slice(0, 10);
+  const d31Str = ymdLocal(d31);
   const remplissage30 = tauxRemplissage(d30Str, todayStr);
   const remplissage30Prec = tauxRemplissage(d60Str, d31Str);
   const ecartRemplissage = remplissage30 - remplissage30Prec;
@@ -132,23 +140,26 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
   // Sert à décider des commandes et du planning : c'est ce qui est DÉJÀ acquis
   // pour la semaine, à la différence des KPI du jour.
   const d7 = new Date(); d7.setDate(d7.getDate() + 7);
-  const d7Str = d7.toISOString().slice(0, 10);
+  const d7Str = ymdLocal(d7);
   const resaSemaine = resa.filter(
     (r) => r.date >= todayStr && r.date <= d7Str && r.status !== "annule" && r.status !== "no_show"
   );
   const couvertsSemaine = sumCovers(resaSemaine);
 
-  // ── Occupation des tables (30 derniers jours) ────────────────────────────
-  // Différent du remplissage en couverts : mesure si les tables sont bien
-  // dimensionnées. Un écart important entre les deux signale des tables de 4
-  // occupées par 2 personnes — donc de la capacité perdue.
-  const placesUtilisees = periode
-    .filter((r) => r.status !== "annule" && (r.table_ids?.length || 0) > 0)
+  // ── Adéquation tables / groupes (30 derniers jours) ──────────────────────
+  // Différent du remplissage en couverts : couverts ÷ capacité des tables
+  // ASSIGNÉES, pas de la salle. Mesure si les tables sont bien dimensionnées :
+  // un écart important avec le remplissage signale des tables de 4 occupées par
+  // 2 personnes — donc de la capacité perdue. Avec un parc de tables de 2 et
+  // une clientèle de couples, il reste proche de 100 % par construction.
+  // No-shows exclus : une table réservée par un groupe qui n'est pas venu ne
+  // dit rien de son dimensionnement.
+  const resaPlacees = periode.filter(
+    (r) => r.status !== "annule" && r.status !== "no_show" && (r.table_ids?.length || 0) > 0);
+  const placesAssignees = resaPlacees
     .reduce((s, r) => s + (r.table_ids || []).reduce(
       (c, tid) => c + (tables.find((t) => t.id === tid)?.capacity || 0), 0), 0);
-  const couvertsPlaces = sumCovers(periode.filter(
-    (r) => r.status !== "annule" && (r.table_ids?.length || 0) > 0));
-  const tauxOccupTable = placesUtilisees ? Math.round((couvertsPlaces / placesUtilisees) * 100) : 0;
+  const tauxOccupTable = placesAssignees ? Math.round((sumCovers(resaPlacees) / placesAssignees) * 100) : 0;
 
   const JOURS_LONG = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
   // Quand les clients réservent-ils EN LIGNE (heure de création de la demande) ?
@@ -193,7 +204,7 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
   // Disponibilité par service, sur toute la fenêtre de réservation (horizon configuré)
   const jours = Array.from({ length: horizon }, (_, i) => {
     const d = new Date(today); d.setDate(today.getDate() + i);
-    const ds = d.toISOString().slice(0, 10);
+    const ds = ymdLocal(d);
     const h = hours.find((x) => x.day_of_week === d.getDay());
     const ferme = !h || h.is_closed;
     const sertMidi = !ferme && !!h?.lunch_open;
@@ -392,9 +403,9 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
               </div>
             </div>
             <div className="stat">
-              <div className="lib">Occupation des tables</div>
+              <div className="lib">Adéquation tables / groupes</div>
               <div className="val">{tauxOccupTable}%</div>
-              <div className="det">places réellement utilisées</div>
+              <div className="det">des places assignées sont occupées</div>
             </div>
             <div className="stat"><div className="lib">Taux d'annulation</div><div className="val" style={{ color: tauxAnnulation >= 20 ? "var(--annule)" : "var(--ink)" }}>{tauxAnnulation}%</div><div className="det">{nbAnnulePeriode} sur {periode.length} réservation(s)</div></div>
             <div className="stat"><div className="lib">Taux de no-show</div><div className="val" style={{ color: tauxNoShow >= 10 ? "var(--annule)" : "var(--ink)" }}>{tauxNoShow}%</div><div className="det">{nbNoShowPeriode} absence(s) constatée(s)</div></div>
