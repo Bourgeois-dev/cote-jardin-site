@@ -2,6 +2,15 @@ import type { MenuItem } from "../../lib/types";
 
 interface CatMeta { moment?: string; intro?: string }
 
+// Bloc "La carte". La MISE EN PAGE est propre à Côté Jardin (nom + description
+// groupés à gauche, prix à droite — cf. .plat-gauche dans site.css). Le gabarit
+// en propose une autre (ligne avec points de conduite, .plat-ligne/.plat-pts) :
+// c'est normal, voir le registre des compositions (GESTION-MULTI-CLIENTS.md,
+// section 7).
+//
+// ⚠️ DETTE CONNUE : le titre et l'eyebrow sont écrits en dur ci-dessous alors
+// qu'ils sont propres au client. À passer en VITE_CARTE_TITRE / VITE_CARTE_EYEBROW,
+// comme le fait déjà le bloc Histoire avec VITE_STORY_*.
 export default function Carte({ menu, catMeta, menuFile }: {
   menu: MenuItem[];
   catMeta?: Record<string, CatMeta>;

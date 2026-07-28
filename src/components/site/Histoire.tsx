@@ -1,3 +1,12 @@
+// Bloc "Notre cuisine" — EXCEPTION figée au build (comme le hero et le menu de
+// navigation). Son contenu n'est PAS éditable dans l'admin : il est défini une
+// fois à la création du site via les variables VITE_STORY_* et figé au build.
+// C'est un bloc unique, à l'image du restaurateur. Voir la règle d'or (CLAUDE.md).
+//
+// La MISE EN PAGE de ce bloc est propre à Côté Jardin (colonne texte + colonne
+// image, cf. .histoire-texte-col / .histoire-img-col dans site.css). Le gabarit
+// en propose une autre — c'est normal, voir le registre des compositions
+// (GESTION-MULTI-CLIENTS.md, section 7).
 export default function Histoire() {
   const title     = import.meta.env.VITE_STORY_TITLE     || "Notre histoire";
   const content   = import.meta.env.VITE_STORY_CONTENT   || "";
