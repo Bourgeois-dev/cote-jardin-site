@@ -8,14 +8,18 @@ interface CatMeta { moment?: string; intro?: string }
 // c'est normal, voir le registre des compositions (GESTION-MULTI-CLIENTS.md,
 // section 7).
 //
-// ⚠️ DETTE CONNUE : le titre et l'eyebrow sont écrits en dur ci-dessous alors
-// qu'ils sont propres au client. À passer en VITE_CARTE_TITRE / VITE_CARTE_EYEBROW,
-// comme le fait déjà le bloc Histoire avec VITE_STORY_*.
+// Titre et surtitre viennent des variables VITE_CARTE_* figées au build, comme
+// le bloc Histoire avec ses VITE_STORY_* : aucun texte propre au client ne doit
+// être écrit en dur dans un fichier de fond. Les valeurs par défaut ci-dessous
+// sont NEUTRES — si elles s'affichent en production, c'est que la variable
+// manque côté Netlify.
 export default function Carte({ menu, catMeta, menuFile }: {
   menu: MenuItem[];
   catMeta?: Record<string, CatMeta>;
   menuFile?: { url: string; name?: string } | null;
 }) {
+  const carteEyebrow = import.meta.env.VITE_CARTE_EYEBROW || "La carte";
+  const carteTitre   = import.meta.env.VITE_CARTE_TITRE   || "Notre carte";
   const cats: string[] = [];
   menu.forEach((m) => { if (!cats.includes(m.category)) cats.push(m.category); });
   const meta = catMeta || {};
@@ -24,8 +28,8 @@ export default function Carte({ menu, catMeta, menuFile }: {
     <section className="carte" id="carte">
       <div className="wrap">
         <div className="carte-head">
-          <span className="carte-eyebrow">La carte</span>
-          <h2 className="carte-titre">Galettes, salades &amp; gourmandises</h2>
+          <span className="carte-eyebrow">{carteEyebrow}</span>
+          <h2 className="carte-titre">{carteTitre}</h2>
           {menuFile?.url && (
             <a className="carte-telecharger" href={menuFile.url} target="_blank" rel="noopener noreferrer" download>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
