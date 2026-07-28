@@ -30,25 +30,14 @@ export async function fetchContent(sectionKey: string): Promise<any | null> {
   return data?.content ?? null;
 }
 
-// Notification manuelle de la liste d'attente pour un créneau donné.
-//
-// ⚠️ Plus appelée par l'interface depuis 2026-07 : la notification est
-// déclenchée côté base par le trigger `trg_waitlist_liberation` sur
-// `reservations`, qui couvre TOUS les cas de libération (annulation par le
-// restaurateur, annulation par le client via le lien email, passage en
-// no_show, mise à jour SQL directe). Appeler cette fonction en plus du
-// trigger enverrait un email en double.
-//
-// Conservée pour un éventuel déclenchement manuel/diagnostic.
-export async function notifyWaitlist(date: string, time: string) {
-  try {
-    await supabase.functions.invoke("reservation-reminders", {
-      body: { notify_waitlist: true, date, time },
-    });
-  } catch { /* silencieux */ }
-}
+// Les quatre types reconnus par l'edge function reservation-email (voir les
+// `if (type === …)` dans son index.ts) : cette union doit rester leur miroir.
+// `confirmation_immediate` y manquait alors qu'il est envoyé par le widget
+// public quand la table est confirmée d'emblée : `npm run typecheck` échouait,
+// ce qui masquait les vraies erreurs de typage suivantes.
+export type TypeEmailResa = "accuse" | "confirmation" | "confirmation_immediate" | "waitlist_confirm";
 
-export async function sendReservationEmail(type: "accuse" | "confirmation" | "waitlist_confirm", reservation: any): Promise<void> {
+export async function sendReservationEmail(type: TypeEmailResa, reservation: any): Promise<void> {
   try {
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reservation-email`;
     await fetch(url, {

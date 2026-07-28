@@ -49,7 +49,8 @@ export default function TabReservations({ initialDate, initialService }: { initi
   }
   // La notification de la liste d'attente est déclenchée côté base par le
   // trigger trg_waitlist_liberation (couvre aussi l'annulation client et le
-  // no_show). Ne pas rappeler notifyWaitlist() ici : doublon d'email.
+  // no_show). Aucun appel côté front n'est nécessaire ni souhaitable ici :
+  // ce serait un doublon d'email.
   async function annuler(r: Reservation) { await update(r.id, { status: "annule" }); }
 
   return (
