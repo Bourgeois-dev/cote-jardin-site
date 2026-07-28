@@ -566,11 +566,29 @@ Deno.serve(async (req: Request) => {
 
     let recipients: Destinataire[];
     if (estTest) {
-      // Token de désinscription réel si l'adresse est un lead connu, sinon vide
-      // (le lien pointera alors vers la page de désinscription sans token).
-      const { data: lead } = await db.from("leads").select("unsubscribe_token").eq("email", override_email.toLowerCase()).maybeSingle();
-      const nomTest = String(override_name || "").trim();
-      recipients = [{ email: override_email, name: nomTest, prenom: nomTest.split(" ")[0] || "", token: lead?.unsubscribe_token || "" }];
+      // Fiche du destinataire de test s'il est déjà inscrit : on y prend le
+      // token de désinscription réel (sinon le lien pointe vers la page sans
+      // token) ET son prénom, pour que le test montre ce qu'il recevra
+      // vraiment plutôt qu'un prénom d'exemple.
+      const { data: lead } = await db.from("leads")
+        .select("unsubscribe_token,first_name")
+        .eq("email", override_email.toLowerCase())
+        .maybeSingle();
+      // `override_name` porte la bascule de l'aperçu :
+      //   absent            -> ancienne interface, on personnalise ;
+      //   chaîne non vide   -> « Avec prénom » ;
+      //   chaîne vide       -> « Sans prénom », le repli s'applique.
+      const nomTest = String(override_name ?? "").trim();
+      const avecPrenom = override_name === undefined || override_name === null || nomTest !== "";
+      const prenomLead = String(lead?.first_name || "").trim();
+      // Prénom réel de l'inscrit en priorité, prénom d'exemple en repli.
+      const prenomTest = avecPrenom ? (prenomLead || nomTest.split(" ")[0] || "") : "";
+      recipients = [{
+        email: override_email,
+        name: nomTest || prenomLead,
+        prenom: prenomTest,
+        token: lead?.unsubscribe_token || "",
+      }];
     } else {
       recipients = await getRecipients(camp.segment);
     }
