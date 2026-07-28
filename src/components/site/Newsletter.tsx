@@ -18,7 +18,10 @@ function utmSource(): string {
 }
 
 export default function Newsletter({ socials }: { socials: SocialLink[] }) {
-  const [sent, setSent] = useState(false);
+  // "" = formulaire affiché ; "nouveau" = 1re inscription ; "reactive" = adresse
+  // qui s'était désinscrite et revient. Le cas "déjà inscrit" ne bascule PAS en
+  // écran de remerciement : on garde le formulaire et on affiche le message.
+  const [sent, setSent] = useState<"" | "nouveau" | "reactive">("");
   const [utm] = useState(utmSource);
 
   // Scroll vers la section quand l'URL cible #contact.
@@ -55,27 +58,37 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
     e.preventDefault();
     if (!email || !consent) return;
     setBusy(true); setErreur("");
-    // On passe par la fonction serveur inscrire_newsletter (SECURITY DEFINER)
-    // plutôt que par un .upsert() direct : PostgREST traduit un upsert en
-    // INSERT ... ON CONFLICT, ce qui exige un droit de SELECT sur `leads`.
-    // Or `anon` n'en a aucun (et ne doit surtout pas en avoir : la liste des
-    // emails serait publiquement lisible). Résultat, l'upsert échouait pour
-    // toute adresse DÉJÀ inscrite qui se réinscrivait.
-    const { data, error } = await supabase.rpc("inscrire_newsletter", {
+    // On passe par la fonction serveur inscrire_newsletter_statut
+    // (SECURITY DEFINER) plutôt que par un .upsert() direct : PostgREST traduit
+    // un upsert en INSERT ... ON CONFLICT, ce qui exige un droit de SELECT sur
+    // `leads`. Or `anon` n'en a aucun (et ne doit surtout pas en avoir : la
+    // liste des emails serait publiquement lisible). Résultat, l'upsert
+    // échouait pour toute adresse DÉJÀ inscrite qui se réinscrivait.
+    // La fonction renvoie un statut texte, ce qui permet de distinguer une
+    // vraie inscription d'une adresse déjà présente dans la liste.
+    const { data, error } = await supabase.rpc("inscrire_newsletter_statut", {
       p_email: email,
       p_first_name: prenom,
       p_last_name: nom,
       p_source: utm ? `newsletter:${utm}` : "newsletter",
     });
     setBusy(false);
-    if (error) signalerIncident("newsletter", error);
-    if (error || data === false) {
-      setErreur(error
-        ? "Une erreur est survenue. Merci de réessayer dans un instant."
-        : "Cette adresse e-mail ne semble pas valide. Merci de la vérifier.");
+    if (error) {
+      signalerIncident("newsletter", error);
+      setErreur("Une erreur est survenue. Merci de réessayer dans un instant.");
       return;
     }
-    setSent(true);
+    if (data === "invalide") {
+      setErreur("Cette adresse e-mail ne semble pas valide. Merci de la vérifier.");
+      return;
+    }
+    if (data === "deja_inscrit") {
+      // Doublon : on ne renvoie pas l'écran « Merci » (le visiteur croirait
+      // s'être inscrit une deuxième fois) et rien n'est modifié en base.
+      setErreur("Cette adresse est déjà inscrite à nos actualités. Vous recevez donc déjà nos e-mails — un lien de désinscription figure en bas de chacun d'eux.");
+      return;
+    }
+    setSent(data === "reactive" ? "reactive" : "nouveau");
     // L'email de bienvenue est envoyé côté serveur par newsletter-scheduler
     // (il détecte les nouveaux leads consentis et déclenche l'envoi avec le
     // secret interne). Le site public ne déclenche plus aucun envoi d'email :
@@ -123,7 +136,11 @@ export default function Newsletter({ socials }: { socials: SocialLink[] }) {
           ) : (
             <div className="news-merci">
               <div className="news-merci-titre">Merci !</div>
-              <p>Vous êtes inscrit·e aux actualités de {restoName}.<br />À très bientôt à table.</p>
+              {sent === "reactive" ? (
+                <p>Votre inscription aux actualités de {restoName} est réactivée.<br />Ravi de vous retrouver.</p>
+              ) : (
+                <p>Vous êtes inscrit·e aux actualités de {restoName}.<br />À très bientôt à table.</p>
+              )}
             </div>
           )}
         </div>
