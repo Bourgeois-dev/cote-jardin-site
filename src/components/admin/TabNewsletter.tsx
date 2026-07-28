@@ -109,6 +109,56 @@ function premiereImage(content: any): string | null {
   return null;
 }
 
+/* ── Personnalisation : {{prenom}} ──────────────────────────────────────────
+   Miroir EXACT de send-newsletter/index.ts : si l'une des deux implémentations
+   change, l'autre doit suivre, sinon l'aperçu ment sur ce qui sera envoyé. */
+const JETON_PRENOM = "{{prenom}}";
+const PRENOM_EXEMPLE = "Marie";           // prénom d'exemple affiché dans l'aperçu
+const REPLI_DEFAUT = "à vous";            // repli proposé pour une nouvelle campagne
+
+const contientJeton = (s: string) => /\{\{\s*prenom\s*\}\}/i.test(String(s || ""));
+
+function normPrenom(v: string): string {
+  const s = String(v || "").trim().replace(/\s+/g, " ");
+  if (!s) return "";
+  return s.toLocaleLowerCase("fr")
+    .replace(/(^|[\s\-'\u2019])(\p{L})/gu, (_m, sep, c) => sep + c.toLocaleUpperCase("fr"));
+}
+
+function remplacerPrenom(s: string, prenom: string, repli: string): string {
+  if (!String(s || "").includes("{{")) return String(s || "");
+  const val = prenom ? normPrenom(prenom) : String(repli || "");
+  return String(s)
+    .replace(/\{\{\s*prenom\s*\}\}/gi, val)
+    .replace(/ {2,}/g, " ")
+    .replace(/[ \t]+([,.])/g, "$1")
+    .trim();
+}
+
+function personnaliser(v: any, prenom: string, repli: string): any {
+  if (typeof v === "string") return remplacerPrenom(v, prenom, repli);
+  if (Array.isArray(v)) return v.map((x) => personnaliser(x, prenom, repli));
+  if (v && typeof v === "object") {
+    const o: any = {};
+    for (const k of Object.keys(v)) o[k] = personnaliser(v[k], prenom, repli);
+    return o;
+  }
+  return v;
+}
+
+// Insère {{prenom}} à la position du curseur d'un champ.
+function insererJeton(
+  el: HTMLInputElement | HTMLTextAreaElement | null,
+  appliquer: (valeur: string) => void,
+) {
+  if (!el) return;
+  const d = el.selectionStart ?? el.value.length;
+  const f = el.selectionEnd ?? d;
+  appliquer(el.value.slice(0, d) + JETON_PRENOM + el.value.slice(f));
+  const pos = d + JETON_PRENOM.length;
+  requestAnimationFrame(() => { el.focus(); el.setSelectionRange(pos, pos); });
+}
+
 /* ── Mise en forme d'un bloc : alignement, teintes de la charte, gras ───────
    Les teintes sont enregistrées de façon SYMBOLIQUE ('accent', 'encre'…) et non
    en hexadécimal. L'aperçu les résout en variables CSS du thème du site,
@@ -145,9 +195,17 @@ function fragmentsGras(ligne: string): React.ReactNode[] {
 // une fois ACCENT_COLOR/ACCENT_DARK configurés côté secrets (non visibles ici).
 // Aperçu unique : rend n'importe quelle composition de blocs.
 // Reflète la structure réelle de l'email (600px, logo, blocs, footer).
-function BlocsCanvas({ subject, content, restoName, logoUrl }: {
+function BlocsCanvas({ subject, content, restoName, logoUrl, avecPrenom, onBascule }: {
   subject: string; content: any; restoName: string; logoUrl: string;
+  avecPrenom: boolean; onBascule: (v: boolean) => void;
 }) {
+  // La campagne n'affiche la bascule que si elle utilise réellement le jeton :
+  // inutile d'encombrer l'aperçu d'un réglage sans effet.
+  const perso = contientJeton(subject) || contientJeton(JSON.stringify(content || {}));
+  const repli = String(content?.prenom_defaut ?? "");
+  const prenomApercu = avecPrenom ? PRENOM_EXEMPLE : "";
+  subject = remplacerPrenom(subject, prenomApercu, repli);
+  content = personnaliser(content, prenomApercu, repli);
   // L'aperçu doit refléter l'email réel : charte du SITE (secret ACCENT_COLOR côté edge),
   // et NON la charte de l'admin (--admin-accent, bordeaux) qui n'apparaît jamais dans un email.
   // Les teintes choisies bloc par bloc sont résolues par teinteCss() ci-dessus.
@@ -194,6 +252,17 @@ function BlocsCanvas({ subject, content, restoName, logoUrl }: {
         color: "var(--ink-soft)", marginBottom: 10, textAlign: "center" }}>
         Aperçu de l'email
       </div>
+
+      {/* Bascule : la phrase doit tenir debout dans les deux cas. Beaucoup
+          d'inscrits n'ont pas de prénom — le formulaire public ne l'exige pas. */}
+      {perso && (
+        <div className="nl-liens" style={{ justifyContent: "center", marginBottom: 12 }}>
+          <button type="button" className={`nl-lien${avecPrenom ? " actif" : ""}`}
+            onClick={() => onBascule(true)}>Avec prénom</button>
+          <button type="button" className={`nl-lien${!avecPrenom ? " actif" : ""}`}
+            onClick={() => onBascule(false)}>Sans prénom</button>
+        </div>
+      )}
 
       <div style={{ marginBottom: 18, maxWidth: 500, margin: "0 auto 18px" }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-soft)", marginBottom: 6 }}>
@@ -418,6 +487,9 @@ function ChampsBloc({ val, onChange, onUpload }: {
           <label style={{ margin: 0 }}>Texte</label>
           <button type="button" className="nl-lien nl-gras" onClick={basculerGras}
             title="Mettre la sélection en gras (Ctrl+B)"><b>G</b></button>
+          <button type="button" className="nl-lien"
+            onClick={() => insererJeton(refTexte.current, (v) => onChange({ texte: v }))}
+            title="Insérer le prénom du destinataire">+ Prénom</button>
         </div>
         <textarea ref={refTexte} rows={4} value={val.texte || ""} onChange={(e) => onChange({ texte: e.target.value })} maxLength={2000}
           onKeyDown={(e) => {
@@ -426,7 +498,8 @@ function ChampsBloc({ val, onChange, onUpload }: {
           placeholder={"Votre texte…\n\nUne ligne vide sépare deux paragraphes."} />
         <span className="aide" style={{ fontSize: 11.5 }}>
           Entrée = retour à la ligne · Entrée deux fois = nouveau paragraphe ·
-          {" "}<b>**gras**</b> pour mettre un passage en évidence.
+          {" "}<b>**gras**</b> pour mettre un passage en évidence ·
+          {" "}<b>{"{{prenom}}"}</b> fonctionne aussi dans le titre.
         </span>
       </div>
 
@@ -507,7 +580,15 @@ function NouveauForm({ onSaved, initial }: {
     });
   }, []);
   const [subject, setSubject] = useState(initial?.subject || "");
-  const [content, setContent] = useState<Record<string, any>>(initial?.content || {});
+  // `prenom_defaut` est semé dès l'ouverture : une campagne qui utilise
+  // {{prenom}} sans repli écrirait « Bonjour , » aux inscrits sans prénom.
+  const [content, setContent] = useState<Record<string, any>>(
+    { prenom_defaut: REPLI_DEFAUT, ...(initial?.content || {}) });
+  // Aperçu : voir la campagne telle que la recevra un inscrit avec prénom
+  // connu, ou telle que la recevra un inscrit sans prénom.
+  const [avecPrenom, setAvecPrenom] = useState(true);
+  const refSujet = useRef<HTMLInputElement | null>(null);
+  const refPreheader = useRef<HTMLInputElement | null>(null);
 
   // ── Blocs de la campagne ────────────────────────────────────────────────
   const blocs: Bloc[] = Array.isArray(content.blocs) ? content.blocs : [];
@@ -696,7 +777,12 @@ function NouveauForm({ onSaved, initial }: {
       const res = await fetch(url, {
         method: "POST",
         headers: await authHeaders(),
-        body: JSON.stringify({ campaign_id: id, override_email: email }),
+        // L'envoi de test suit la bascule de l'aperçu : ce qu'on voit à l'écran
+        // est exactement ce qui arrive dans la boîte de réception, prénom compris.
+        body: JSON.stringify({
+          campaign_id: id, override_email: email,
+          override_name: avecPrenom ? PRENOM_EXEMPLE : "",
+        }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json.error) {
@@ -746,14 +832,48 @@ function NouveauForm({ onSaved, initial }: {
             </div>
 
             <div className="champ">
-              <label>Objet de l'email <span style={{ color: "var(--admin-accent)" }}>*</span></label>
-              <input value={subject} onChange={(e) => { setSubject(e.target.value); if (manqueEtape1) setManqueEtape1(""); }} placeholder="Ex. Notre nouvelle carte d'été est là 🌿" maxLength={150} />
+              <div className="nl-outils">
+                <label style={{ margin: 0 }}>Objet de l'email <span style={{ color: "var(--admin-accent)" }}>*</span></label>
+                <button type="button" className="nl-lien"
+                  onClick={() => insererJeton(refSujet.current, (v) => { setSubject(v); if (manqueEtape1) setManqueEtape1(""); })}
+                  title="Insérer le prénom du destinataire">+ Prénom</button>
+                {/* Au-delà d'environ 45 signes, la fin de l'objet est coupée
+                    dans la liste des messages sur téléphone. */}
+                <span className={`nl-compteur${subject.length > 45 ? " alerte" : ""}`}>
+                  {subject.length} signe{subject.length > 1 ? "s" : ""}
+                  {subject.length > 45 ? " — coupé sur mobile au-delà de ~45" : ""}
+                </span>
+              </div>
+              <input ref={refSujet} value={subject} onChange={(e) => { setSubject(e.target.value); if (manqueEtape1) setManqueEtape1(""); }} placeholder="Ex. Notre nouvelle carte d'été est là 🌿" maxLength={150} />
             </div>
             <div className="champ">
-              <label>Aperçu (preheader)</label>
-              <input value={content.preheader || ""} onChange={(e) => setContent({ ...content, preheader: e.target.value })}
+              <div className="nl-outils">
+                <label style={{ margin: 0 }}>Aperçu (preheader)</label>
+                <button type="button" className="nl-lien"
+                  onClick={() => insererJeton(refPreheader.current, (v) => setContent({ ...content, preheader: v }))}
+                  title="Insérer le prénom du destinataire">+ Prénom</button>
+                <span className={`nl-compteur${(content.preheader || "").length > 130 ? " alerte" : ""}`}>
+                  {(content.preheader || "").length}/150
+                </span>
+              </div>
+              <input ref={refPreheader} value={content.preheader || ""} onChange={(e) => setContent({ ...content, preheader: e.target.value })}
                 placeholder="Le texte gris affiché après l'objet dans la boîte de réception" maxLength={150} />
             </div>
+            {/* Repli : ce qui remplace {{prenom}} pour les inscrits dont on ne
+                connaît pas le prénom — le formulaire public ne l'exige pas. */}
+            {(contientJeton(subject) || contientJeton(JSON.stringify(content || {}))) && (
+              <div className="champ">
+                <label>Si le prénom est inconnu, écrire</label>
+                <input value={content.prenom_defaut ?? ""} maxLength={40}
+                  onChange={(e) => setContent({ ...content, prenom_defaut: e.target.value })}
+                  placeholder={REPLI_DEFAUT} />
+                <span className="aide" style={{ fontSize: 11.5 }}>
+                  « Bonjour {"{{prenom}}"}, » devient « Bonjour {PRENOM_EXEMPLE}, » ou
+                  {" "}« Bonjour {content.prenom_defaut || "…"}, ». Laissez vide pour supprimer
+                  simplement le prénom : la ponctuation est recollée.
+                </span>
+              </div>
+            )}
 
             {/* ── Éditeur de blocs ── */}
             <div style={{ marginTop: 22 }}>
@@ -838,7 +958,8 @@ function NouveauForm({ onSaved, initial }: {
           </div>
 
           <div>
-            <BlocsCanvas subject={subject} content={content} restoName={restoName} logoUrl={logoUrl} />
+            <BlocsCanvas subject={subject} content={content} restoName={restoName} logoUrl={logoUrl}
+              avecPrenom={avecPrenom} onBascule={setAvecPrenom} />
           </div>
         </div>
       )}

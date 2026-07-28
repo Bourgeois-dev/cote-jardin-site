@@ -552,6 +552,8 @@ tr:last-child td { border-bottom:none }
   margin-right:5px; vertical-align:0; border:1px solid rgba(0,0,0,.14) }
 .nl-outils { display:flex; align-items:center; gap:8px; margin-bottom:5px }
 .nl-gras { min-width:26px; font-size:12px; line-height:1.2; padding:3px 7px }
+.nl-compteur { margin-left:auto; font-size:11px; color:var(--ink-soft); font-variant-numeric:tabular-nums }
+.nl-compteur.alerte { color:#b5503c; font-weight:600 }
 
 /* ============ Onglet Contacts : liens UTM + filtres par source ============ */
 .ct-aide { font-size:12.5px; color:var(--ink-soft); font-style:italic; margin:4px 0 0 }

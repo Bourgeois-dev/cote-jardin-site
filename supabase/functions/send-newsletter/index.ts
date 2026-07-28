@@ -23,6 +23,8 @@ const cors = {
 
 const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+type Destinataire = { email: string; name: string; prenom: string; token: string };
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function isValidEmail(e: string): boolean { return EMAIL_RE.test(e.trim()); }
 
@@ -37,15 +39,22 @@ async function getLogoUrl(): Promise<string> {
   return (data?.content as any)?.url || "";
 }
 
-async function getOptinRecipients(): Promise<{ email: string; name: string; token: string }[]> {
+// `prenom` est porté séparément de `name` : un lead sans prénom mais avec un
+// nom donnerait « Bonjour Durand » si on découpait `name` sur l'espace.
+async function getOptinRecipients(): Promise<Destinataire[]> {
   const { data } = await db.from("leads").select("email,first_name,last_name,unsubscribe_token").eq("consent", true);
   const seen = new Set<string>();
-  const out: { email: string; name: string; token: string }[] = [];
+  const out: Destinataire[] = [];
   (data || []).forEach((r: any) => {
     const e = (r.email || "").trim().toLowerCase();
     if (!e || seen.has(e) || !isValidEmail(e)) return;
     seen.add(e);
-    out.push({ email: e, name: `${r.first_name||""} ${r.last_name||""}`.trim(), token: r.unsubscribe_token || "" });
+    out.push({
+      email: e,
+      name: `${r.first_name||""} ${r.last_name||""}`.trim(),
+      prenom: (r.first_name || "").trim(),
+      token: r.unsubscribe_token || "",
+    });
   });
   return out;
 }
@@ -90,7 +99,7 @@ async function getParVisitesEmails(min: number, max?: number): Promise<Set<strin
   return set;
 }
 
-async function getRecipients(segment: string): Promise<{ email: string; name: string; token: string }[]> {
+async function getRecipients(segment: string): Promise<Destinataire[]> {
   const optin = await getOptinRecipients();
   if (segment === "optin") return optin;
   if (segment === "optin_vip") { const vip = await getVipEmails(); return optin.filter(r => vip.has(r.email)); }
@@ -162,6 +171,48 @@ function signoff(): string {
   return `<tr><td class="px" style="padding:20px 44px 40px 44px;background-color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;"><p style="margin:0 0 4px 0;font-size:16px;color:#4A4A45;">\u00c0 tr\u00e8s bient\u00f4t,</p><p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:18px;color:${ACCENT_DARK};font-style:italic;">${esc(RESTO_NAME)}</p></td></tr>`;
 }
 
+
+/* ── Personnalisation : {{prenom}} ──────────────────────────────────────────
+   Substitution faite destinataire par destinataire, sur le contenu BRUT, donc
+   avant tout échappement HTML : un prénom contenant un caractère spécial est
+   échappé comme le reste du texte et ne peut rien casser. */
+
+// « MARIE » ou « marie » deviennent « Marie ». Traits d'union et apostrophes
+// gérés : « jean-pierre » -> « Jean-Pierre », « m'barek » -> « M'Barek ».
+// Une base client contient toujours des prénoms saisis à la volée ; sans ça,
+// l'e-mail hurle le prénom de son destinataire.
+function normPrenom(v: string): string {
+  const s = String(v || "").trim().replace(/\s+/g, " ");
+  if (!s) return "";
+  return s.toLocaleLowerCase("fr")
+    .replace(/(^|[\s\-'\u2019])(\p{L})/gu, (_m, sep, c) => sep + c.toLocaleUpperCase("fr"));
+}
+
+// Remplace {{prenom}} par le prénom, ou par le repli choisi dans l'éditeur.
+// Le nettoyage qui suit rattrape « Bonjour , » quand le repli est vide. Il ne
+// touche QUE la virgule et le point : en français, le point-virgule, les deux
+// points et les points d'exclamation/interrogation prennent une espace avant.
+function remplacerPrenom(s: string, prenom: string, repli: string): string {
+  if (!s.includes("{{")) return s;
+  const val = prenom ? normPrenom(prenom) : String(repli || "");
+  return s.replace(/\{\{\s*prenom\s*\}\}/gi, val)
+    .replace(/ {2,}/g, " ")
+    .replace(/[ \t]+([,.])/g, "$1")
+    .trim();
+}
+
+// Parcours récursif du contenu : tout champ texte est personnalisé, quel que
+// soit le template (blocs, welcome, anciennes campagnes archivées).
+function personnaliser(v: any, prenom: string, repli: string): any {
+  if (typeof v === "string") return remplacerPrenom(v, prenom, repli);
+  if (Array.isArray(v)) return v.map((x) => personnaliser(x, prenom, repli));
+  if (v && typeof v === "object") {
+    const o: any = {};
+    for (const k of Object.keys(v)) o[k] = personnaliser(v[k], prenom, repli);
+    return o;
+  }
+  return v;
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    MOTEUR DE BLOCS — campagnes libres (template "blocs")
@@ -513,12 +564,13 @@ Deno.serve(async (req: Request) => {
 
     const logoUrl = await getLogoUrl();
 
-    let recipients: { email: string; name: string; token: string }[];
+    let recipients: Destinataire[];
     if (estTest) {
       // Token de désinscription réel si l'adresse est un lead connu, sinon vide
       // (le lien pointera alors vers la page de désinscription sans token).
       const { data: lead } = await db.from("leads").select("unsubscribe_token").eq("email", override_email.toLowerCase()).maybeSingle();
-      recipients = [{ email: override_email, name: override_name || "", token: lead?.unsubscribe_token || "" }];
+      const nomTest = String(override_name || "").trim();
+      recipients = [{ email: override_email, name: nomTest, prenom: nomTest.split(" ")[0] || "", token: lead?.unsubscribe_token || "" }];
     } else {
       recipients = await getRecipients(camp.segment);
     }
@@ -530,6 +582,10 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ ok: true, sent: 0 }), { headers: cors });
     }
 
+    // Repli affiché à la place du prénom quand le lead n'en a pas. Choisi dans
+    // l'éditeur, campagne par campagne.
+    const repliPrenom = String((camp.content as any)?.prenom_defaut ?? "").trim();
+
     let totalSent = 0;
     const sendErrors: string[] = [];
     const sendRecords: any[] = [];
@@ -538,8 +594,8 @@ Deno.serve(async (req: Request) => {
       const emails = batch.map((r) => ({
         from: `${RESTO_NAME} <${FROM_EMAIL}>`,
         to: [r.email],
-        subject: camp.subject,
-        html: renderTemplate(camp.template, camp.content, r.name, logoUrl, r.token),
+        subject: remplacerPrenom(camp.subject || "", r.prenom, repliPrenom),
+        html: renderTemplate(camp.template, personnaliser(camp.content, r.prenom, repliPrenom), r.name, logoUrl, r.token),
       }));
       const result = await sendBatch(emails);
       if (result.ok) { totalSent += batch.length; batch.forEach((r) => sendRecords.push({ campaign_id, email: r.email, name: r.name })); }
