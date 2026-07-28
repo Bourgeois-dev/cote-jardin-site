@@ -109,6 +109,38 @@ function premiereImage(content: any): string | null {
   return null;
 }
 
+/* ── Mise en forme d'un bloc : alignement, teintes de la charte, gras ───────
+   Les teintes sont enregistrées de façon SYMBOLIQUE ('accent', 'encre'…) et non
+   en hexadécimal. L'aperçu les résout en variables CSS du thème du site,
+   l'edge function en couleurs réelles (secrets ACCENT_COLOR / ACCENT_DARK).
+   Le restaurateur ne peut donc pas sortir de sa propre charte, et une campagne
+   archivée suit la charte si celle-ci évolue. */
+const TEINTES: { cle: string; label: string; css: string }[] = [
+  { cle: "encre",        label: "Encre",        css: "#333333" },
+  { cle: "accent",       label: "Accent",       css: "var(--accent, #5a7d4f)" },
+  { cle: "accent_fonce", label: "Accent foncé", css: "var(--accent-dark, #41603a)" },
+  { cle: "gris",         label: "Gris doux",    css: "#6b6358" },
+];
+const teinteCss = (v?: string, defaut = "encre") =>
+  (TEINTES.find((t) => t.cle === (v || defaut)) || TEINTES[0]).css;
+
+const ALIGNS: { cle: string; label: string; css: "left" | "center" | "right" }[] = [
+  { cle: "gauche", label: "Gauche", css: "left" },
+  { cle: "centre", label: "Centré", css: "center" },
+  { cle: "droite", label: "Droite", css: "right" },
+];
+const alignCss = (v?: string) => (ALIGNS.find((a) => a.cle === (v || "gauche")) || ALIGNS[0]).css;
+
+// Gras : **texte**. Rendu en fragments React et NON en HTML injecté — le texte
+// saisi par le restaurateur n'est jamais interprété comme du balisage.
+function fragmentsGras(ligne: string): React.ReactNode[] {
+  return ligne.split(/(\*\*[^*\n]+\*\*)/g).filter(Boolean).map((m, i) =>
+    /^\*\*[^*\n]+\*\*$/.test(m)
+      ? <strong key={i}>{m.slice(2, -2)}</strong>
+      : <span key={i}>{m}</span>
+  );
+}
+
 // Couleurs : variables admin par défaut, remplacées par la charte du client
 // une fois ACCENT_COLOR/ACCENT_DARK configurés côté secrets (non visibles ici).
 // Aperçu unique : rend n'importe quelle composition de blocs.
@@ -118,15 +150,15 @@ function BlocsCanvas({ subject, content, restoName, logoUrl }: {
 }) {
   // L'aperçu doit refléter l'email réel : charte du SITE (secret ACCENT_COLOR côté edge),
   // et NON la charte de l'admin (--admin-accent, bordeaux) qui n'apparaît jamais dans un email.
-  const accent = "var(--accent, #5a7d4f)";
+  // Les teintes choisies bloc par bloc sont résolues par teinteCss() ci-dessus.
   const INK = "#333333";
   const blocs: any[] = Array.isArray(content.blocs) ? content.blocs : [];
 
-  const Cta = ({ label }: { label?: string }) =>
-    label ? (
-      <div style={{ textAlign: "center", padding: "10px 0 2px" }}>
-        <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 12,
-          fontWeight: 700, padding: "9px 22px", borderRadius: 5 }}>{label}</span>
+  const Cta = ({ v }: { v: any }) =>
+    v.cta_label ? (
+      <div style={{ textAlign: alignCss(v.align), padding: "10px 0 2px" }}>
+        <span style={{ display: "inline-block", background: teinteCss(v.cta_couleur, "accent"), color: "#fff", fontSize: 12,
+          fontWeight: 700, padding: "9px 22px", borderRadius: 5 }}>{v.cta_label}</span>
       </div>
     ) : null;
 
@@ -138,20 +170,20 @@ function BlocsCanvas({ subject, content, restoName, logoUrl }: {
           <img src={v.image} alt={v.image_alt || v.titre || ""} style={{ width: "100%", display: "block" }} />
         </div>
       )}
-      <div style={{ padding: petit ? "12px 14px" : "18px 24px" }}>
-        {v.titre && <div style={{ fontSize: petit ? 13 : 15, fontWeight: 700, color: INK, marginBottom: 6 }}>{v.titre}</div>}
+      <div style={{ padding: petit ? "12px 14px" : "18px 24px", textAlign: alignCss(v.align) }}>
+        {v.titre && <div style={{ fontSize: petit ? 13 : 15, fontWeight: 700, color: teinteCss(v.couleur_titre), marginBottom: 6 }}>{v.titre}</div>}
         {/* Même règle que le rendu email : ligne vide = nouveau paragraphe,
             saut simple = retour à la ligne. L'aperçu doit être fidèle. */}
         {String(v.texte || "").replace(/\r\n?/g, "\n").split(/\n\s*\n/)
           .filter((bloc: string) => bloc.trim())
           .map((bloc: string, i: number) => (
-            <div key={i} style={{ fontSize: petit ? 11.5 : 13, lineHeight: 1.6, color: INK, marginBottom: 8 }}>
+            <div key={i} style={{ fontSize: petit ? 11.5 : 13, lineHeight: 1.6, color: teinteCss(v.couleur_texte), marginBottom: 8 }}>
               {bloc.split("\n").filter((l: string) => l.trim()).map((l: string, j: number, arr: string[]) => (
-                <span key={j}>{l}{j < arr.length - 1 && <br />}</span>
+                <span key={j}>{fragmentsGras(l)}{j < arr.length - 1 && <br />}</span>
               ))}
             </div>
           ))}
-        <Cta label={v.cta_label} />
+        <Cta v={v} />
       </div>
     </>
   );
@@ -298,11 +330,57 @@ function liensSuggeres(): { label: string; url: string }[] {
   ];
 }
 
+// Rangée de pastilles pour choisir une teinte de la charte.
+function ChoixTeinte({ label, valeur, defaut, onChange }: {
+  label: string; valeur?: string; defaut: string; onChange: (cle: string) => void;
+}) {
+  return (
+    <div className="nl-mef-groupe">
+      <span className="nl-mef-lab">{label}</span>
+      <div className="nl-liens" style={{ marginTop: 0 }}>
+        {TEINTES.map((t) => (
+          <button key={t.cle} type="button"
+            className={`nl-lien${(valeur || defaut) === t.cle ? " actif" : ""}`}
+            onClick={() => onChange(t.cle)}>
+            <span className="nl-pastille" style={{ background: t.css }} />{t.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ChampsBloc({ val, onChange, onUpload }: {
-  val: { titre?: string; texte?: string; image?: string; image_alt?: string; cta_label?: string; cta_url?: string };
+  val: {
+    titre?: string; texte?: string; image?: string; image_alt?: string;
+    cta_label?: string; cta_url?: string;
+    align?: string; couleur_titre?: string; couleur_texte?: string; cta_couleur?: string;
+  };
   onChange: (champs: Record<string, any>) => void;
   onUpload: (f: File) => Promise<string | null>;
 }) {
+  // Le bouton « Gras » agit sur la sélection courante du textarea : on garde
+  // donc une référence dessus. Le texte reste stocké en clair (**gras**), jamais
+  // en HTML — c'est ce qui permet de l'échapper sans risque à l'envoi.
+  const refTexte = useRef<HTMLTextAreaElement | null>(null);
+
+  function basculerGras() {
+    const ta = refTexte.current;
+    if (!ta) return;
+    const d = ta.selectionStart, f = ta.selectionEnd, t = ta.value;
+    if (d === f) {
+      // Rien de sélectionné : on pose les marqueurs et on place le curseur entre.
+      onChange({ texte: t.slice(0, d) + "****" + t.slice(f) });
+      requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(d + 2, d + 2); });
+      return;
+    }
+    const sel = t.slice(d, f);
+    const deja = /^\*\*[\s\S]+\*\*$/.test(sel);
+    const remp = deja ? sel.slice(2, -2) : `**${sel}**`;
+    onChange({ texte: t.slice(0, d) + remp + t.slice(f) });
+    requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(d, d + remp.length); });
+  }
+
   return (
     <>
       <div className="champ">
@@ -336,12 +414,38 @@ function ChampsBloc({ val, onChange, onUpload }: {
         <input value={val.titre || ""} onChange={(e) => onChange({ titre: e.target.value })} maxLength={120} placeholder="Optionnel" />
       </div>
       <div className="champ">
-        <label>Texte</label>
-        <textarea rows={4} value={val.texte || ""} onChange={(e) => onChange({ texte: e.target.value })} maxLength={2000}
+        <div className="nl-outils">
+          <label style={{ margin: 0 }}>Texte</label>
+          <button type="button" className="nl-lien nl-gras" onClick={basculerGras}
+            title="Mettre la sélection en gras (Ctrl+B)"><b>G</b></button>
+        </div>
+        <textarea ref={refTexte} rows={4} value={val.texte || ""} onChange={(e) => onChange({ texte: e.target.value })} maxLength={2000}
+          onKeyDown={(e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") { e.preventDefault(); basculerGras(); }
+          }}
           placeholder={"Votre texte…\n\nUne ligne vide sépare deux paragraphes."} />
         <span className="aide" style={{ fontSize: 11.5 }}>
-          Entrée = retour à la ligne · Entrée deux fois = nouveau paragraphe.
+          Entrée = retour à la ligne · Entrée deux fois = nouveau paragraphe ·
+          {" "}<b>**gras**</b> pour mettre un passage en évidence.
         </span>
+      </div>
+
+      {/* Mise en forme — alignement et teintes puisées dans la charte du site. */}
+      <div className="nl-mef">
+        <div className="nl-mef-groupe">
+          <span className="nl-mef-lab">Alignement</span>
+          <div className="nl-liens" style={{ marginTop: 0 }}>
+            {ALIGNS.map((a) => (
+              <button key={a.cle} type="button"
+                className={`nl-lien${(val.align || "gauche") === a.cle ? " actif" : ""}`}
+                onClick={() => onChange({ align: a.cle })}>{a.label}</button>
+            ))}
+          </div>
+        </div>
+        <ChoixTeinte label="Couleur du titre" valeur={val.couleur_titre} defaut="encre"
+          onChange={(cle) => onChange({ couleur_titre: cle })} />
+        <ChoixTeinte label="Couleur du texte" valeur={val.couleur_texte} defaut="encre"
+          onChange={(cle) => onChange({ couleur_texte: cle })} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         <div className="champ">
@@ -370,6 +474,15 @@ function ChampsBloc({ val, onChange, onUpload }: {
           )}
         </div>
       </div>
+      {/* Couleur du bouton : proposée seulement s'il y a un bouton à colorer.
+          Le libellé passe automatiquement en blanc ou en encre à l'envoi, selon
+          la clarté du fond — pas de bouton illisible possible. */}
+      {val.cta_label && (
+        <div className="nl-mef">
+          <ChoixTeinte label="Couleur du bouton" valeur={val.cta_couleur} defaut="accent"
+            onChange={(cle) => onChange({ cta_couleur: cle })} />
+        </div>
+      )}
     </>
   );
 }
@@ -406,6 +519,12 @@ function NouveauForm({ onSaved, initial }: {
   }
   function supprimerBloc(i: number) {
     setBlocs(blocs.filter((_, n) => n !== i));
+  }
+  // Copie profonde : sans elle, les deux blocs partageraient le même tableau
+  // `colonnes` et se modifieraient l'un l'autre.
+  function dupliquerBloc(i: number) {
+    const copie = JSON.parse(JSON.stringify(blocs[i]));
+    setBlocs([...blocs.slice(0, i + 1), copie, ...blocs.slice(i + 1)]);
   }
   function deplacerBloc(i: number, dir: -1 | 1) {
     const j = i + dir;
@@ -661,6 +780,7 @@ function NouveauForm({ onSaved, initial }: {
                     <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
                       <button className="btn btn-mini btn-ligne" onClick={() => deplacerBloc(i, -1)} disabled={i === 0} title="Monter">▲</button>
                       <button className="btn btn-mini btn-ligne" onClick={() => deplacerBloc(i, 1)} disabled={i === blocs.length - 1} title="Descendre">▼</button>
+                      <button className="btn btn-mini btn-ligne" onClick={() => dupliquerBloc(i)} title="Dupliquer ce bloc">⧉</button>
                       <button className="btn btn-mini btn-danger" onClick={() => supprimerBloc(i)} title="Supprimer">×</button>
                     </span>
                   </div>

@@ -169,16 +169,61 @@ function signoff(): string {
    reprise du template maison : tables imbriquées + conditionnels MSO.
    ══════════════════════════════════════════════════════════════════════ */
 
+/* ── Mise en forme d'un bloc : alignement, teintes, gras ──────────────────
+   Les teintes sont stockées en base de façon SYMBOLIQUE ('accent', 'encre'…),
+   jamais en hexadécimal : la charte du client vit dans les secrets
+   ACCENT_COLOR / ACCENT_DARK. Conséquences voulues —
+     • le restaurateur ne peut pas sortir de sa propre palette ;
+     • si la charte évolue, les campagnes archivées suivent ;
+     • aucun code couleur en dur ne se retrouve dans le contenu. */
+const TEINTES: Record<string, string> = {
+  encre:        INK,
+  accent:       ACCENT_COLOR,
+  accent_fonce: ACCENT_DARK,
+  gris:         "#6b6358",
+};
+function teinte(v: any, defaut = "encre"): string {
+  return TEINTES[String(v || defaut)] || TEINTES[defaut] || INK;
+}
+
+const ALIGNS: Record<string, string> = { gauche: "left", centre: "center", droite: "right" };
+function aligne(v: any): string { return ALIGNS[String(v || "gauche")] || "left"; }
+
+// Couleur du texte posé sur un fond coloré (bouton) : blanc sur fond sombre,
+// encre sur fond clair. Un accent pastel avec du blanc dessus serait illisible ;
+// le calcul évite au restaurateur d'avoir à y penser.
+function contraste(hex: string): string {
+  const m = /^#?([0-9a-f]{6}|[0-9a-f]{3})$/i.exec(String(hex).trim());
+  if (!m) return "#ffffff";
+  const h = m[1].length === 3 ? m[1].split("").map((c) => c + c).join("") : m[1];
+  const lin = [0, 2, 4].map((i) => {
+    const c = parseInt(h.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  const L = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+  return L > 0.45 ? INK : "#ffffff";
+}
+
+// Gras : **texte** -> <strong>texte</strong>. Appliqué APRÈS l'échappement,
+// donc aucun HTML saisi dans l'admin ne peut passer dans l'email.
+function gras(s: string): string {
+  return esc(s).replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+}
+
 // Bouton CTA (table imbriquée : seul rendu fiable sur Outlook)
-function blocCta(label: string, url: string, largeur = 200): string {
+// `v` porte la mise en forme du bloc : cta_couleur + align.
+function blocCta(label: string, url: string, largeur = 200, v: any = {}): string {
   if (!label || !url) return "";
-  return `<tr><td align="center" style="font-size:0; padding:14px 30px 4px 30px;">
-    <table cellspacing="0" cellpadding="0"><tr>
-      <td align="center" height="38" bgcolor="${ACCENT_COLOR}" style="border-radius:5px; display:block;">
-        <table cellspacing="0" cellpadding="0" height="38" width="${largeur}" bgcolor="${ACCENT_COLOR}" style="width:${largeur}px;border-radius:5px;display:block;mso-cellspacing:0px;mso-padding-alt:0px 0px 0px 0px;"><tr>
+  const fond = teinte(v.cta_couleur, "accent");
+  const encre = contraste(fond);
+  const al = aligne(v.align);
+  return `<tr><td align="${al}" style="font-size:0; padding:14px 30px 4px 30px;">
+    <table cellspacing="0" cellpadding="0" align="${al}"><tr>
+      <td align="center" height="38" bgcolor="${fond}" style="border-radius:5px; display:block;">
+        <table cellspacing="0" cellpadding="0" height="38" width="${largeur}" bgcolor="${fond}" style="width:${largeur}px;border-radius:5px;display:block;mso-cellspacing:0px;mso-padding-alt:0px 0px 0px 0px;"><tr>
           <td align="center" valign="middle" width="20" style="width:20px;"></td>
-          <td align="center" valign="middle" width="100%" height="38" style="width:100%;height:38px;font-size:16px;font-family:Arial,Sans-Serif;color:#ffffff;text-decoration:none;text-align:center;">
-            <a title="${esc(label)}" target="_blank" style="font-size:16px;font-family:Arial,Sans-Serif;color:#ffffff;text-decoration:none;display:block;" href="${esc(url)}"><strong>${esc(label)}</strong></a>
+          <td align="center" valign="middle" width="100%" height="38" style="width:100%;height:38px;font-size:16px;font-family:Arial,Sans-Serif;color:${encre};text-decoration:none;text-align:center;">
+            <a title="${esc(label)}" target="_blank" style="font-size:16px;font-family:Arial,Sans-Serif;color:${encre};text-decoration:none;display:block;" href="${esc(url)}"><strong>${esc(label)}</strong></a>
           </td>
         </tr></table>
       </td>
@@ -191,16 +236,18 @@ function blocCta(label: string, url: string, largeur = 200): string {
 //   • saut simple -> retour à la ligne DANS le paragraphe (<br/>)
 // Auparavant `split(/\n+/)` fusionnait les lignes vides : impossible d'obtenir
 // un espacement marqué ni un retour à la ligne court (adresse, horaires...).
-function blocParas(texte: string, largeur: number): string {
+function blocParas(texte: string, largeur: number, v: any = {}): string {
+  const al = aligne(v.align);
+  const col = teinte(v.couleur_texte);
   return String(texte || "")
     .replace(/\r\n?/g, "\n")
     .split(/\n\s*\n/)                      // paragraphes = séparés par une ligne vide
     .filter((bloc: string) => bloc.trim())
     .map((bloc: string) => {
       const lignes = bloc.split("\n").filter((l: string) => l.trim())
-        .map((l: string) => esc(l)).join("<br/>");
-      return `<div style="display:block; max-width:${largeur}px; text-align:left; width:100%; line-height:initial; padding:14px 0 0 0;">
-      <font style="font-family:Arial,sans-serif; font-size:14px; line-height:22px; color:${INK}">${lignes}</font></div>`;
+        .map((l: string) => gras(l)).join("<br/>");
+      return `<div style="display:block; max-width:${largeur}px; text-align:${al}; width:100%; line-height:initial; padding:14px 0 0 0;">
+      <font style="font-family:Arial,sans-serif; font-size:14px; line-height:22px; color:${col}">${lignes}</font></div>`;
     }).join("");
 }
 
@@ -210,15 +257,16 @@ function blocPleineLargeur(b: any): string {
   // bloquent les images par défaut, l'alt est alors tout ce que le lecteur voit.
   const img = b.image ? `<tr><td align="center" style="font-size:0; padding:0;">
     <img width="600" alt="${esc(b.image_alt || b.titre || "")}" style="display:block; line-height:0; max-width:100%; width:600px; height:auto;" border="0" src="${esc(b.image)}" /></td></tr>` : "";
-  const titre = b.titre ? `<div style="display:block; max-width:560px; text-align:left; width:100%; line-height:initial;">
-    <font style="font-family:Arial,sans-serif; font-size:16px; color:${INK}"><strong>${esc(b.titre)}</strong></font></div>` : "";
+  const al = aligne(b.align);
+  const titre = b.titre ? `<div style="display:block; max-width:560px; text-align:${al}; width:100%; line-height:initial;">
+    <font style="font-family:Arial,sans-serif; font-size:16px; color:${teinte(b.couleur_titre)}"><strong>${esc(b.titre)}</strong></font></div>` : "";
   const corps = (titre || b.texte) ? `<tr><td style="font-size:0; padding:30px 30px 20px 30px;" align="center">
-    <!--[if (gte mso 9)|(IE)]><table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr><td width="560" align="center" style="text-align:left;"><![endif]-->
-    ${titre}${blocParas(b.texte, 560)}
+    <!--[if (gte mso 9)|(IE)]><table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr><td width="560" align="center" style="text-align:${al};"><![endif]-->
+    ${titre}${blocParas(b.texte, 560, b)}
     <!--[if mso]></td></tr></table><![endif]-->
   </td></tr>` : "";
   return `<table border="0" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;"><tbody>
-    ${img}${corps}${blocCta(b.cta_label, b.cta_url, 200)}
+    ${img}${corps}${blocCta(b.cta_label, b.cta_url, 200, b)}
   </tbody></table>`;
 }
 
@@ -227,15 +275,16 @@ function colonne(col: any): string {
   // padding 10px autour de l'image (demande client) — l'image ne colle ni au bord ni à sa voisine
   const img = col.image ? `<tr><td align="center" style="font-size:0; padding:10px;">
     <img width="280" alt="${esc(col.image_alt || col.titre || "")}" style="display:block; line-height:0; max-width:100%; width:100%; height:auto;" border="0" src="${esc(col.image)}" /></td></tr>` : "";
-  const titre = col.titre ? `<div style="display:block; max-width:300px; text-align:left; width:100%; line-height:initial;">
-    <font style="font-family:Arial,sans-serif; font-size:16px; color:${INK}"><strong>${esc(col.titre)}</strong></font></div>` : "";
+  const al = aligne(col.align);
+  const titre = col.titre ? `<div style="display:block; max-width:300px; text-align:${al}; width:100%; line-height:initial;">
+    <font style="font-family:Arial,sans-serif; font-size:16px; color:${teinte(col.couleur_titre)}"><strong>${esc(col.titre)}</strong></font></div>` : "";
   const corps = (titre || col.texte) ? `<tr><td style="font-size:0; padding:20px 30px 20px 30px;" align="center">
-    <!--[if (gte mso 9)|(IE)]><table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr><td width="300" align="center" style="text-align:left;"><![endif]-->
-    ${titre}${blocParas(col.texte, 300)}
+    <!--[if (gte mso 9)|(IE)]><table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;"><tr><td width="300" align="center" style="text-align:${al};"><![endif]-->
+    ${titre}${blocParas(col.texte, 300, col)}
     <!--[if mso]></td></tr></table><![endif]-->
   </td></tr>` : "";
   return `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tbody>
-    ${img}${corps}${blocCta(col.cta_label, col.cta_url, 180)}
+    ${img}${corps}${blocCta(col.cta_label, col.cta_url, 180, col)}
   </tbody></table>`;
 }
 
