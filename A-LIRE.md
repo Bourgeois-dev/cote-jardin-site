@@ -475,3 +475,52 @@ Dans les trois espaces (`cote-jardin-site/`, `app-template/`,
 - (modifié) `src/components/admin/TabAvis.tsx`
 
 > Les zips contiennent l'intégralité des sept envois.
+
+---
+
+# Onglet Fonctionnalités — imbrication des modules dépendants (29/07/2026, huitième envoi)
+
+## Régression corrigée
+
+La mention « Sans effet : dépend du module Réservation en ligne » ajoutée au
+sixième envoi s'affichait **collée à la description**, sans séparation :
+« …dans l'administrationSans effet : dépend du module… ». Cause :
+`.ligne-toggle .lib span` est en `inline`, et le second `<span>` se plaçait donc
+dans la continuité du premier. Ma régression.
+
+## Le fond du problème
+
+CRM clients et Liste d'attente gardent une raison d'être : avec la réservation
+active, un client peut vouloir la réservation **sans** fiche client (simplicité
+RGPD) ou **sans** liste d'attente (jamais complet). Ce sont donc de vraies
+sous-options — pas des réglages à supprimer.
+
+Le tort était de les présenter comme des modules de même niveau que « Réservation
+en ligne », avec une note d'excuse quand leur parent est coupé.
+
+## Ce qui change
+
+- CRM clients et Liste d'attente sont **imbriqués** sous « Réservation en ligne »,
+  dans un `.sous-reglages` — le même parti pris que l'opt-in newsletter sous la
+  réservation dans « Réservations & site » : *réglage imbriqué, et non voisin*.
+- Ils **disparaissent** quand le parent est coupé, au lieu d'afficher un
+  interrupteur sans effet. La note d'excuse disparaît donc aussi, et la
+  régression ci-dessus avec elle.
+- Ordre d'affichage explicite (`ORDRE = ["reservation", "newsletter"]`) : `useTable`
+  triait par libellé, si bien que « Réservation en ligne » arrivait **après** les
+  modules qui en dépendent — l'imbrication aurait été illisible.
+- Ligne d'interrupteur extraite en composant `Ligne` pour servir aux deux niveaux.
+- Un module inconnu de `ORDRE` et sans parent est affiché en fin de liste plutôt
+  que d'être perdu silencieusement.
+- La description du bloc précise la règle : « Les modules encadrés dépendent de
+  celui qui les précède : couper le parent les coupe avec lui. »
+
+> Choix assumé : les interrupteurs des dépendants restent en base à `true`. Les
+> masquer n'écrit rien — rallumer « Réservation en ligne » restitue donc l'état
+> exact d'avant, sans réglage perdu.
+
+## Fichiers à remplacer (ce huitième envoi)
+
+- (modifié) `src/components/admin/TabFeatures.tsx` — dans les trois espaces.
+
+> Les zips contiennent l'intégralité des huit envois.

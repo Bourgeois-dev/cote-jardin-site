@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { useTable } from "../../hooks/useTable";
 import { supabase } from "../../lib/supabase";
 import Chargement from "./Chargement";
@@ -19,10 +20,35 @@ const DEPENDANCES: Record<string, string> = {
   crm: "reservation",
 };
 
+// Ordre d'affichage des modules de premier niveau. Sans cela, useTable trie par
+// libellé et « Réservation en ligne » se retrouve APRÈS les modules qui en
+// dépendent — l'imbrication devient illisible.
+const ORDRE = ["reservation", "newsletter"];
+
+function Ligne({ f, onBascule }: { f: FeatureFlag; onBascule: (f: FeatureFlag, v: boolean) => void }) {
+  return (
+    <div className="ligne-toggle">
+      <div className="lib">
+        <b>{f.label}</b>
+        {f.description && <span>{f.description}</span>}
+      </div>
+      <label className="toggle">
+        <input type="checkbox" checked={f.enabled} onChange={(e) => onBascule(f, e.target.checked)} />
+        <span className="piste" />
+      </label>
+    </div>
+  );
+}
+
 export default function TabFeatures() {
   const { rows, loading, update } = useTable<FeatureFlag>("feature_flags", "label");
-  const actifs: Record<string, boolean> = {};
-  rows.forEach((f) => { actifs[f.key] = f.enabled; });
+  // Modules de premier niveau, puis leurs dépendants. Tout module inconnu de
+  // ORDRE et sans parent est ajouté à la fin plutôt que d'être perdu.
+  const parents = [
+    ...ORDRE.map((k) => rows.find((r) => r.key === k)).filter((r): r is FeatureFlag => !!r),
+    ...rows.filter((r) => !DEPENDANCES[r.key] && !ORDRE.includes(r.key)),
+  ];
+  const enfantsDe = (k: string) => rows.filter((r) => DEPENDANCES[r.key] === k);
 
   /**
    * Bascule d'un module. Cas particulier de la newsletter : le bloc du site est
@@ -58,37 +84,26 @@ export default function TabFeatures() {
                 Ces réglages contrôlent quels <b>onglets sont visibles dans l'administration</b> du
                 restaurateur — ils n'affectent pas l'affichage du site public (géré depuis
                 « Réservations &amp; site »). Un module désactivé masque l'onglet correspondant,
-                au prochain chargement de l'interface.
+                au prochain chargement de l'interface. Les modules encadrés dépendent de
+                celui qui les précède : couper le parent les coupe avec lui.
               </div>
             </div>
           </div>
-          {rows.map((f) => {
-            // Module dont le parent est coupé : l'onglet est masqué côté admin
-            // quoi qu'affiche l'interrupteur. On le dit plutôt que de laisser
-            // croire que le réglage est sans effet.
-            const parent = DEPENDANCES[f.key];
-            const neutralise = parent ? actifs[parent] === false : false;
+          {/* Les dépendants sont imbriqués sous leur parent, et disparaissent
+              avec lui : un interrupteur qu'on ne peut pas voir vaut mieux qu'un
+              interrupteur qui n'a aucun effet. Même parti pris que l'opt-in
+              newsletter sous « Réservation en ligne » dans TabParametres. */}
+          {parents.map((f) => {
+            const enfants = enfantsDe(f.key);
             return (
-              <div className="ligne-toggle" key={f.id}>
-                <div className="lib">
-                  <b>{f.label}</b>
-                  {f.description && <span>{f.description}</span>}
-                  {neutralise && (
-                    <span style={{ color: "var(--admin-accent)" }}>
-                      Sans effet : dépend du module « Réservation en ligne », actuellement désactivé.
-                      L'onglet reste masqué.
-                    </span>
-                  )}
-                </div>
-                <label className="toggle">
-                  <input
-                    type="checkbox"
-                    checked={f.enabled}
-                    onChange={(e) => basculer(f, e.target.checked)}
-                  />
-                  <span className="piste" />
-                </label>
-              </div>
+              <Fragment key={f.id}>
+                <Ligne f={f} onBascule={basculer} />
+                {f.enabled && enfants.length > 0 && (
+                  <div className="sous-reglages">
+                    {enfants.map((c) => <Ligne key={c.id} f={c} onBascule={basculer} />)}
+                  </div>
+                )}
+              </Fragment>
             );
           })}
         </div>
