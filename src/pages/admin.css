@@ -131,7 +131,7 @@ tr:last-child td { border-bottom:none }
 /* Texte d'aide sous un champ. La classe était utilisée dans plusieurs onglets
    sans exister dans la feuille : l'aide s'affichait collée à l'input, à la
    taille du corps de texte. */
-.champ .aide, .aide { display:block; font-size:12px; color:var(--ink-soft);
+.champ .aide, .aide, .champ-aide { display:block; font-size:12px; color:var(--ink-soft);
   margin-top:5px; line-height:1.45 }
 .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px }
 @media(max-width:600px) { .grid2 { grid-template-columns:1fr } }
@@ -940,6 +940,20 @@ tr:last-child td { border-bottom:none }
 .rs-err { color:var(--annule) }
 .rs-tester { color:var(--admin-accent); text-decoration:none; font-weight:700 }
 .rs-tester:hover { text-decoration:underline }
+
+/* Réglages « Réservations & site » : sections nommées.
+   Tous les réglages vivaient dans une seule .grid2, interrupteurs compris :
+   « Confirmation automatique » se retrouvait à côté de « Durée d'occupation »
+   par accident de flux, pas par intention. */
+.reglages-section { border-top:1px solid var(--line); margin-top:22px; padding-top:18px }
+.reglages-section:first-of-type { border-top:none; margin-top:0; padding-top:0 }
+.reglages-titre { font-size:12px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.06em; color:var(--admin-accent); margin-bottom:4px }
+.reglages-desc { font-size:12.5px; color:var(--ink-soft); margin-bottom:14px; max-width:70ch }
+/* Les aides longues méritent une largeur de lecture, pas toute la carte. */
+.reglages-section .champ-aide { max-width:60ch }
+.reglages-note { font-size:12.5px; color:var(--ink-soft); background:var(--cream);
+  border-radius:8px; padding:10px 14px; margin-bottom:14px }
 
 /* L'aperçu suit la saisie : sur un formulaire long, il sortait de l'écran
    pendant qu'on remplissait les champs. */
