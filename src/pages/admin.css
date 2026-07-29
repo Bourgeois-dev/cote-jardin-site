@@ -1112,6 +1112,18 @@ tr:last-child td { border-bottom:none }
 .canal-pastille.canal-site { background:var(--admin-accent) }
 .canal-pastille.canal-tel  { background:var(--or) }
 
+/* Origine des inscriptions (tableau de bord newsletter) */
+.src-liste { display:flex; flex-direction:column; gap:12px }
+.src-ligne { display:grid; grid-template-columns:minmax(120px,190px) 1fr auto; align-items:center; gap:14px }
+.src-nom { font-size:13.5px; color:var(--ink); text-transform:capitalize;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.src-ligne .canal-barre { margin-bottom:0 }
+.src-nb { font-size:13px; color:var(--ink-soft); white-space:nowrap }
+@media (max-width:640px){
+  .src-ligne { grid-template-columns:1fr auto; row-gap:6px }
+  .src-ligne .canal-barre { grid-column:1 / -1; order:3 }
+}
+
 /* Zones de filtres réservations (carnet) */
 .filtres-resa { display:flex; gap:6px; flex-wrap:wrap; align-items:center }
 

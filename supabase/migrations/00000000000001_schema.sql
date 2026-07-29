@@ -185,9 +185,17 @@ create table if not exists public.leads (
   unsubscribe_token uuid    not null default gen_random_uuid(),
   created_at timestamptz not null default now(),
   welcome_sent      boolean not null default false,
+  -- Horodatage de la désinscription (consent repassé à false). Null si jamais
+  -- désinscrit. Alimenté par l'edge function newsletter-unsubscribe. Permet de
+  -- mesurer les désinscriptions sur une période, pas seulement en volume total.
+  unsubscribed_at   timestamptz,
   unique (email));
 
 -- Index partiel : le scheduler ne balaie que les leads en attente de welcome.
+create index if not exists leads_unsubscribed_at_idx
+  on public.leads (unsubscribed_at)
+  where unsubscribed_at is not null;
+
 create index if not exists leads_welcome_pending
   on public.leads (created_at)
   where welcome_sent = false and consent = true;

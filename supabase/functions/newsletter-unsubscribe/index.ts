@@ -69,7 +69,7 @@ Deno.serve(async (req: Request) => {
     // Désinscrire
     const { error } = await db
       .from("leads")
-      .update({ consent: false })
+      .update({ consent: false, unsubscribed_at: new Date().toISOString() })
       .eq("unsubscribe_token", token);
 
     if (error) throw error;

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabase";
 import TabTableau from "./TabTableau";
+import TabTableauNewsletter from "./TabTableauNewsletter";
+import Chargement from "./Chargement";
 import TabReservations from "./TabReservations";
 import TabClients from "./TabClients";
 import TabCarte from "./TabCarte";
@@ -117,6 +119,19 @@ function AdminShell({ session }: { session: Session }) {
     if (Object.keys(features).length === 0) return true; // flags pas encore chargés
     return moduleActif(fk);
   });
+  // Sans module Réservation, le tableau de bord du service n'aurait rien à
+  // montrer : on monte celui de la newsletter à la place. Composant distinct,
+  // donc aucune requête inutile sur reservations / restaurant_tables.
+  const sansResa = features["reservation"] === false;
+  // Tant que les flags ne sont pas lus, on n'affiche aucun des deux tableaux de
+  // bord : sinon un client Essentiel verrait passer une fraction de seconde de
+  // « Couverts aujourd'hui » avant la bascule.
+  const flagsCharges = Object.keys(features).length > 0;
+  const tableauDeBord = !flagsCharges
+    ? <Chargement />
+    : sansResa
+    ? <TabTableauNewsletter onNavigate={(tab) => naviguer(tab)} />
+    : <TabTableau onNavigate={(tab, date, service) => { setForceDate(date); setForceService(service); naviguer(tab); }} />;
   const Current = TABS_VISIBLES.find((t) => t.key === active)?.comp || TabTableau;
   const siteUrl = import.meta.env.VITE_SITE_URL || "/";
 
@@ -255,11 +270,11 @@ function AdminShell({ session }: { session: Session }) {
       </aside>
       <main className="main">
         {active === "tableau"
-          ? <TabTableau onNavigate={(tab, date, service) => { setForceDate(date); setForceService(service); naviguer(tab); }} />
+          ? tableauDeBord
           : active === "reservations"
           ? <TabReservations initialDate={forceDate} initialService={forceService} />
           : active === "features" && !isEditor
-          ? <TabTableau onNavigate={(tab, date, service) => { setForceDate(date); setForceService(service); naviguer(tab); }} />
+          ? tableauDeBord
           : <Current />}
       </main>
       {/* Tiroir de navigation mobile (menu burger) */}
