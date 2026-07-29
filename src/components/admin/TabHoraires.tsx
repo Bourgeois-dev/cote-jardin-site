@@ -1,5 +1,6 @@
 import { useTable } from "../../hooks/useTable";
-import { useState } from "react";
+import { supabase } from "../../lib/supabase";
+import { useState, useEffect } from "react";
 import type { OpeningHour, ClosurePeriod } from "../../lib/types";
 import { useToast } from "./Toast";
 import Chargement from "./Chargement";
@@ -27,6 +28,14 @@ export default function TabHoraires() {
   const cp = useTable<ClosurePeriod>("closure_periods", "start_date");
   const [nc, setNc] = useState({ start_date: "", end_date: "", reason: "", service: "", note_interne: "", custom_message: "" });
   const [err, setErr] = useState("");
+  // Les fermetures exceptionnelles ne servent qu'au widget de réservation :
+  // closure_periods n'est lue que par ReservationWidget.tsx et par
+  // check_availability(). Sans le module, la section n'a aucun effet visible.
+  const [reservationOn, setReservationOn] = useState(true);
+  useEffect(() => {
+    supabase.from("feature_flags").select("enabled").eq("key", "reservation").maybeSingle()
+      .then(({ data }) => { if (data && data.enabled === false) setReservationOn(false); });
+  }, []);
 
   const jours = oh.rows.slice().sort((a, b) => a.day_of_week - b.day_of_week);
 
@@ -47,7 +56,9 @@ export default function TabHoraires() {
 
   return (
     <>
-      <div className="topbar"><div><h1>Horaires</h1><div className="sous">Ouvertures et fermetures exceptionnelles</div></div></div>
+      <div className="topbar"><div><h1>Horaires</h1><div className="sous">
+        {reservationOn ? "Ouvertures et fermetures exceptionnelles" : "Horaires d'ouverture affichés sur le site"}
+      </div></div></div>
       <div className="contenu">
         {oh.loading && oh.rows.length === 0 && <Chargement />}
         <div className="bloc">
@@ -86,66 +97,72 @@ export default function TabHoraires() {
           <div className="hint">Les heures s'enregistrent automatiquement quand vous quittez le champ. Un créneau vide = pas de service à ce moment-là.</div>
         </div>
 
-        <div className="bloc">
-          <div className="bloc-tete"><div><h2>Fermetures &amp; événements exceptionnels</h2><div className="desc">Fermetures totales, partielles (midi ou soir uniquement), ou événements privatifs. Le widget masque automatiquement les créneaux bloqués.</div></div></div>
-          {/* Sans aucune fermeture, un en-tête de tableau seul flotte au-dessus
-              du vide : on affiche un état vide franc à la place. */}
-          {cp.rows.length === 0 ? (
-            <div className="ferm-vide">
-              Aucune fermeture programmée.
-              <span>Congés, jour férié, privatisation : ajoutez-les ci-dessous, le widget masquera les créneaux.</span>
-            </div>
-          ) : (
-            <table className="tab-fermetures tbl-cartes"><thead><tr><th>Période</th><th>Service</th><th>Motif client</th><th>Note interne</th><th></th></tr></thead><tbody>
-              {cp.rows.map((cl) => (
-                <tr key={cl.id}>
-                  <td data-label="Période"><b>{frPeriode(cl.start_date, cl.end_date)}</b></td>
-                  <td data-label="Service"><span className="tag t-neutre">{LIBELLE_SERVICE[cl.service || ""]}</span></td>
-                  <td data-label="Motif client">{cl.reason || "—"}</td>
-                  <td data-label="Note interne"><span className="sub-desc">{cl.note_interne || "—"}</span></td>
-                  <td className="td-actions"><button className="btn btn-mini btn-danger" onClick={() => cp.remove(cl.id)}>Supprimer</button></td>
-                </tr>
-              ))}
-            </tbody></table>
-          )}
-
-          {/* Formulaire dans un panneau à part : sans conteneur, la pile de
-              champs flottait sous le tableau sans qu'on sache où elle commence. */}
-          <div className="ferm-form">
-            <div className="ferm-form-titre">Ajouter une fermeture</div>
-            <div className="ferm-dates">
-              <div className="champ"><label>Du</label><input type="date" value={nc.start_date} onChange={(e) => setNc({ ...nc, start_date: e.target.value, end_date: nc.end_date && nc.end_date < e.target.value ? e.target.value : nc.end_date })} /></div>
-              {/* `min` sur la date de fin : une période à l'envers est impossible
-                  à saisir plutôt que refusée après coup. */}
-              <div className="champ"><label>Au</label><input type="date" min={nc.start_date || undefined} value={nc.end_date} onChange={(e) => setNc({ ...nc, end_date: e.target.value })} /></div>
-              <div className="champ">
-                <label>Service bloqué</label>
-                <select value={nc.service} onChange={(e) => setNc({ ...nc, service: e.target.value })}>
-                  <option value="">Toute la journée</option>
-                  <option value="midi">Midi uniquement</option>
-                  <option value="soir">Soir uniquement</option>
-                </select>
+        {/* Section réservée au module Réservation : closure_periods n'est
+            exploitée que par le widget et par check_availability(). */}
+        {reservationOn && (
+          <>
+          <div className="bloc">
+            <div className="bloc-tete"><div><h2>Fermetures &amp; événements exceptionnels</h2><div className="desc">Fermetures totales, partielles (midi ou soir uniquement), ou événements privatifs. Le widget masque automatiquement les créneaux bloqués.</div></div></div>
+            {/* Sans aucune fermeture, un en-tête de tableau seul flotte au-dessus
+                du vide : on affiche un état vide franc à la place. */}
+            {cp.rows.length === 0 ? (
+              <div className="ferm-vide">
+                Aucune fermeture programmée.
+                <span>Congés, jour férié, privatisation : ajoutez-les ci-dessous, le widget masquera les créneaux.</span>
               </div>
-            </div>
+            ) : (
+              <table className="tab-fermetures tbl-cartes"><thead><tr><th>Période</th><th>Service</th><th>Motif client</th><th>Note interne</th><th></th></tr></thead><tbody>
+                {cp.rows.map((cl) => (
+                  <tr key={cl.id}>
+                    <td data-label="Période"><b>{frPeriode(cl.start_date, cl.end_date)}</b></td>
+                    <td data-label="Service"><span className="tag t-neutre">{LIBELLE_SERVICE[cl.service || ""]}</span></td>
+                    <td data-label="Motif client">{cl.reason || "—"}</td>
+                    <td data-label="Note interne"><span className="sub-desc">{cl.note_interne || "—"}</span></td>
+                    <td className="td-actions"><button className="btn btn-mini btn-danger" onClick={() => cp.remove(cl.id)}>Supprimer</button></td>
+                  </tr>
+                ))}
+              </tbody></table>
+            )}
 
-            {/* Les deux champs vus par le client, groupés ; la note interne est
-                séparée pour qu'on ne confonde jamais les deux publics. */}
-            <div className="ferm-groupe">
-              <div className="ferm-groupe-titre">Ce que voit le client sur le widget</div>
-              <div className="grid2">
-                <div className="champ"><label>Motif</label><input value={nc.reason} onChange={(e) => setNc({ ...nc, reason: e.target.value })} placeholder="Congés d'été" /></div>
-                <div className="champ"><label>Message personnalisé</label><input value={nc.custom_message} onChange={(e) => setNc({ ...nc, custom_message: e.target.value })} placeholder="Nous sommes complets ce soir — prochain créneau…" /></div>
+            {/* Formulaire dans un panneau à part : sans conteneur, la pile de
+                champs flottait sous le tableau sans qu'on sache où elle commence. */}
+            <div className="ferm-form">
+              <div className="ferm-form-titre">Ajouter une fermeture</div>
+              <div className="ferm-dates">
+                <div className="champ"><label>Du</label><input type="date" value={nc.start_date} onChange={(e) => setNc({ ...nc, start_date: e.target.value, end_date: nc.end_date && nc.end_date < e.target.value ? e.target.value : nc.end_date })} /></div>
+                {/* `min` sur la date de fin : une période à l'envers est impossible
+                    à saisir plutôt que refusée après coup. */}
+                <div className="champ"><label>Au</label><input type="date" min={nc.start_date || undefined} value={nc.end_date} onChange={(e) => setNc({ ...nc, end_date: e.target.value })} /></div>
+                <div className="champ">
+                  <label>Service bloqué</label>
+                  <select value={nc.service} onChange={(e) => setNc({ ...nc, service: e.target.value })}>
+                    <option value="">Toute la journée</option>
+                    <option value="midi">Midi uniquement</option>
+                    <option value="soir">Soir uniquement</option>
+                  </select>
+                </div>
               </div>
-            </div>
 
-            <div className="champ ferm-interne"><label>Note interne <span>— non visible sur le site</span></label><input value={nc.note_interne} onChange={(e) => setNc({ ...nc, note_interne: e.target.value })} placeholder="Séminaire entreprise, salle privée" /></div>
+              {/* Les deux champs vus par le client, groupés ; la note interne est
+                  séparée pour qu'on ne confonde jamais les deux publics. */}
+              <div className="ferm-groupe">
+                <div className="ferm-groupe-titre">Ce que voit le client sur le widget</div>
+                <div className="grid2">
+                  <div className="champ"><label>Motif</label><input value={nc.reason} onChange={(e) => setNc({ ...nc, reason: e.target.value })} placeholder="Congés d'été" /></div>
+                  <div className="champ"><label>Message personnalisé</label><input value={nc.custom_message} onChange={(e) => setNc({ ...nc, custom_message: e.target.value })} placeholder="Nous sommes complets ce soir — prochain créneau…" /></div>
+                </div>
+              </div>
 
-            <div className="ferm-actions">
-              <span className="ferm-aide">Une seule journée ? Indiquez la même date des deux côtés.</span>
-              <button className="btn btn-accent" onClick={addClosure}>Ajouter la fermeture</button>
+              <div className="champ ferm-interne"><label>Note interne <span>— non visible sur le site</span></label><input value={nc.note_interne} onChange={(e) => setNc({ ...nc, note_interne: e.target.value })} placeholder="Séminaire entreprise, salle privée" /></div>
+
+              <div className="ferm-actions">
+                <span className="ferm-aide">Une seule journée ? Indiquez la même date des deux côtés.</span>
+                <button className="btn btn-accent" onClick={addClosure}>Ajouter la fermeture</button>
+              </div>
             </div>
           </div>
-        </div>
+          </>
+        )}
       </div>
     </>
   );

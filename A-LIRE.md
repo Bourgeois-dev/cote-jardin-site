@@ -352,3 +352,51 @@ table oubliée sera inaccessible plutôt qu'ouverte en grand.
 
 > `app-template` n'est pas concerné (pas de schéma, pas de doc de provisioning).
 > Les zips contiennent l'intégralité des cinq envois.
+
+---
+
+# Fermetures exceptionnelles masquées en offre Essentiel (29/07/2026, sixième envoi)
+
+Le bloc « Fermetures & événements exceptionnels » de l'onglet Horaires restait
+visible sans le module Réservation.
+
+Vérifié avant de trancher : `closure_periods` n'est lue que par
+`ReservationWidget.tsx` et par la fonction `check_availability()`. Aucun bloc du
+site public ne l'affiche. Sans réservation, la section est donc **sans effet
+observable** — un restaurateur pouvait y saisir des congés en croyant qu'ils
+s'afficheraient quelque part.
+
+## Ce qui change dans `TabHoraires.tsx`
+
+- le bloc « Fermetures & événements exceptionnels » disparaît entièrement quand
+  `reservation` est sur `false` ;
+- le sous-titre de l'onglet passe de « Ouvertures et fermetures exceptionnelles »
+  à « Horaires d'ouverture affichés sur le site » ;
+- les horaires d'ouverture, eux, restent : ils sont affichés sur le site public,
+  indépendamment de toute réservation.
+
+> Note : `useTable("closure_periods")` continue de s'exécuter (on ne peut pas
+> conditionner un hook React). La requête revient vide et n'a aucun coût visible ;
+> la corriger imposerait de découper le composant, ce qui n'en vaut pas le prix.
+
+## Balayage des autres onglets
+
+J'ai passé en revue les onglets qui restent visibles en offre Essentiel. Il ne
+reste que deux traces, toutes deux sans conséquence :
+
+- **Ardoise/Promo** : le champ « Texte du bouton » propose `Réserver ma place`
+  comme *placeholder*. Simple suggestion grisée, le restaurateur saisit son propre
+  libellé. À changer si tu veux, mais rien ne casse.
+- **Contacts** : la table de correspondance des sources traduit `reservation` en
+  « Réservation ». Comportement correct — cette source n'apparaît simplement
+  jamais chez un client sans réservation.
+
+Aucun autre onglet ne mentionne la réservation. À ma connaissance, le tour est
+complet.
+
+## Fichiers à remplacer (ce sixième envoi)
+
+- (modifié) `src/components/admin/TabHoraires.tsx` — dans les trois espaces
+  (`cote-jardin-site/`, `app-template/`, `provisioning/templates/app/`).
+
+> Les zips contiennent l'intégralité des six envois.
