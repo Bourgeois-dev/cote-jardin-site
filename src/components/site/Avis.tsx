@@ -31,7 +31,10 @@ export default function Avis({ reviews }: { reviews: Review[] }) {
             {reviews.map((r) => (
               <div className="avis-carte" key={r.id}>
                 <Stars n={r.rating} />
-                <p className="avis-texte">« {r.content} »</p>
+                {/* pre-line : les retours à la ligne saisis dans l'admin sont respectés
+                    (les avis Google en contiennent presque toujours). Réglé ici et non
+                    dans site.css : c'est un comportement, pas une décoration. */}
+                <p className="avis-texte" style={{ whiteSpace: "pre-line" }}>« {r.content} »</p>
                 <div className="avis-auteur">{r.author}</div>
               </div>
             ))}

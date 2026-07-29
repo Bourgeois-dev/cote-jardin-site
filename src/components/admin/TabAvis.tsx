@@ -62,12 +62,12 @@ export default function TabAvis() {
               on voit la carte se construire pendant qu'on tape. */}
           <div className="apercu-col">
             <div className="eyebrow" style={{ marginBottom: 12 }}>Aperçu de la carte</div>
-            <div className="pa-carte avis-carte" style={{ cursor: "default" }}>
-              <div className="avis-tete">
+            <div className="adm-pa-carte adm-avis-carte" style={{ cursor: "default" }}>
+              <div className="adm-avis-tete">
                 <b>{edit.author || "Nom de l'auteur"}</b>
                 <Stars n={edit.rating || 5} />
               </div>
-              <blockquote className="avis-texte" style={{ WebkitLineClamp: "unset" }}>{edit.content || "Le texte de l'avis apparaîtra ici…"}</blockquote>
+              <blockquote className="adm-avis-texte" style={{ WebkitLineClamp: "unset" }}>{edit.content || "Le texte de l'avis apparaîtra ici…"}</blockquote>
             </div>
             <div className="apercu-note">Mise à jour en direct</div>
           </div>
@@ -92,14 +92,14 @@ export default function TabAvis() {
           {/* Un avis est une citation : la carte la montre presque entière
               (six lignes) au lieu de la tronquer à 90 caractères — c'est le
               texte qu'on vient relire ici, pas une métadonnée. */}
-          <div className="pa-grille avis-grille">
+          <div className="adm-pa-grille adm-avis-grille">
             {rows.map((r) => (
-              <div className={`pa-carte avis-carte${r.is_active ? "" : " pa-masque"}`} key={r.id}>
-                <div className="avis-tete">
+              <div className={`adm-pa-carte adm-avis-carte${r.is_active ? "" : " adm-pa-masque"}`} key={r.id}>
+                <div className="adm-avis-tete">
                   <b>{r.author}</b>
                   <Stars n={r.rating} />
                 </div>
-                <blockquote className="avis-texte">{r.content}</blockquote>
+                <blockquote className="adm-avis-texte">{r.content}</blockquote>
                 <div className="ga-actions">
                   <label className="toggle" title={r.is_active ? "Visible sur le site" : "Masqué"}><input type="checkbox" checked={r.is_active} onChange={(e) => update(r.id, { is_active: e.target.checked })} /><span className="piste" /></label>
                   <button className="btn btn-mini btn-ligne" onClick={() => setEdit({ ...r })}>Modifier</button>

@@ -1035,31 +1035,37 @@ tr:last-child td { border-bottom:none }
 .ga-ajout:hover b { color:var(--admin-accent) }
 .ga-ajout:disabled { cursor:default; opacity:.6 }
 
-/* Partenaires & Avis : cartes. Réutilise les badges (.ga-num, .ga-badge), les
+/* ⚠️ COLLISIONS DE CLASSES : site.css (forme, par client) définit ses propres
+   .pa-* et .avis-* — et Vite fusionne tout le CSS dans un seul bundle. Toute
+   nouvelle classe admin dont le nom pourrait exister côté site doit être
+   préfixée `adm-`. Bug vu en production : l'aperçu partenaire héritait du
+   dégradé vert de .pa-visuel du site.
+   Partenaires & Avis : cartes. Réutilise les badges (.ga-num, .ga-badge), les
    actions (.ga-actions) et la tuile d'ajout (.ga-ajout) de la Galerie — un seul
    vocabulaire visuel pour tous les contenus en grille de l'admin. */
-.pa-grille { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; margin-top:14px }
-.pa-carte { border:1px solid var(--line); border-radius:10px; background:#fff;
+.adm-pa-grille { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; margin-top:14px }
+.adm-pa-carte { border:1px solid var(--line); border-radius:10px; background:#fff;
   display:flex; flex-direction:column; overflow:hidden; cursor:grab }
-.pa-masque .pa-visuel, .pa-masque .pa-corps, .pa-masque .avis-tete, .pa-masque .avis-texte { opacity:.45 }
-.pa-visuel { position:relative; background:var(--cream) }
-.pa-visuel img { width:100%; aspect-ratio:16/7; object-fit:cover; display:block }
+.adm-pa-masque .adm-pa-visuel, .adm-pa-masque .adm-pa-corps, .adm-pa-masque .adm-avis-tete, .adm-pa-masque .adm-avis-texte { opacity:.45 }
+.adm-pa-visuel { position:relative; background:var(--cream) }
+.adm-pa-visuel img { width:100%; aspect-ratio:16/7; object-fit:cover; display:block }
 /* Sans image : l'initiale du partenaire, pas un tiret gris. */
-.pa-initiale { display:flex; align-items:center; justify-content:center; aspect-ratio:16/7;
+.adm-pa-initiale { display:flex; align-items:center; justify-content:center; aspect-ratio:16/7;
   font-size:34px; font-weight:700; color:var(--admin-accent-light) }
-.pa-avant { background:var(--or); color:#fff; border:none }
-.pa-corps { padding:11px 14px 4px; flex:1 }
-.pa-nom { display:flex; align-items:center; gap:8px; flex-wrap:wrap }
-.pa-nom b { font-size:14.5px }
-.pa-desc { margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
+.adm-pa-avant { background:var(--or); color:#fff; border:none }
+.adm-pa-corps { padding:11px 14px 4px; flex:1 }
+.adm-pa-nom { display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+.adm-pa-nom b { font-size:14.5px }
+.adm-pa-desc { margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
 
 /* Avis : la citation est le contenu — six lignes visibles, pas 90 caractères. */
-.avis-carte { cursor:default; padding-top:12px }
-.avis-tete { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 14px 6px }
-.avis-tete b { font-size:14.5px }
-.avis-texte { margin:0; padding:0 14px 10px; flex:1; font-size:13px; line-height:1.55;
-  color:var(--ink); display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden }
-.avis-texte::before { content:"« " } .avis-texte::after { content:" »" }
+.adm-avis-carte { cursor:default; padding-top:12px }
+.adm-avis-tete { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 14px 6px }
+.adm-avis-tete b { font-size:14.5px }
+.adm-avis-texte { margin:0; padding:0 14px 10px; flex:1; font-size:13px; line-height:1.55;
+  color:var(--ink); white-space:pre-line;
+  display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden }
+.adm-avis-texte::before { content:"« " } .adm-avis-texte::after { content:" »" }
 
 /* Carte PDF */
 .menu-file-actuel { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; background:var(--cream); border:1px solid var(--line); border-radius:10px; padding:14px 16px }

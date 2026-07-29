@@ -129,16 +129,16 @@ export default function TabPartenaires() {
               grille — même patron que l'avis, l'ardoise et la bannière. */}
           <div className="apercu-col">
             <div className="eyebrow" style={{ marginBottom: 12 }}>Aperçu de la carte</div>
-            <div className="pa-carte" style={{ cursor: "default" }}>
-              <div className="pa-visuel">
+            <div className="adm-pa-carte" style={{ cursor: "default" }}>
+              <div className="adm-pa-visuel">
                 {edit.image_url
                   ? <img src={edit.image_url} alt="" />
-                  : <span className="pa-initiale" aria-hidden="true">{(edit.name || "?").trim().charAt(0).toUpperCase()}</span>}
-                {edit.featured && <span className="ga-badge pa-avant">★ En avant</span>}
+                  : <span className="adm-pa-initiale" aria-hidden="true">{(edit.name || "?").trim().charAt(0).toUpperCase()}</span>}
+                {edit.featured && <span className="ga-badge adm-pa-avant">★ En avant</span>}
               </div>
-              <div className="pa-corps" style={{ paddingBottom: 12 }}>
-                <div className="pa-nom"><b>{edit.name || "Nom du partenaire"}</b>{edit.partner_type && <span className="tag t-neutre">{edit.partner_type}</span>}</div>
-                {edit.description && <div className="sub-desc pa-desc">{edit.description}</div>}
+              <div className="adm-pa-corps" style={{ paddingBottom: 12 }}>
+                <div className="adm-pa-nom"><b>{edit.name || "Nom du partenaire"}</b>{edit.partner_type && <span className="tag t-neutre">{edit.partner_type}</span>}</div>
+                {edit.description && <div className="sub-desc adm-pa-desc">{edit.description}</div>}
                 {(edit.category || edit.location) && <div className="sub-desc" style={{ marginTop: 4 }}>{[edit.category, edit.location].filter(Boolean).join(" · ")}</div>}
               </div>
             </div>
@@ -166,24 +166,24 @@ export default function TabPartenaires() {
           {/* Cartes plutôt que tableau : chaque partenaire est un petit
               portrait — image, nom, type — pas une ligne de données. Le badge
               numéroté rend l'ordre du site visible, comme dans la Galerie. */}
-          <div className="pa-grille">
+          <div className="adm-pa-grille">
             {ordered.map((p, i) => (
-              <div className={`pa-carte${p.is_active ? "" : " pa-masque"}`} key={p.id}
+              <div className={`adm-pa-carte${p.is_active ? "" : " adm-pa-masque"}`} key={p.id}
                   draggable
                   onDragStart={() => { dragId.current = p.id; }}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={() => onDrop(p.id)}>
-                <div className="pa-visuel">
+                <div className="adm-pa-visuel">
                   {p.image_url
                     ? <img src={p.image_url} alt="" />
-                    : <span className="pa-initiale" aria-hidden="true">{(p.name || "?").trim().charAt(0).toUpperCase()}</span>}
+                    : <span className="adm-pa-initiale" aria-hidden="true">{(p.name || "?").trim().charAt(0).toUpperCase()}</span>}
                   <span className="ga-num">{i + 1}</span>
-                  {p.featured && <span className="ga-badge pa-avant">★ En avant</span>}
+                  {p.featured && <span className="ga-badge adm-pa-avant">★ En avant</span>}
                   {!p.is_active && <span className="ga-badge">Masqué</span>}
                 </div>
-                <div className="pa-corps">
-                  <div className="pa-nom"><b>{p.name}</b>{p.partner_type && <span className="tag t-neutre">{p.partner_type}</span>}</div>
-                  {p.description && <div className="sub-desc pa-desc">{p.description}</div>}
+                <div className="adm-pa-corps">
+                  <div className="adm-pa-nom"><b>{p.name}</b>{p.partner_type && <span className="tag t-neutre">{p.partner_type}</span>}</div>
+                  {p.description && <div className="sub-desc adm-pa-desc">{p.description}</div>}
                 </div>
                 <div className="ga-actions">
                   <label className="toggle" title={p.is_active ? "Visible sur le site" : "Masqué"}><input type="checkbox" checked={p.is_active} onChange={(e) => update(p.id, { is_active: e.target.checked })} /><span className="piste" /></label>
