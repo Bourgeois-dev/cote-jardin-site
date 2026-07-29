@@ -318,9 +318,25 @@ export default function PlanService({ initialDate, initialService }: { initialDa
   }
   async function enregistrerSaisie() {
     if (!saisie) return;
-    if (!saisie.p.trim() || !saisie.phone.trim() || !saisie.time) { setErreurSaisie("Prénom, téléphone et heure requis."); return; }
+    // Prénom et heure : bloquants. Sans heure la réservation n'est pas plaçable,
+    // et le prénom est ce qu'on annonce à l'arrivée — toujours connu au téléphone.
+    if (!saisie.p.trim() || !saisie.time) { setErreurSaisie("Prénom et heure requis."); return; }
+    // Téléphone : exigé mais CONTOURNABLE (même mécanique que le hors-créneaux).
+    // Bloquer dur pousse à inventer un faux numéro — pire qu'un champ vide : il
+    // pollue la fiche client, les rappels et le suivi de récurrence. Mais un vrai
+    // vide a un coût, annoncé dans l'avertissement : sans téléphone ni e-mail, le
+    // rapprochement CRM est impossible (le trigger attach_customer crée une fiche
+    // neuve à chaque fois) et il n'y a pas de rappel de réservation.
+    const avertissements: string[] = [];
+    if (!saisie.phone.trim()) {
+      avertissements.push(saisie.email.trim()
+        ? "Pas de téléphone : le rappel passera par e-mail uniquement."
+        : "Pas de téléphone ni d'e-mail : aucun rappel possible, et la réservation ne sera pas reliée à une fiche client existante.");
+    }
     const probleme = horsCreneaux(date, saisie.time, hours);
-    if (probleme && !avertSaisie) { setAvertSaisie(probleme); return; }
+    if (probleme) avertissements.push(probleme);
+    const texte = avertissements.join(" ");
+    if (texte && avertSaisie !== texte) { setAvertSaisie(texte); return; }
     const reservation: any = {
       customer_name: [saisie.p.trim(), saisie.n.trim()].filter(Boolean).join(" "),
       email: saisie.email.trim(), phone: saisie.phone.trim(),
@@ -623,7 +639,7 @@ export default function PlanService({ initialDate, initialService }: { initialDa
                   <div className="champ"><label>Nom</label><input value={saisie.n} onChange={(e) => setSaisie({ ...saisie, n: e.target.value })} /></div>
                 </div>
                 <div className="ps-saisie-row">
-                  <div className="champ"><label>Téléphone *</label><input type="tel" value={saisie.phone} onChange={(e) => setSaisie({ ...saisie, phone: e.target.value })} /></div>
+                  <div className="champ"><label>Téléphone *</label><input type="tel" value={saisie.phone} onChange={(e) => { setSaisie({ ...saisie, phone: e.target.value }); setAvertSaisie(""); }} /></div>
                   <div className="champ"><label>Email</label><input type="email" value={saisie.email} onChange={(e) => setSaisie({ ...saisie, email: e.target.value })} placeholder="Confirmation" /></div>
                 </div>
                 <div className="ps-saisie-row">
