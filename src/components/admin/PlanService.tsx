@@ -318,9 +318,13 @@ export default function PlanService({ initialDate, initialService }: { initialDa
   }
   async function enregistrerSaisie() {
     if (!saisie) return;
-    // Prénom et heure : bloquants. Sans heure la réservation n'est pas plaçable,
-    // et le prénom est ce qu'on annonce à l'arrivée — toujours connu au téléphone.
-    if (!saisie.p.trim() || !saisie.time) { setErreurSaisie("Prénom et heure requis."); return; }
+    // Heure : bloquante — sans elle la réservation n'est pas plaçable.
+    // Identité : au moins le nom OU le prénom. Au téléphone on donne son nom
+    // (« au nom de Bernard ») ; le prénom seul suffit pour l'habituée connue de
+    // la maison. Exiger spécifiquement le prénom était le réflexe du formulaire
+    // web plaqué sur un contexte où il ne colle pas.
+    if (!saisie.time) { setErreurSaisie("L'heure est requise."); return; }
+    if (!saisie.p.trim() && !saisie.n.trim()) { setErreurSaisie("Indiquez au moins un nom ou un prénom."); return; }
     // Téléphone : exigé mais CONTOURNABLE (même mécanique que le hors-créneaux).
     // Bloquer dur pousse à inventer un faux numéro — pire qu'un champ vide : il
     // pollue la fiche client, les rappels et le suivi de récurrence. Mais un vrai
@@ -635,8 +639,10 @@ export default function PlanService({ initialDate, initialService }: { initialDa
                   <button type="button" className="ps-saisie-nav" onClick={() => decalerJour(1)} aria-label="Jour suivant">›</button>
                 </div>
                 <div className="ps-saisie-row">
-                  <div className="champ"><label>Prénom *</label><input value={saisie.p} onChange={(e) => setSaisie({ ...saisie, p: e.target.value })} /></div>
-                  <div className="champ"><label>Nom</label><input value={saisie.n} onChange={(e) => setSaisie({ ...saisie, n: e.target.value })} /></div>
+                  {/* Le nom d'abord : c'est ce que donne un client au téléphone.
+                      customer_name reste assemblé « Prénom Nom » à l'enregistrement. */}
+                  <div className="champ"><label>Nom *</label><input value={saisie.n} onChange={(e) => setSaisie({ ...saisie, n: e.target.value })} /></div>
+                  <div className="champ"><label>Prénom</label><input value={saisie.p} onChange={(e) => setSaisie({ ...saisie, p: e.target.value })} /></div>
                 </div>
                 <div className="ps-saisie-row">
                   <div className="champ"><label>Téléphone *</label><input type="tel" value={saisie.phone} onChange={(e) => { setSaisie({ ...saisie, phone: e.target.value }); setAvertSaisie(""); }} /></div>
