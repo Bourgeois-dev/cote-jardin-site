@@ -236,9 +236,12 @@ export default function TabCarte() {
               if (enRecherche && !plats.length) return null;
               const total = ordered.filter((m) => m.category === cat).length;
               const masques = ordered.filter((m) => m.category === cat && !m.is_active).length;
+              // <div> et non <section>/<header> : site.css et app.css posent du
+              // padding sur ces éléments nus pour le site public, et Vite
+              // regroupe tout le CSS dans un seul bundle — l'admin en hérite.
               return (
-                <section className="carte-cat" key={cat}>
-                  <header className="carte-cat-tete">
+                <div className="carte-cat" key={cat}>
+                  <div className="carte-cat-tete">
                     <b>{cat}</b>
                     <span className="carte-cat-nb">
                       {total} plat{total > 1 ? "s" : ""}
@@ -253,7 +256,7 @@ export default function TabCarte() {
                         <button onClick={() => bougerCat(cat, 1)} disabled={catsOrdre.indexOf(cat) === catsOrdre.length - 1} aria-label="Descendre la catégorie">▼</button>
                       </span>
                     )}
-                  </header>
+                  </div>
 
                   {plats.length === 0 ? (
                     <div className="carte-cat-vide">Aucun plat dans cette catégorie.</div>
@@ -295,7 +298,7 @@ export default function TabCarte() {
                       </div>
                     </div>
                   ))}
-                </section>
+                </div>
               );
             })}
           </div>

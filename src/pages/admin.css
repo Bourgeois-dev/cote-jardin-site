@@ -36,7 +36,12 @@
 
 
 /* ── 02. LAYOUT ────────────────────────────────────────────────────────── */
-.app { display:grid; grid-template-columns:248px 1fr; height:100vh; overflow:hidden }
+.app { display:grid; grid-template-columns:248px 1fr; height:100vh; overflow:hidden;
+  /* app.css (partagé site+admin) pose body { font-size:17px; line-height:1.65 } :
+     des mesures d'un site vitrine, pas d'une interface de gestion. L'admin les
+     ramène ici à des valeurs d'interface — c'était la cause de l'interlignage
+     trop aéré et de la police trop grande partout dans l'admin. */
+  font-size:14.5px; line-height:1.5 }
 /* Note : toute l'adaptation mobile (≤820px) est regroupée en fin de fichier,
    section « MOBILE ≤ 820px — refonte complète ». Un seul point de vérité. */
 .side { background:var(--admin-ink); color:#fff; padding:22px 16px; display:flex;
@@ -1190,7 +1195,9 @@ a.cli-coord-val:hover { text-decoration:underline }
    (gauche→droite, puis ligne suivante), qui reste l'ordre du site. */
 .carte-cats { display:grid; grid-template-columns:repeat(auto-fill, minmax(640px,1fr));
   gap:18px; align-items:start }
-.carte-cat { border:1px solid var(--line); border-radius:12px; overflow:hidden }
+/* padding:0 en défense : si un futur bloc redevient un <section>, les règles
+   globales du site (site.css/app.css) ne recréeront pas le vide. */
+.carte-cat { border:1px solid var(--line); border-radius:12px; overflow:hidden; padding:0 }
 .carte-cat-tete {
   display:flex; align-items:center; gap:10px;
   background:var(--cream); border-bottom:1px solid var(--line);
@@ -1215,8 +1222,9 @@ a.cli-coord-val:hover { text-decoration:underline }
 .carte-plat:hover { background:var(--a06) }
 .carte-plat-masque { opacity:.55 }
 .carte-plat-nom { flex:1; min-width:0 }
-.carte-plat-nom b { font-size:14px; line-height:1.4 }
-.carte-plat-nom .sub-desc { margin-top:1px }
+.carte-plat-nom { line-height:1.35 }
+.carte-plat-nom b { font-size:13.5px; line-height:1.35 }
+.carte-plat-nom .sub-desc { margin-top:2px; font-size:12px; line-height:1.4 }
 .carte-plat-prix { flex-shrink:0; min-width:64px; text-align:right }
 .carte-plat-actions { display:flex; align-items:center; gap:6px; flex-shrink:0 }
 .carte-icone { width:30px; height:30px; border:1px solid var(--line); background:#fff;
