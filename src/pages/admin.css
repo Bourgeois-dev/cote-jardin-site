@@ -1188,13 +1188,13 @@ a.cli-coord-val:hover { text-decoration:underline }
    rempli par du contenu au lieu d'être traversé par le regard.
    Les flèches ▲▼ déplacent toujours la catégorie dans l'ordre de lecture
    (gauche→droite, puis ligne suivante), qui reste l'ordre du site. */
-.carte-cats { display:grid; grid-template-columns:repeat(auto-fill, minmax(600px,1fr));
-  gap:14px; align-items:start }
+.carte-cats { display:grid; grid-template-columns:repeat(auto-fill, minmax(640px,1fr));
+  gap:18px; align-items:start }
 .carte-cat { border:1px solid var(--line); border-radius:12px; overflow:hidden }
 .carte-cat-tete {
   display:flex; align-items:center; gap:10px;
   background:var(--cream); border-bottom:1px solid var(--line);
-  padding:10px 14px; font-size:14px;
+  padding:7px 16px; font-size:13.5px; min-height:40px;
 }
 .carte-cat-nb { font-size:12px; color:var(--ink-soft) }
 .carte-cat-vide { padding:18px 14px; font-size:13px; color:var(--ink-soft); text-align:center }
@@ -1209,13 +1209,14 @@ a.cli-coord-val:hover { text-decoration:underline }
   font-weight:700; font-family:var(--font-body) }
 
 /* Ligne de plat : poignée · visibilité · nom (extensible) · prix · actions. */
-.carte-plat { display:flex; align-items:center; gap:10px; padding:9px 12px;
+.carte-plat { display:flex; align-items:center; gap:12px; padding:12px 16px;
   border-bottom:1px solid var(--line); background:#fff; cursor:grab }
 .carte-plat:last-child { border-bottom:none }
 .carte-plat:hover { background:var(--a06) }
 .carte-plat-masque { opacity:.55 }
 .carte-plat-nom { flex:1; min-width:0 }
-.carte-plat-nom b { font-size:14px }
+.carte-plat-nom b { font-size:14px; line-height:1.4 }
+.carte-plat-nom .sub-desc { margin-top:1px }
 .carte-plat-prix { flex-shrink:0; min-width:64px; text-align:right }
 .carte-plat-actions { display:flex; align-items:center; gap:6px; flex-shrink:0 }
 .carte-icone { width:30px; height:30px; border:1px solid var(--line); background:#fff;
