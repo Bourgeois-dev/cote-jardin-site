@@ -11,8 +11,17 @@ interface FeatureFlag {
  * Visible UNIQUEMENT pour les comptes @latable-digitale.fr
  * Les changements sont pris en compte au prochain chargement de l'admin.
  */
+// Modules alimentés par les réservations : sans le module Réservation, leurs
+// tables restent vides. Doit rester synchronisé avec DEPENDANCES (AdminApp.tsx).
+const DEPENDANCES: Record<string, string> = {
+  liste_attente: "reservation",
+  crm: "reservation",
+};
+
 export default function TabFeatures() {
   const { rows, loading, update } = useTable<FeatureFlag>("feature_flags", "label");
+  const actifs: Record<string, boolean> = {};
+  rows.forEach((f) => { actifs[f.key] = f.enabled; });
 
   return (
     <>
@@ -36,22 +45,35 @@ export default function TabFeatures() {
               </div>
             </div>
           </div>
-          {rows.map((f) => (
-            <div className="ligne-toggle" key={f.id}>
-              <div className="lib">
-                <b>{f.label}</b>
-                {f.description && <span>{f.description}</span>}
+          {rows.map((f) => {
+            // Module dont le parent est coupé : l'onglet est masqué côté admin
+            // quoi qu'affiche l'interrupteur. On le dit plutôt que de laisser
+            // croire que le réglage est sans effet.
+            const parent = DEPENDANCES[f.key];
+            const neutralise = parent ? actifs[parent] === false : false;
+            return (
+              <div className="ligne-toggle" key={f.id}>
+                <div className="lib">
+                  <b>{f.label}</b>
+                  {f.description && <span>{f.description}</span>}
+                  {neutralise && (
+                    <span style={{ color: "var(--admin-accent)" }}>
+                      Sans effet : dépend du module « Réservation en ligne », actuellement désactivé.
+                      L'onglet reste masqué.
+                    </span>
+                  )}
+                </div>
+                <label className="toggle">
+                  <input
+                    type="checkbox"
+                    checked={f.enabled}
+                    onChange={(e) => update(f.id, { enabled: e.target.checked })}
+                  />
+                  <span className="piste" />
+                </label>
               </div>
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={f.enabled}
-                  onChange={(e) => update(f.id, { enabled: e.target.checked })}
-                />
-                <span className="piste" />
-              </label>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div className="bloc" style={{ background: "rgba(122,31,36,.04)", border: "1px solid rgba(122,31,36,.15)" }}>
           <p style={{ fontSize: 13, color: "var(--admin-accent)", fontWeight: 600, marginBottom: 6 }}>

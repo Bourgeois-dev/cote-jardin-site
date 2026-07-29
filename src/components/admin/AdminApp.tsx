@@ -82,18 +82,34 @@ function AdminShell({ session }: { session: Session }) {
   const dirty = useDirty();
   // isEditor calculé directement depuis la session (synchrone, fiable)
   const isEditor = (session.user.email || "").toLowerCase().includes("latable-digitale");
-  // Onglets masqués selon feature flags
+  // Onglets masqués selon feature flags.
+  // « plan » suit le module Réservation : un plan de salle sans réservations
+  // n'a pas d'objet (il ne sert qu'à placer des couverts).
   const FEATURE_MAP: Record<string, string> = {
     "reservations": "reservation",
+    "plan": "reservation",
     "liste-attente": "liste_attente",
     "clients": "crm",
     "newsletter": "newsletter",
   };
+  // Dépendances entre modules. La liste d'attente et le CRM sont alimentés par
+  // les réservations (trigger attach_customer) : sans le module Réservation ils
+  // resteraient vides quoi qu'il arrive. Couper Réservation les coupe donc aussi,
+  // pour qu'aucune combinaison de flags ne produise un onglet mort.
+  const DEPENDANCES: Record<string, string> = {
+    "liste_attente": "reservation",
+    "crm": "reservation",
+  };
+  function moduleActif(fk: string): boolean {
+    if (features[fk] === false) return false;
+    const parent = DEPENDANCES[fk];
+    return parent ? features[parent] !== false : true;
+  }
   const TABS_VISIBLES = TABS.filter((t) => {
     const fk = FEATURE_MAP[t.key];
     if (!fk) return true; // pas de flag associé = toujours visible
     if (Object.keys(features).length === 0) return true; // flags pas encore chargés
-    return features[fk] !== false;
+    return moduleActif(fk);
   });
   const Current = TABS_VISIBLES.find((t) => t.key === active)?.comp || TabTableau;
   const siteUrl = import.meta.env.VITE_SITE_URL || "/";
