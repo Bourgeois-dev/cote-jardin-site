@@ -72,8 +72,11 @@ export default function TabPartenaires() {
   if (edit) {
     return (
       <>
-        <div className="topbar"><div><h1>{edit.id ? "Modifier le partenaire" : "Nouveau partenaire"}</h1></div></div>
-        <div className="contenu"><div className="bloc">
+        {/* Retour visible en topbar : « Annuler » tout en bas était la seule
+            sortie d'un écran qui remplace la liste entière. */}
+        <div className="topbar"><div><h1>{edit.id ? "Modifier le partenaire" : "Nouveau partenaire"}</h1><div className="sous">{edit.id ? edit.name : "Producteur, fournisseur ou artisan mis à l'honneur sur le site"}</div></div>
+          <button className="btn btn-ligne" onClick={() => setEdit(null)}>← Retour à la liste</button></div>
+        <div className="contenu"><div className="bloc form-etroit">
           <div className="grid2">
             <div className="champ"><label>Nom *</label><input value={edit.name || ""} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
             <div className="champ"><label>Type de partenaire</label>
@@ -90,15 +93,24 @@ export default function TabPartenaires() {
           <div className="champ"><label>Site web / lien (optionnel)</label><input placeholder="https://…" value={edit.website || ""} onChange={(e) => setEdit({ ...edit, website: e.target.value })} /></div>
           <div className="champ"><label>Description</label><textarea rows={2} value={edit.description || ""} onChange={(e) => setEdit({ ...edit, description: e.target.value })} /></div>
 
+          {/* Même composant média que l'ardoise et la bannière : vignette +
+              actions, ou zone d'appel en pointillés. */}
           <div className="champ"><label>Image</label>
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              {edit.image_url
-                ? <img src={edit.image_url} alt="" style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8 }} />
-                : <div style={{ width: 72, height: 72, borderRadius: 8, background: "#eee", display: "grid", placeItems: "center", fontSize: 11, color: "#999" }}>—</div>}
-              <input ref={fileRef} type="file" accept="image/*" onChange={uploadImage} style={{ display: "none" }} />
-              <button className="btn btn-ligne" onClick={() => fileRef.current?.click()} disabled={uploading}>{uploading ? "Envoi…" : (edit.image_url ? "Remplacer" : "Choisir une image")}</button>
-              {edit.image_url && <button className="btn btn-mini btn-danger" onClick={() => setEdit({ ...edit, image_url: "" })}>Retirer</button>}
-            </div>
+            <input ref={fileRef} type="file" accept="image/*" onChange={uploadImage} style={{ display: "none" }} />
+            {edit.image_url ? (
+              <div className="media-champ">
+                <img className="media-vignette" src={edit.image_url} alt="" />
+                <div className="media-actions">
+                  <button className="btn btn-mini btn-ligne" onClick={() => fileRef.current?.click()} disabled={uploading}>{uploading ? "Envoi…" : "Remplacer"}</button>
+                  <button className="btn btn-mini btn-danger" onClick={() => setEdit({ ...edit, image_url: "" })}>Retirer</button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="media-vide" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                <b>{uploading ? "Envoi…" : "Choisir une image"}</b>
+                <span>Affichée en bandeau sur la carte. Sans image, l'initiale du nom prend le relais.</span>
+              </button>
+            )}
             {err && <div className="erreur" style={{ marginTop: 6 }}>{err}</div>}
           </div>
 
@@ -107,7 +119,10 @@ export default function TabPartenaires() {
             <span className="toggle"><input type="checkbox" checked={edit.featured ?? false} onChange={(e) => setEdit({ ...edit, featured: e.target.checked })} /><span className="piste" /></span>
           </label>
 
-          <div style={{ display: "flex", gap: 10, marginTop: 8 }}><button className="btn btn-accent" onClick={save} disabled={uploading}>{edit.id ? "Enregistrer" : "Ajouter"}</button><button className="btn btn-ligne" onClick={() => setEdit(null)}>Annuler</button></div>
+          <div className="form-pied">
+            <button className="btn btn-ligne" onClick={() => setEdit(null)}>Annuler</button>
+            <button className="btn btn-accent" onClick={save} disabled={uploading}>{edit.id ? "Enregistrer" : "Ajouter le partenaire"}</button>
+          </div>
         </div></div>
       </>
     );

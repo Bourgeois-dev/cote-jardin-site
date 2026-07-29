@@ -41,14 +41,23 @@ export default function TabAvis() {
   if (edit) {
     return (
       <>
-        <div className="topbar"><div><h1>{edit.id ? "Modifier l'avis" : "Nouvel avis"}</h1></div></div>
-        <div className="contenu"><div className="bloc">
+        <div className="topbar"><div><h1>{edit.id ? "Modifier l'avis" : "Nouvel avis"}</h1><div className="sous">{edit.id ? `Avis de ${edit.author}` : "Recopiez un avis reçu sur Google, TripAdvisor ou en salle"}</div></div>
+          <button className="btn btn-ligne" onClick={() => setEdit(null)}>← Retour à la liste</button></div>
+        <div className="contenu"><div className="bloc form-etroit">
           <div className="grid2">
-            <div className="champ"><label>Nom de l'auteur *</label><input value={edit.author} onChange={(e) => setEdit({ ...edit, author: e.target.value })} placeholder="Camille R." /></div>
+            <div className="champ"><label>Nom de l'auteur *</label><input value={edit.author} onChange={(e) => setEdit({ ...edit, author: e.target.value })} placeholder="Camille R." /><span className="aide">Tel qu'il apparaît sur l'avis d'origine — prénom et initiale suffisent.</span></div>
             <div className="champ"><label>Note</label><div style={{ paddingTop: 4 }}><Stars n={edit.rating || 5} onPick={(v) => setEdit({ ...edit, rating: v })} /></div></div>
           </div>
-          <div className="champ"><label>Avis *</label><textarea rows={4} value={edit.content} onChange={(e) => setEdit({ ...edit, content: e.target.value })} /></div>
-          <div style={{ display: "flex", gap: 10, marginTop: 8 }}><button className="btn btn-accent" onClick={save}>{edit.id ? "Enregistrer" : "Ajouter"}</button><button className="btn btn-ligne" onClick={() => setEdit(null)}>Annuler</button></div>
+          <div className="champ"><label>Avis *</label>
+            {/* rows=4 forçait l'ascenseur dès trois phrases : un avis moyen doit
+                tenir entièrement sous les yeux pendant qu'on le recopie. */}
+            <textarea rows={8} value={edit.content} onChange={(e) => setEdit({ ...edit, content: e.target.value })} placeholder="Le texte de l'avis, tel qu'il a été écrit…" />
+            <span className="aide">Le carrousel du site affiche l'avis en entier — inutile de le raccourcir.</span>
+          </div>
+          <div className="form-pied">
+            <button className="btn btn-ligne" onClick={() => setEdit(null)}>Annuler</button>
+            <button className="btn btn-accent" onClick={save}>{edit.id ? "Enregistrer" : "Ajouter l'avis"}</button>
+          </div>
         </div></div>
       </>
     );

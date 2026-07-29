@@ -932,6 +932,9 @@ tr:last-child td { border-bottom:none }
   gap:14px; flex-wrap:wrap; margin-top:20px; padding-top:16px; border-top:1px solid var(--line) }
 .form-pied-aide { font-size:12.5px; color:var(--ink-soft) }
 .champ-court { max-width:230px }
+/* Formulaire pleine page : borné à une largeur de lecture — des champs de
+   1 500 px n'aident personne à saisir un nom. */
+.form-etroit { max-width:780px }
 
 /* Réseaux sociaux : une carte par réseau, avec le picto réellement utilisé
    dans le footer du site (SOCIAL_SVG). La liste en lignes obligeait à lire le
