@@ -2,7 +2,11 @@ import { useState } from "react";
 import { useTable } from "../../hooks/useTable";
 import type { SocialLink } from "../../lib/types";
 import Chargement from "./Chargement";
+import { useToast } from "./Toast";
+import { SOCIAL_SVG } from "../site/socialIcons";
 
+// Les clés correspondent à celles de SOCIAL_SVG (composant du site) : le picto
+// affiché ici est EXACTEMENT celui que verra le visiteur dans le footer.
 const PLATEFORMES = [
   { key: "instagram", label: "Instagram", ph: "https://instagram.com/votre-compte" },
   { key: "facebook", label: "Facebook", ph: "https://facebook.com/votre-page" },
@@ -13,53 +17,127 @@ const PLATEFORMES = [
   { key: "tripadvisor", label: "Tripadvisor", ph: "https://tripadvisor.fr/Restaurant_Review-..." },
 ];
 
+// Un réseau activé sans lien valable afficherait dans le footer une icône qui
+// ne mène nulle part. On exige donc une URL absolue avant toute activation.
+function urlValide(u: string): boolean {
+  const v = u.trim();
+  if (!v) return false;
+  try {
+    const p = new URL(v);
+    return p.protocol === "http:" || p.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export default function TabSocial() {
   const { rows, loading, insert, update } = useTable<SocialLink>("social_links");
+  const toast = useToast();
   const [urls, setUrls] = useState<Record<string, string>>({});
-  const [saved, setSaved] = useState(false);
+  const [erreurs, setErreurs] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+
   const byKey: Record<string, SocialLink> = {};
   rows.forEach((r) => { byKey[r.platform] = r; });
 
   const val = (key: string) => (urls[key] !== undefined ? urls[key] : byKey[key]?.url || "");
+  const poserErreur = (key: string, msg: string) => setErreurs((e) => ({ ...e, [key]: msg }));
 
-  async function toggle(key: string, actif: boolean, pos: number) {
-    const existing = byKey[key];
-    if (existing) await update(existing.id, { is_active: actif });
-    else if (actif) await insert({ platform: key, url: val(key), position: pos, is_active: true });
-  }
-  async function saveUrls() {
-    for (const p of PLATEFORMES) {
-      const existing = byKey[p.key];
-      if (existing && urls[p.key] !== undefined) await update(existing.id, { url: urls[p.key] });
+  // Le champ reste saisissable même réseau éteint : on renseigne un lien
+  // d'abord, on publie ensuite. L'inverse obligeait à activer un réseau vide.
+  async function basculer(key: string, actif: boolean, pos: number) {
+    const u = val(key).trim();
+    if (actif && !urlValide(u)) {
+      poserErreur(key, "Renseignez d'abord un lien commençant par https://");
+      return;
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    poserErreur(key, "");
+    const existant = byKey[key];
+    const ok = existant
+      ? await update(existant.id, { is_active: actif, url: u })
+      : await insert({ platform: key, url: u, position: pos, is_active: actif });
+    if (ok) toast.ok(actif ? "Réseau affiché dans le footer" : "Réseau retiré du footer");
+    else toast.err("Échec de l'enregistrement.");
+  }
+
+  async function enregistrer() {
+    setBusy(true);
+    const invalides: string[] = [];
+    let modifies = 0;
+    for (const [i, p] of PLATEFORMES.entries()) {
+      const saisi = urls[p.key];
+      if (saisi === undefined) continue;              // champ jamais touché
+      const u = saisi.trim();
+      if (u && !urlValide(u)) { invalides.push(p.label); continue; }
+      const existant = byKey[p.key];
+      if (existant) {
+        // Vider le lien d'un réseau actif l'éteint : sans ça, le footer
+        // garderait une icône pointant vers le vide.
+        await update(existant.id, { url: u, ...(u ? {} : { is_active: false }) });
+        modifies++;
+      } else if (u) {
+        // La ligne n'existait pas : avant, la saisie était perdue en silence.
+        await insert({ platform: p.key, url: u, position: i, is_active: false });
+        modifies++;
+      }
+    }
+    setBusy(false);
+    setErreurs({});
+    if (invalides.length) toast.err(`Lien invalide : ${invalides.join(", ")}`);
+    else if (modifies) toast.ok(modifies > 1 ? "Liens enregistrés" : "Lien enregistré");
+    else toast.ok("Aucune modification à enregistrer");
   }
 
   return (
     <>
       <div className="topbar"><div><h1>Réseaux sociaux</h1><div className="sous">Liens affichés dans le pied de page</div></div></div>
       <div className="contenu">
-        {loading && rows.length === 0 && <Chargement />}<div className="bloc">
-        <div className="bloc-tete"><div><h2>Vos réseaux</h2><div className="desc">Activez un réseau et renseignez son lien. Les icônes actives apparaissent dans le footer.</div></div></div>
-        {PLATEFORMES.map((p, i) => {
-          const r = byKey[p.key];
-          const actif = r ? r.is_active : false;
-          return (
-            <div className="ligne-toggle" key={p.key}>
-              <div className="lib" style={{ flex: ".5" }}><b>{p.label}</b></div>
-              <div style={{ flex: 2, margin: "0 14px" }}>
-                <input value={val(p.key)} placeholder={p.ph} disabled={!actif} onChange={(e) => setUrls({ ...urls, [p.key]: e.target.value })} style={{ width: "100%" }} />
-              </div>
-              <label className="toggle"><input type="checkbox" checked={actif} onChange={(e) => toggle(p.key, e.target.checked, i)} /><span className="piste" /></label>
-            </div>
-          );
-        })}
-        <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 14 }}>
-          <button className="btn btn-accent" onClick={saveUrls}>Enregistrer les liens</button>
-          {saved && <span style={{ color: "var(--ok)", fontSize: 13, fontWeight: 600 }}>✓ Liens enregistrés</span>}
+        {loading && rows.length === 0 && <Chargement />}
+        <div className="bloc">
+          <div className="bloc-tete"><div><h2>Vos réseaux</h2><div className="desc">Renseignez un lien, puis activez le réseau : son icône apparaît dans le pied de page du site.</div></div></div>
+
+          <div className="rs-grille">
+            {PLATEFORMES.map((p, i) => {
+              const r = byKey[p.key];
+              const actif = r ? r.is_active : false;
+              const lien = val(p.key).trim();
+              const err = erreurs[p.key];
+              return (
+                <div className={`rs-carte${actif ? " actif" : ""}`} key={p.key}>
+                  <div className="rs-tete">
+                    <span className="rs-icone" aria-hidden="true">{SOCIAL_SVG[p.key]}</span>
+                    <span className="rs-nom">{p.label}</span>
+                    <label className="toggle" title={actif ? "Masquer du footer" : "Afficher dans le footer"}>
+                      <input type="checkbox" checked={actif} onChange={(e) => basculer(p.key, e.target.checked, i)} />
+                      <span className="piste" />
+                    </label>
+                  </div>
+                  <input
+                    className={err ? "rs-input err" : "rs-input"}
+                    value={val(p.key)}
+                    placeholder={p.ph}
+                    aria-label={`Lien ${p.label}`}
+                    onChange={(e) => { setUrls({ ...urls, [p.key]: e.target.value }); if (err) poserErreur(p.key, ""); }}
+                  />
+                  <div className="rs-pied">
+                    {err
+                      ? <span className="rs-err">{err}</span>
+                      : urlValide(lien)
+                        // Vérifier un lien d'un clic vaut mieux que le relire caractère par caractère.
+                        ? <a className="rs-tester" href={lien} target="_blank" rel="noopener noreferrer">Tester le lien ↗</a>
+                        : <span className="rs-etat">{actif ? "Affiché dans le footer" : "Non affiché"}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="form-pied">
+            <span className="form-pied-aide">L'interrupteur s'applique aussitôt ; les liens saisis demandent un enregistrement.</span>
+            <button className="btn btn-accent" onClick={enregistrer} disabled={busy}>{busy ? "Enregistrement…" : "Enregistrer les liens"}</button>
+          </div>
         </div>
-      </div></div>
+      </div>
     </>
   );
 }

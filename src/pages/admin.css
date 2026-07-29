@@ -917,6 +917,30 @@ tr:last-child td { border-bottom:none }
 .form-pied-aide { font-size:12.5px; color:var(--ink-soft) }
 .champ-court { max-width:230px }
 
+/* Réseaux sociaux : une carte par réseau, avec le picto réellement utilisé
+   dans le footer du site (SOCIAL_SVG). La liste en lignes obligeait à lire le
+   nom pour savoir de quel réseau il s'agissait. */
+.rs-grille { display:grid; grid-template-columns:repeat(auto-fill, minmax(290px,1fr)); gap:14px }
+.rs-carte { border:1px solid var(--line); border-radius:12px; padding:14px 16px 12px;
+  background:#fff; transition:border-color .15s, background .15s }
+.rs-carte.actif { border-color:var(--a25); background:var(--a06) }
+.rs-tete { display:flex; align-items:center; gap:10px; margin-bottom:10px }
+.rs-icone { display:inline-flex; align-items:center; justify-content:center;
+  width:34px; height:34px; border-radius:9px; flex-shrink:0;
+  background:var(--cream); color:var(--ink-soft); border:1px solid var(--line) }
+.rs-icone svg { width:19px; height:19px }
+.rs-carte.actif .rs-icone { background:var(--admin-accent); color:#fff; border-color:var(--admin-accent) }
+.rs-nom { font-weight:700; font-size:14.5px; flex:1; min-width:0 }
+.rs-input { width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:8px;
+  font-family:var(--font-body); font-size:13.5px; background:#fff; color:var(--ink) }
+.rs-input:focus { outline:none; border-color:var(--admin-accent) }
+.rs-input.err { border-color:var(--annule) }
+.rs-pied { min-height:18px; margin-top:7px; font-size:11.5px }
+.rs-etat { color:var(--ink-soft) }
+.rs-err { color:var(--annule) }
+.rs-tester { color:var(--admin-accent); text-decoration:none; font-weight:700 }
+.rs-tester:hover { text-decoration:underline }
+
 /* L'aperçu suit la saisie : sur un formulaire long, il sortait de l'écran
    pendant qu'on remplissait les champs. */
 .apercu-col { position:sticky; top:16px }
