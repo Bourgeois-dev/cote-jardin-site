@@ -560,9 +560,11 @@ function ChampsBloc({ val, onChange, onUpload }: {
   );
 }
 
-function NouveauForm({ onSaved, initial }: {
+function NouveauForm({ onSaved, initial, cibleUnique }: {
   onSaved: () => void;
   initial?: { id?: string; template: string; segment: string; subject: string; content: Record<string, string> };
+  /** Module Réservation désactivé : un seul ciblage possible, l'étape 2 est retirée. */
+  cibleUnique: boolean;
 }) {
   const dirty = useDirty();
   // Éditeur ouvert = travail en cours : protège contre la perte (changement
@@ -570,7 +572,9 @@ function NouveauForm({ onSaved, initial }: {
   useEffect(() => { dirty.set(true); return () => dirty.set(false); }, []); // eslint-disable-line
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [template] = useState(initial?.template || "blocs");
-  const [segment, setSegment] = useState(initial?.segment || "optin");
+  // Sans module Réservation, `customers` reste vide : tous les segments sauf
+  // « optin » seraient à 0. On force le seul ciblage qui a du sens.
+  const [segment, setSegment] = useState(cibleUnique ? "optin" : (initial?.segment || "optin"));
   const [counts, setCounts] = useState<Record<string, number> | null>(null);
 
   // Nombre de destinataires par segment (RPC : même logique que l'envoi réel)
@@ -801,9 +805,11 @@ function NouveauForm({ onSaved, initial }: {
       <div className="bloc-tete">
         <h2>Nouvelle campagne</h2>
         <div style={{ display: "flex", gap: 6 }}>
-          {([1,2,3] as const).map((n) => (
+          {/* L'étape 2 (ciblage) disparaît du fil quand elle est sautée : les
+              pastilles sont renumérotées 1-2 pour ne pas afficher un « 3 » orphelin. */}
+          {(cibleUnique ? [1, 3] : [1, 2, 3]).map((n, i) => (
             <span key={n} style={{ width: 28, height: 28, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700,
-              background: step >= n ? "var(--admin-accent)" : "var(--line)", color: step >= n ? "#fff" : "var(--ink-soft)" }}>{n}</span>
+              background: step >= n ? "var(--admin-accent)" : "var(--line)", color: step >= n ? "#fff" : "var(--ink-soft)" }}>{i + 1}</span>
           ))}
         </div>
       </div>
@@ -950,7 +956,7 @@ function NouveauForm({ onSaved, initial }: {
                 if (!subject.trim()) { setManqueEtape1("Indiquez l'objet de l'email avant de continuer."); return; }
                 if (!blocs.length)   { setManqueEtape1("Ajoutez au moins un bloc de contenu avant de continuer."); return; }
                 setManqueEtape1("");
-                setStep(2);
+                setStep(cibleUnique ? 3 : 2);
               }}>
                 Suivant →
               </button>
@@ -1034,7 +1040,7 @@ function NouveauForm({ onSaved, initial }: {
           )}
 
           <div style={{ background: "var(--cream)", borderRadius: 8, padding: "12px 16px", fontSize: 13, marginBottom: 20 }}>
-            <b>Récap</b> — Template : {TEMPLATES[template]?.label} · Segment : {SEGMENTS[segment]?.label}{counts ? ` (${counts[segment] ?? 0} destinataire${(counts[segment] ?? 0) > 1 ? "s" : ""})` : ""} · Objet : {subject}
+            <b>Récap</b> — Template : {TEMPLATES[template]?.label} · {cibleUnique ? "Destinataires : tous les inscrits" : `Segment : ${SEGMENTS[segment]?.label}`}{counts ? ` (${counts[segment] ?? 0} destinataire${(counts[segment] ?? 0) > 1 ? "s" : ""})` : ""} · Objet : {subject}
           </div>
 
           {erreur && <div className="alerte">{erreur}</div>}
@@ -1073,7 +1079,7 @@ function NouveauForm({ onSaved, initial }: {
           </div>
 
           <div className="pan-actions">
-            <button className="btn btn-ligne" onClick={() => setStep(2)}>← Retour</button>
+            <button className="btn btn-ligne" onClick={() => setStep(cibleUnique ? 1 : 2)}>← Retour</button>
             <button className="btn btn-ligne" disabled={busy} onClick={() => sauvegarder(false)}>Sauvegarder en brouillon</button>
             <button className="btn btn-accent" disabled={busy} onClick={() => {
               if (!canSend) { setErreur("Choisissez une date d'envoi, ou sélectionnez « Envoyer maintenant »."); return; }
@@ -1150,6 +1156,15 @@ export default function TabNewsletter() {
   const [welcomeOuvert, setWelcomeOuvert] = useState(false); // accordéon d'aperçu de l'email de bienvenue
   const restoName = import.meta.env.VITE_RESTO_NAME || "";
   const [logoUrl, setLogoUrl] = useState(""); // logo newsletter, pour l'aperçu du Welcome
+  // Offre « Essentiel + Newsletter » : module Réservation désactivé. Sans
+  // réservations, `customers` n'est jamais alimentée et les cinq segments qui
+  // en dépendent afficheraient tous 0 contact. On retire alors purement et
+  // simplement l'étape de ciblage — l'assistant passe de trois étapes à deux.
+  const [cibleUnique, setCibleUnique] = useState(false);
+  useEffect(() => {
+    supabase.from("feature_flags").select("enabled").eq("key", "reservation").maybeSingle()
+      .then(({ data }) => { if (data && data.enabled === false) setCibleUnique(true); });
+  }, []);
   useEffect(() => {
     supabase.from("site_content").select("content").eq("section_key", "newsletter_logo").maybeSingle()
       .then(({ data }) => { if (data?.content?.url) setLogoUrl(data.content.url); });
@@ -1365,6 +1380,7 @@ function dateRef(c: Campaign): string {
 
         {mode === "nouveau" && (
           <NouveauForm key={prefill?.id || (prefill ? "dup" : "neuf")} initial={prefill}
+            cibleUnique={cibleUnique}
             onSaved={() => { setPrefill(undefined); setMode("liste"); charger(); }} />
         )}
 
@@ -1546,7 +1562,9 @@ function dateRef(c: Campaign): string {
                         <span className="nl-cible-nb">{cibles != null ? cibles : "—"}</span>
                         <span className="nl-cible-lbl">
                           {cibles != null ? `destinataire${cibles > 1 ? "s" : ""}` : "à envoyer"}
-                          <span className="sub-desc"> · {SEGMENTS[c.segment]?.label || c.segment}</span>
+                          {!cibleUnique && (
+                            <span className="sub-desc"> · {SEGMENTS[c.segment]?.label || c.segment}</span>
+                          )}
                         </span>
                       </div>
 
