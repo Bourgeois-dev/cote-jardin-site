@@ -59,7 +59,12 @@ export default function TabGalerie() {
 
   async function saveEdit() {
     if (!edit) return;
-    await update(edit.id, { alt: edit.alt || "", caption: edit.caption || "" });
+    const legende = (edit.caption || "").trim();
+    // Un seul champ pour le restaurateur : la légende. Le texte alternatif
+    // (accessibilité / SEO) en est déduit — pour une photo de restaurant, une
+    // bonne légende EST une bonne description. On ne remplace jamais un alt
+    // existant par du vide : effacer la légende ne doit pas dégrader le SEO.
+    await update(edit.id, { caption: legende, ...(legende ? { alt: legende } : {}) });
     setEdit(null);
   }
 
@@ -89,7 +94,7 @@ export default function TabGalerie() {
                 {/* Photo sans texte alternatif : invisible pour les lecteurs
                     d'écran et les moteurs. La pastille disparaît dès qu'il est
                     renseigné — c'est une liste de choses à faire intégrée. */}
-                {!g.alt && g.is_active && <button className="ga-badge ga-alerte" onClick={() => setEdit(g)} title="Ajouter un texte alternatif (accessibilité / SEO)">Texte manquant</button>}
+                {!g.alt && g.is_active && <button className="ga-badge ga-alerte" onClick={() => setEdit(g)} title="Ajouter une légende — elle sert aussi de description pour l'accessibilité et le référencement">Légende manquante</button>}
                 {g.caption && <div className="ga-legende">{g.caption}</div>}
               </div>
               <div className="ga-actions">
@@ -111,10 +116,12 @@ export default function TabGalerie() {
       {edit && (
         <div className="modal-backdrop" onClick={() => setEdit(null)}>
           <div className="modal-in" onClick={(e) => e.stopPropagation()}>
-            <h2>Légende &amp; texte alternatif</h2>
+            <h2>Légende de la photo</h2>
             <img src={edit.url} alt="" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 8, margin: "12px 0" }} />
-            <div className="champ"><label>Légende (affichée sur le site)</label><input value={edit.caption || ""} onChange={(e) => setEdit({ ...edit, caption: e.target.value })} placeholder="Ex. Notre terrasse en été" /></div>
-            <div className="champ"><label>Texte alternatif (accessibilité / SEO)</label><input value={edit.alt || ""} onChange={(e) => setEdit({ ...edit, alt: e.target.value })} placeholder="Description de l'image pour les lecteurs d'écran" /></div>
+            <div className="champ"><label>Légende (affichée sur le site)</label>
+              <input value={edit.caption || ""} onChange={(e) => setEdit({ ...edit, caption: e.target.value })} placeholder="Ex. Notre terrasse en été" />
+              <span className="aide">Sert aussi de description de l'image pour les lecteurs d'écran et le référencement.</span>
+            </div>
             <div style={{ display: "flex", gap: 10, marginTop: 14 }}><button className="btn btn-accent" onClick={saveEdit}>Enregistrer</button><button className="btn btn-ligne" onClick={() => setEdit(null)}>Annuler</button></div>
           </div>
         </div>
