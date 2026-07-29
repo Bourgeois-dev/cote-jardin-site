@@ -15,6 +15,39 @@ function frDate(d: string | null) {
   const [y, m, j] = d.split("-");
   return `${j}/${m}/${y}`;
 }
+// Date du jour au format AAAA-MM-JJ en heure LOCALE. Surtout pas toISOString(),
+// qui renvoie la date UTC : entre minuit et 2 h (heure française), une
+// réservation du jour serait classée « à venir ».
+function aujourdhui(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/* Repères de fréquentation calculés depuis l'historique réel.
+   `customers.last_visit` vaut max(date) sur les réservations non annulées, donc
+   une réservation À VENIR y figure : la fiche affichait « dernière venue » avec
+   une date future. On distingue ici trois choses différentes :
+     • première / dernière venue = ce qui a EU LIEU (date passée, hors no-show :
+       une absence n'est pas une venue) ;
+     • prochaine venue = la plus proche réservation à venir, non annulée.
+   Le calcul se fait côté écran et non en base : la bascule d'une date « future »
+   vers « passée » se produit au fil du temps, sans qu'aucune ligne ne change —
+   une valeur figée en base deviendrait fausse toute seule. */
+function reperesVenues(resas: Reservation[]) {
+  const auj = aujourdhui();
+  const venues = resas
+    .filter((r) => r.status !== "annule" && r.status !== "no_show" && r.date <= auj)
+    .map((r) => r.date).sort();
+  const aVenir = resas
+    .filter((r) => r.status !== "annule" && r.date > auj)
+    .map((r) => r.date).sort();
+  return {
+    premiere: venues[0] || null,
+    derniere: venues[venues.length - 1] || null,
+    prochaine: aVenir[0] || null,
+  };
+}
+
 function badgeClient(c: Customer) {
   if (c.is_vip) return { label: "VIP", cls: "cli-badge cli-badge-vip" };
   if (c.bookings_count >= 5) return { label: "Fidèle", cls: "cli-badge cli-badge-fidele" };
@@ -172,7 +205,13 @@ export default function TabClients() {
                         <span className="cli-item-nb">{c.bookings_count} résa</span>
                       </div>
                       <div className="cli-item-det">{c.email || c.phone || "—"}</div>
-                      <div className="cli-item-det">dernière venue {frDate(c.last_visit)}</div>
+                      {/* La liste ne dispose que de l'agrégat `last_visit` (pas de
+                          l'historique) : on ne peut pas distinguer la dernière venue
+                          d'une réservation à venir, mais on peut au moins nommer
+                          correctement ce qu'on affiche. */}
+                      <div className="cli-item-det">
+                        {c.last_visit && c.last_visit > aujourdhui() ? "prochaine venue" : "dernière venue"} {frDate(c.last_visit)}
+                      </div>
                     </button>
                   </li>
                 );
@@ -225,7 +264,19 @@ export default function TabClients() {
                     <div className="cli-stat"><b>{sel.cancelled_count}</b><span>Annulations</span></div>
                   </div>
                   <div className="sub-desc" style={{ margin: "10px 0 0", fontSize: 12 }}>
-                    Première venue {frDate(sel.first_visit)} · Dernière venue {frDate(sel.last_visit)}
+                    {(() => {
+                      // Tant que l'historique charge, on retombe sur les agrégats de
+                      // la fiche plutôt que d'afficher un vide clignotant.
+                      if (histoLoad || histo.length === 0) {
+                        return <>Première venue {frDate(sel.first_visit)} · Dernière venue {frDate(sel.last_visit)}</>;
+                      }
+                      const { premiere, derniere, prochaine } = reperesVenues(histo);
+                      const bouts: string[] = [];
+                      if (premiere) bouts.push(`Première venue ${frDate(premiere)}`);
+                      if (derniere && derniere !== premiere) bouts.push(`Dernière venue ${frDate(derniere)}`);
+                      if (prochaine) bouts.push(`Prochaine venue ${frDate(prochaine)}`);
+                      return <>{bouts.length ? bouts.join(" · ") : "Aucune venue enregistrée"}</>;
+                    })()}
                   </div>
 
                   {/* Préférences & allergies (pills) */}
