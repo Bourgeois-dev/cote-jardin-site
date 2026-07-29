@@ -984,12 +984,35 @@ tr:last-child td { border-bottom:none }
 .ardoise-apercu-note { color:var(--ink-soft); font-style:italic }
 
 /* Galerie */
-.galerie-admin { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; margin-top:14px }
-.ga-item { border-radius:10px; overflow:hidden; background:#fff; border:1px solid var(--line); display:flex; flex-direction:column }
+.galerie-admin { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:14px; margin-top:14px }
+.ga-item { border-radius:10px; overflow:hidden; background:#fff; border:1px solid var(--line);
+  display:flex; flex-direction:column; cursor:grab }
 .ga-visuel { position:relative; }
 .ga-item img { width:100%; aspect-ratio:4/3; object-fit:cover; display:block }
-.ga-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px; border-top:1px solid var(--line) }
+/* Une photo masquée le DIT, au lieu d'être juste un peu pâle. */
+.ga-masquee img { opacity:.4; filter:grayscale(.4) }
+.ga-num { position:absolute; top:8px; left:8px; min-width:22px; height:22px;
+  border-radius:99px; background:rgba(255,255,255,.92); color:var(--ink);
+  font-size:11.5px; font-weight:700; display:inline-flex; align-items:center;
+  justify-content:center; padding:0 6px; border:1px solid var(--line) }
+.ga-badge { position:absolute; top:8px; right:8px; font-size:10.5px; font-weight:700;
+  letter-spacing:.03em; padding:3px 9px; border-radius:99px;
+  background:rgba(255,255,255,.92); color:var(--ink-soft); border:1px solid var(--line) }
+/* Texte alternatif manquant : cliquable, ouvre directement la modale. */
+.ga-alerte { background:rgba(193,138,46,.94); color:#fff; border:none;
+  cursor:pointer; font-family:var(--font-body) }
+.ga-alerte:hover { background:#a87824 }
+.ga-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-top:1px solid var(--line) }
 .ga-actions .btn-mini { padding:5px 10px; font-size:12px }
+/* Tuile d'ajout : dans la grille, au format des photos. */
+.ga-ajout { display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:6px; min-height:180px; border:1px dashed var(--line); border-radius:10px;
+  background:none; cursor:pointer; font-family:var(--font-body);
+  font-size:12px; color:var(--ink-soft); text-align:center; padding:14px }
+.ga-ajout b { font-size:14.5px; color:var(--ink) }
+.ga-ajout:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
+.ga-ajout:hover b { color:var(--admin-accent) }
+.ga-ajout:disabled { cursor:default; opacity:.6 }
 
 /* Carte PDF */
 .menu-file-actuel { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; background:var(--cream); border:1px solid var(--line); border-radius:10px; padding:14px 16px }
