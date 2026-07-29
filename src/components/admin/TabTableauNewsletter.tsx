@@ -3,12 +3,19 @@ import type { Lead } from "../../lib/types";
 import Chargement from "./Chargement";
 
 /**
- * TabTableauNewsletter — tableau de bord de l'offre « Essentiel + Newsletter ».
+ * Suivi de la newsletter, servi dans DEUX contextes :
  *
- * Monté par AdminApp à la place de TabTableau quand le module Réservation est
- * coupé. Composant séparé, et non conditions dans TabTableau : cela évite de
- * lancer les requêtes sur reservations, restaurant_tables et opening_hours pour
- * un client dont ces tables sont vides par construction.
+ * - `TabTableauNewsletter` (export par défaut) — le tableau de bord complet de
+ *   l'offre « Essentiel + Newsletter », monté par AdminApp à la place de
+ *   TabTableau quand le module Réservation est coupé. Composant séparé, et non
+ *   conditions dans TabTableau : cela évite de lancer les requêtes sur
+ *   reservations, restaurant_tables et opening_hours pour un client dont ces
+ *   tables sont vides par construction.
+ *
+ * - `BlocsNewsletter` avec `mode="complement"` — les mêmes indicateurs ajoutés
+ *   à la suite du tableau de bord du service, pour les offres qui ont la
+ *   réservation ET la newsletter. Un seul calcul, deux présentations : les
+ *   chiffres ne peuvent pas diverger entre les deux offres.
  *
  * Tout est calculé à partir de deux sources : `leads` et `newsletter_campaigns`.
  */
@@ -53,7 +60,13 @@ function libelleSource(source: string): string {
   return s;
 }
 
-export default function TabTableauNewsletter({ onNavigate }: { onNavigate?: (tab: string) => void } = {}) {
+export function BlocsNewsletter({ onNavigate, mode = "seul" }: {
+  onNavigate?: (tab: string) => void;
+  /** "seul" : le composant EST le tableau de bord. "complement" : il s'ajoute
+   *  sous celui du service, et se coiffe alors d'un titre pour ne pas donner
+   *  l'impression d'une rangée de cartes tombée du ciel au milieu de la page. */
+  mode?: "seul" | "complement";
+} = {}) {
   const { rows: leads, loading } = useTable<Lead>("leads", "created_at", true);
   const { rows: campagnes } = useTable<Campagne>("newsletter_campaigns", "created_at", true);
 
@@ -126,17 +139,9 @@ export default function TabTableauNewsletter({ onNavigate }: { onNavigate?: (tab
     },
   } : { className: "stat" };
 
-  return (
+  // Cartes communes aux deux présentations.
+  const cartes = (
     <>
-      <div className="topbar"><div>
-        <h1>Tableau de bord</h1>
-        <div className="sous">Votre liste de contacts et vos campagnes</div>
-      </div></div>
-      <div className="contenu">
-        {loading && leads.length === 0 && <Chargement />}
-
-        {/* Cartes du haut : l'état de la liste, et ce qui appelle une action. */}
-        <div className="cartes-stat cartes-stat-kpi">
           <div className="stat">
             <div className="lib">Inscrits</div>
             <div className="val">{inscrits.length}</div>
@@ -172,7 +177,28 @@ export default function TabTableauNewsletter({ onNavigate }: { onNavigate?: (tab
                 : "aucun envoi pour l'instant"}
             </div>
           </div>
-        </div>
+    </>
+  );
+
+  return (
+    <>
+        {/* Le chargement n'est signalé qu'en mode « seul » : en complément,
+            le tableau de bord du service affiche déjà le sien. */}
+        {mode === "seul" && loading && leads.length === 0 && <Chargement />}
+
+        {mode === "seul" ? (
+          <div className="cartes-stat cartes-stat-kpi">{cartes}</div>
+        ) : (
+          <div className="bloc">
+            <div className="bloc-tete">
+              <div>
+                <h2>Newsletter</h2>
+                <div className="desc">L'état de votre liste et de vos envois.</div>
+              </div>
+            </div>
+            <div className="cartes-stat">{cartes}</div>
+          </div>
+        )}
 
         {/* Croissance de la liste — l'équivalent de « Cette semaine » côté service :
             la courbe qui dit si le site travaille pour vous. */}
@@ -302,6 +328,20 @@ export default function TabTableauNewsletter({ onNavigate }: { onNavigate?: (tab
             </table>
           )}
         </div>
+    </>
+  );
+}
+
+/** Tableau de bord complet — offre « Essentiel + Newsletter ». */
+export default function TabTableauNewsletter({ onNavigate }: { onNavigate?: (tab: string) => void } = {}) {
+  return (
+    <>
+      <div className="topbar"><div>
+        <h1>Tableau de bord</h1>
+        <div className="sous">Votre liste de contacts et vos campagnes</div>
+      </div></div>
+      <div className="contenu">
+        <BlocsNewsletter onNavigate={onNavigate} mode="seul" />
       </div>
     </>
   );

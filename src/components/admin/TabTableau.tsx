@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useTable } from "../../hooks/useTable";
 import { supabase } from "../../lib/supabase";
-import type { Reservation, Lead, RestaurantTable, OpeningHour, ReservationSettings } from "../../lib/types";
+import type { Reservation, RestaurantTable, OpeningHour, ReservationSettings } from "../../lib/types";
 import Chargement from "./Chargement";
+import { BlocsNewsletter } from "./TabTableauNewsletter";
 
 const JOURS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const MOIS = ["jan", "fév", "mar", "avr", "mai", "juin", "juil", "août", "sep", "oct", "nov", "déc"];
@@ -25,8 +26,6 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
   // Fenêtre glissante J-90/+horizon — évite de charger tout l'historique
   const dateMinTdb = (() => { const d = new Date(); d.setDate(d.getDate() - 90); return ymdLocal(d); })();
   const { rows: resa, loading } = useTable<Reservation>("reservations", "date", true, { column: "date", op: "gte", value: dateMinTdb });
-  const { rows: allLeads } = useTable<Lead>("leads", "created_at");
-  const leads = allLeads.filter((l) => l.consent === true);
   const { rows: tables } = useTable<RestaurantTable>("restaurant_tables", "label");
   const { rows: hours } = useTable<OpeningHour>("opening_hours", "day_of_week");
   const { rows: settingsRows } = useTable<ReservationSettings>("reservation_settings", "id");
@@ -419,12 +418,10 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
             <div className="stat"><div className="lib">Taille de groupe moy.</div><div className="val">{tailleMoyenne.toLocaleString("fr-FR", { maximumFractionDigits: 1 })}</div><div className="det">couverts par réservation</div></div>
             <div className="stat"><div className="lib">Clients récurrents</div><div className="val">{tauxRecurrence}%</div><div className="det">{nbRecurrents} sur {nbClientsUniques} client(s)</div></div>
             <div className="stat"><div className="lib">Jour le plus demandé</div><div className="val" style={{ fontSize: jourTop ? undefined : 18 }}>{jourTop || "—"}</div><div className="det">{jourTop ? `${maxCouvJour} couverts cumulés` : "pas encore assez de données"}</div></div>
-            {/* Déplacé depuis les cartes du haut : n'appelle aucune action
-                immédiate, c'est un indicateur de fond. Sans module Newsletter,
-                plus rien ne récolte de contacts : la carte n'a plus d'objet. */}
-            {newsletterOn && (
-              <div className="stat"><div className="lib">Contacts récoltés</div><div className="val">{leads.length}</div><div className="det">newsletter + réservations</div></div>
-            )}
+            {/* La carte « Contacts récoltés » a été retirée : la section
+                Newsletter en bas de page donne le même chiffre en mieux
+                (inscrits actifs, croissance, origine), et sans elle il n'y a
+                plus rien à afficher quand le module Newsletter est coupé. */}
           </div>
         </div>
 
@@ -476,6 +473,12 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
             </>
           )}
         </div>
+
+        {/* Offres qui cumulent réservation et newsletter : les mêmes indicateurs
+            que le tableau de bord « Essentiel + Newsletter », à la suite du
+            service. Composant partagé, donc aucun risque que les deux offres
+            affichent des chiffres différents. */}
+        {newsletterOn && <BlocsNewsletter mode="complement" onNavigate={(tab) => onNavigate?.(tab)} />}
       </div>
     </>
   );

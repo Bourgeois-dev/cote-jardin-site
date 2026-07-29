@@ -524,3 +524,57 @@ en ligne », avec une note d'excuse quand leur parent est coupé.
 - (modifié) `src/components/admin/TabFeatures.tsx` — dans les trois espaces.
 
 > Les zips contiennent l'intégralité des huit envois.
+
+---
+
+# Section Newsletter dans le tableau de bord du service (29/07/2026, neuvième envoi)
+
+Les indicateurs newsletter n'étaient visibles qu'en offre « Essentiel +
+Newsletter ». Ils s'affichent désormais **aussi** pour les offres qui cumulent
+réservation et newsletter, à la suite du tableau de bord du service.
+
+## Un seul calcul, deux présentations
+
+`TabTableauNewsletter.tsx` est scindé en deux exports :
+
+- `BlocsNewsletter` — le contenu (cartes + croissance + origines + santé +
+  dernières campagnes), réutilisable ;
+- `TabTableauNewsletter` (export par défaut, inchangé pour AdminApp) — la
+  `topbar` et le `contenu` autour de `BlocsNewsletter mode="seul"`.
+
+`TabTableau` ajoute `<BlocsNewsletter mode="complement" />` en fin de page quand
+le module Newsletter est actif. Composant partagé : les deux offres ne peuvent pas
+afficher des chiffres différents pour la même liste.
+
+Le mode `complement` coiffe les cinq cartes d'un bloc titré « Newsletter » plutôt
+que de les poser en rangée nue au milieu de la page, et ne réaffiche pas
+l'indicateur de chargement — celui du service suffit.
+
+## Carte « Contacts récoltés » retirée
+
+Elle donnait le total des `leads` (opt-in inclus et exclus) sous le libellé
+« newsletter + réservations ». La section Newsletter juste en dessous donne le
+même chiffre en mieux : inscrits actifs, croissance sur douze mois, origines. La
+garder aurait affiché deux nombres voisins mais différents, à quelques
+centimètres l'un de l'autre.
+
+Conséquence : la requête `leads` de `TabTableau` n'avait plus d'usage. Retirée,
+ainsi que l'import de type `Lead` — `BlocsNewsletter` fait la sienne.
+
+## Combinaisons couvertes
+
+| Réservation | Newsletter | Tableau de bord |
+|---|---|---|
+| ✅ | ✅ | Service **+ section Newsletter** |
+| ❌ | ✅ | Newsletter seul (`TabTableauNewsletter`) |
+| ✅ | ❌ | Service seul |
+| ❌ | ❌ | Onglet masqué |
+
+## Fichiers à remplacer (ce neuvième envoi)
+
+Dans les trois espaces :
+
+- (modifié) `src/components/admin/TabTableau.tsx`
+- (modifié) `src/components/admin/TabTableauNewsletter.tsx`
+
+> Les zips contiennent l'intégralité des neuf envois.
