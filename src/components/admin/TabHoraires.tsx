@@ -6,6 +6,21 @@ import Chargement from "./Chargement";
 
 const JOURS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 
+// Les dates arrivent en ISO (AAAA-MM-JJ) : les afficher telles quelles dans une
+// interface française jure avec le reste de l'admin.
+function frDate(d: string | null | undefined): string {
+  if (!d) return "—";
+  const [a, m, j] = String(d).split("-");
+  return j && m && a ? `${j}/${m}/${a}` : String(d);
+}
+// Une fermeture d'un seul jour n'a pas à s'écrire « du 12/08 au 12/08 ».
+function frPeriode(debut: string, fin: string): string {
+  return debut === fin ? frDate(debut) : `${frDate(debut)} → ${frDate(fin)}`;
+}
+const LIBELLE_SERVICE: Record<string, string> = {
+  midi: "Midi seulement", soir: "Soir seulement", "": "Toute la journée",
+};
+
 export default function TabHoraires() {
   const toast = useToast();
   const oh = useTable<OpeningHour>("opening_hours", "day_of_week");
@@ -73,25 +88,36 @@ export default function TabHoraires() {
 
         <div className="bloc">
           <div className="bloc-tete"><div><h2>Fermetures &amp; événements exceptionnels</h2><div className="desc">Fermetures totales, partielles (midi ou soir uniquement), ou événements privatifs. Le widget masque automatiquement les créneaux bloqués.</div></div></div>
-          <table className="tab-fermetures tbl-cartes"><thead><tr><th>Du</th><th>Au</th><th>Service</th><th>Motif</th><th>Note interne</th><th></th></tr></thead><tbody>
-            {cp.rows.length ? cp.rows.map((cl) => (
-              <tr key={cl.id}>
-                <td data-label="Du">{cl.start_date}</td>
-                <td data-label="Au">{cl.end_date}</td>
-                <td data-label="Service">{cl.service === "midi" ? "Midi seul." : cl.service === "soir" ? "Soir seul." : "Toute la journée"}</td>
-                <td data-label="Motif">{cl.reason || "—"}</td>
-                <td data-label="Note interne"><span className="sub-desc">{cl.note_interne || "—"}</span></td>
-                <td className="td-actions"><button className="btn btn-mini btn-danger" onClick={() => cp.remove(cl.id)}>Supprimer</button></td>
-              </tr>
-            )) : <tr><td colSpan={6} className="vide">Aucune fermeture programmée.</td></tr>}
-          </tbody></table>
-
-          <div style={{ marginTop: 20, borderTop: "1px solid var(--ligne)", paddingTop: 18 }}>
-            <div className="grid2">
-              <div className="champ"><label>Date de début</label><input type="date" value={nc.start_date} onChange={(e) => setNc({ ...nc, start_date: e.target.value })} /></div>
-              <div className="champ"><label>Date de fin</label><input type="date" value={nc.end_date} onChange={(e) => setNc({ ...nc, end_date: e.target.value })} /></div>
+          {/* Sans aucune fermeture, un en-tête de tableau seul flotte au-dessus
+              du vide : on affiche un état vide franc à la place. */}
+          {cp.rows.length === 0 ? (
+            <div className="ferm-vide">
+              Aucune fermeture programmée.
+              <span>Congés, jour férié, privatisation : ajoutez-les ci-dessous, le widget masquera les créneaux.</span>
             </div>
-            <div className="grid2">
+          ) : (
+            <table className="tab-fermetures tbl-cartes"><thead><tr><th>Période</th><th>Service</th><th>Motif client</th><th>Note interne</th><th></th></tr></thead><tbody>
+              {cp.rows.map((cl) => (
+                <tr key={cl.id}>
+                  <td data-label="Période"><b>{frPeriode(cl.start_date, cl.end_date)}</b></td>
+                  <td data-label="Service"><span className="tag t-neutre">{LIBELLE_SERVICE[cl.service || ""]}</span></td>
+                  <td data-label="Motif client">{cl.reason || "—"}</td>
+                  <td data-label="Note interne"><span className="sub-desc">{cl.note_interne || "—"}</span></td>
+                  <td className="td-actions"><button className="btn btn-mini btn-danger" onClick={() => cp.remove(cl.id)}>Supprimer</button></td>
+                </tr>
+              ))}
+            </tbody></table>
+          )}
+
+          {/* Formulaire dans un panneau à part : sans conteneur, la pile de
+              champs flottait sous le tableau sans qu'on sache où elle commence. */}
+          <div className="ferm-form">
+            <div className="ferm-form-titre">Ajouter une fermeture</div>
+            <div className="ferm-dates">
+              <div className="champ"><label>Du</label><input type="date" value={nc.start_date} onChange={(e) => setNc({ ...nc, start_date: e.target.value, end_date: nc.end_date && nc.end_date < e.target.value ? e.target.value : nc.end_date })} /></div>
+              {/* `min` sur la date de fin : une période à l'envers est impossible
+                  à saisir plutôt que refusée après coup. */}
+              <div className="champ"><label>Au</label><input type="date" min={nc.start_date || undefined} value={nc.end_date} onChange={(e) => setNc({ ...nc, end_date: e.target.value })} /></div>
               <div className="champ">
                 <label>Service bloqué</label>
                 <select value={nc.service} onChange={(e) => setNc({ ...nc, service: e.target.value })}>
@@ -100,11 +126,24 @@ export default function TabHoraires() {
                   <option value="soir">Soir uniquement</option>
                 </select>
               </div>
-              <div className="champ"><label>Motif client (affiché sur le widget)</label><input value={nc.reason} onChange={(e) => setNc({ ...nc, reason: e.target.value })} placeholder="Congés d'été" /></div>
             </div>
-            <div className="champ"><label>Message personnalisé sur le widget</label><input value={nc.custom_message} onChange={(e) => setNc({ ...nc, custom_message: e.target.value })} placeholder="Nous sommes complets ce soir — prochain créneau disponible le…" /></div>
-            <div className="champ"><label>Note interne (non visible sur le site)</label><input value={nc.note_interne} onChange={(e) => setNc({ ...nc, note_interne: e.target.value })} placeholder="Séminaire entreprise, salle privée" /></div>
-            <button className="btn btn-accent" onClick={addClosure}>Ajouter</button>
+
+            {/* Les deux champs vus par le client, groupés ; la note interne est
+                séparée pour qu'on ne confonde jamais les deux publics. */}
+            <div className="ferm-groupe">
+              <div className="ferm-groupe-titre">Ce que voit le client sur le widget</div>
+              <div className="grid2">
+                <div className="champ"><label>Motif</label><input value={nc.reason} onChange={(e) => setNc({ ...nc, reason: e.target.value })} placeholder="Congés d'été" /></div>
+                <div className="champ"><label>Message personnalisé</label><input value={nc.custom_message} onChange={(e) => setNc({ ...nc, custom_message: e.target.value })} placeholder="Nous sommes complets ce soir — prochain créneau…" /></div>
+              </div>
+            </div>
+
+            <div className="champ ferm-interne"><label>Note interne <span>— non visible sur le site</span></label><input value={nc.note_interne} onChange={(e) => setNc({ ...nc, note_interne: e.target.value })} placeholder="Séminaire entreprise, salle privée" /></div>
+
+            <div className="ferm-actions">
+              <span className="ferm-aide">Une seule journée ? Indiquez la même date des deux côtés.</span>
+              <button className="btn btn-accent" onClick={addClosure}>Ajouter la fermeture</button>
+            </div>
           </div>
         </div>
       </div>
