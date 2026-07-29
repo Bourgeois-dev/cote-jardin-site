@@ -43,22 +43,35 @@ export default function TabAvis() {
       <>
         <div className="topbar"><div><h1>{edit.id ? "Modifier l'avis" : "Nouvel avis"}</h1><div className="sous">{edit.id ? `Avis de ${edit.author}` : "Recopiez un avis reçu sur Google, TripAdvisor ou en salle"}</div></div>
           <button className="btn btn-ligne" onClick={() => setEdit(null)}>← Retour à la liste</button></div>
-        <div className="contenu"><div className="bloc form-etroit">
-          <div className="grid2">
-            <div className="champ"><label>Nom de l'auteur *</label><input value={edit.author} onChange={(e) => setEdit({ ...edit, author: e.target.value })} placeholder="Camille R." /><span className="aide">Tel qu'il apparaît sur l'avis d'origine — prénom et initiale suffisent.</span></div>
-            <div className="champ"><label>Note</label><div style={{ paddingTop: 4 }}><Stars n={edit.rating || 5} onPick={(v) => setEdit({ ...edit, rating: v })} /></div></div>
+        <div className="contenu"><div className="bloc"><div className="form-duo">
+          <div>
+            <div className="grid2">
+              <div className="champ"><label>Nom de l'auteur *</label><input value={edit.author} onChange={(e) => setEdit({ ...edit, author: e.target.value })} placeholder="Camille R." /><span className="aide">Tel qu'il apparaît sur l'avis d'origine — prénom et initiale suffisent.</span></div>
+              <div className="champ"><label>Note</label><div style={{ paddingTop: 4 }}><Stars n={edit.rating || 5} onPick={(v) => setEdit({ ...edit, rating: v })} /></div></div>
+            </div>
+            <div className="champ"><label>Avis *</label>
+              <textarea className="ta-confort" rows={9} value={edit.content} onChange={(e) => setEdit({ ...edit, content: e.target.value })} placeholder="Le texte de l'avis, tel qu'il a été écrit…" />
+              <span className="aide">Le carrousel du site affiche l'avis en entier — inutile de le raccourcir.</span>
+            </div>
+            <div className="form-pied">
+              <button className="btn btn-ligne" onClick={() => setEdit(null)}>Annuler</button>
+              <button className="btn btn-accent" onClick={save}>{edit.id ? "Enregistrer" : "Ajouter l'avis"}</button>
+            </div>
           </div>
-          <div className="champ"><label>Avis *</label>
-            {/* rows=4 forçait l'ascenseur dès trois phrases : un avis moyen doit
-                tenir entièrement sous les yeux pendant qu'on le recopie. */}
-            <textarea rows={8} value={edit.content} onChange={(e) => setEdit({ ...edit, content: e.target.value })} placeholder="Le texte de l'avis, tel qu'il a été écrit…" />
-            <span className="aide">Le carrousel du site affiche l'avis en entier — inutile de le raccourcir.</span>
+          {/* Aperçu en direct — le patron de l'Ardoise et de la Bannière promo :
+              on voit la carte se construire pendant qu'on tape. */}
+          <div className="apercu-col">
+            <div className="eyebrow" style={{ marginBottom: 12 }}>Aperçu de la carte</div>
+            <div className="pa-carte avis-carte" style={{ cursor: "default" }}>
+              <div className="avis-tete">
+                <b>{edit.author || "Nom de l'auteur"}</b>
+                <Stars n={edit.rating || 5} />
+              </div>
+              <blockquote className="avis-texte" style={{ WebkitLineClamp: "unset" }}>{edit.content || "Le texte de l'avis apparaîtra ici…"}</blockquote>
+            </div>
+            <div className="apercu-note">Mise à jour en direct</div>
           </div>
-          <div className="form-pied">
-            <button className="btn btn-ligne" onClick={() => setEdit(null)}>Annuler</button>
-            <button className="btn btn-accent" onClick={save}>{edit.id ? "Enregistrer" : "Ajouter l'avis"}</button>
-          </div>
-        </div></div>
+        </div></div></div>
       </>
     );
   }

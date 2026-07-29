@@ -935,6 +935,13 @@ tr:last-child td { border-bottom:none }
 /* Formulaire pleine page : borné à une largeur de lecture — des champs de
    1 500 px n'aident personne à saisir un nom. */
 .form-etroit { max-width:780px }
+/* Formulaire + aperçu en direct : le patron signature de l'admin (ardoise,
+   bannière), généralisé. Le formulaire garde une largeur de saisie, l'aperçu
+   suit le défilement. */
+.form-duo { display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:30px; align-items:start; max-width:1120px }
+.apercu-note { text-align:center; font-size:11.5px; color:var(--ink-soft); margin-top:10px }
+.ta-confort { min-height:190px; resize:vertical; line-height:1.6 }
+@media(max-width:980px) { .form-duo { grid-template-columns:1fr } }
 
 /* Réseaux sociaux : une carte par réseau, avec le picto réellement utilisé
    dans le footer du site (SOCIAL_SVG). La liste en lignes obligeait à lire le

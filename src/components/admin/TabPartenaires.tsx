@@ -76,7 +76,8 @@ export default function TabPartenaires() {
             sortie d'un écran qui remplace la liste entière. */}
         <div className="topbar"><div><h1>{edit.id ? "Modifier le partenaire" : "Nouveau partenaire"}</h1><div className="sous">{edit.id ? edit.name : "Producteur, fournisseur ou artisan mis à l'honneur sur le site"}</div></div>
           <button className="btn btn-ligne" onClick={() => setEdit(null)}>← Retour à la liste</button></div>
-        <div className="contenu"><div className="bloc form-etroit">
+        <div className="contenu"><div className="bloc"><div className="form-duo">
+          <div>
           <div className="grid2">
             <div className="champ"><label>Nom *</label><input value={edit.name || ""} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
             <div className="champ"><label>Type de partenaire</label>
@@ -123,7 +124,27 @@ export default function TabPartenaires() {
             <button className="btn btn-ligne" onClick={() => setEdit(null)}>Annuler</button>
             <button className="btn btn-accent" onClick={save} disabled={uploading}>{edit.id ? "Enregistrer" : "Ajouter le partenaire"}</button>
           </div>
-        </div></div>
+          </div>
+          {/* Aperçu en direct de la carte telle qu'elle apparaîtra dans la
+              grille — même patron que l'avis, l'ardoise et la bannière. */}
+          <div className="apercu-col">
+            <div className="eyebrow" style={{ marginBottom: 12 }}>Aperçu de la carte</div>
+            <div className="pa-carte" style={{ cursor: "default" }}>
+              <div className="pa-visuel">
+                {edit.image_url
+                  ? <img src={edit.image_url} alt="" />
+                  : <span className="pa-initiale" aria-hidden="true">{(edit.name || "?").trim().charAt(0).toUpperCase()}</span>}
+                {edit.featured && <span className="ga-badge pa-avant">★ En avant</span>}
+              </div>
+              <div className="pa-corps" style={{ paddingBottom: 12 }}>
+                <div className="pa-nom"><b>{edit.name || "Nom du partenaire"}</b>{edit.partner_type && <span className="tag t-neutre">{edit.partner_type}</span>}</div>
+                {edit.description && <div className="sub-desc pa-desc">{edit.description}</div>}
+                {(edit.category || edit.location) && <div className="sub-desc" style={{ marginTop: 4 }}>{[edit.category, edit.location].filter(Boolean).join(" · ")}</div>}
+              </div>
+            </div>
+            <div className="apercu-note">Mise à jour en direct</div>
+          </div>
+        </div></div></div>
       </>
     );
   }
