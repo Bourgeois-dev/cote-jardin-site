@@ -87,26 +87,29 @@ export default function TabArdoise() {
               <div className="champ">
                 <label>Photo du plat (facultative)</label>
                 {image ? (
-                  <div className="ardoise-img-actuelle">
-                    <img src={image} alt="" />
-                    <div className="actions-ligne">
+                  <div className="media-champ">
+                    <img className="media-vignette" src={image} alt="" />
+                    <div className="media-actions">
                       <button className="btn btn-mini btn-ligne" onClick={() => fileRef.current?.click()} disabled={upLoad}>{upLoad ? "Envoi…" : "Remplacer"}</button>
                       <button className="btn btn-mini btn-danger" onClick={() => setImage("")}>Retirer</button>
                     </div>
                   </div>
                 ) : (
-                  <button className="btn btn-ligne" onClick={() => fileRef.current?.click()} disabled={upLoad}>{upLoad ? "Envoi…" : "🖼 Choisir une image"}</button>
+                  <button type="button" className="media-vide" onClick={() => fileRef.current?.click()} disabled={upLoad}>
+                    <b>{upLoad ? "Envoi…" : "Choisir une image"}</b>
+                    <span>Elle s'affiche en haut du bloc « Plat du jour ».</span>
+                  </button>
                 )}
                 <input ref={fileRef} type="file" accept="image/*" onChange={upload} style={{ display: "none" }} />
                 {upErr && <div className="alerte" style={{ marginTop: 8 }}>{upErr}</div>}
               </div>
-              <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
+              <div className="form-pied">
+                <span className="form-pied-aide">Les changements apparaissent sur le site dès l'enregistrement.</span>
                 <button className="btn btn-accent" onClick={save}>Enregistrer</button>
-                
               </div>
             </div>
 
-            <div>
+            <div className="apercu-col">
               <div className="eyebrow" style={{ marginBottom: 12 }}>Aperçu sur le site</div>
               <div className="ardoise-apercu">
                 <div className="ardoise-apercu-img" style={image ? { backgroundImage: `url(${image})` } : undefined}>

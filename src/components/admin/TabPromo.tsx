@@ -63,7 +63,7 @@ export default function TabPromo() {
             <span className="lib"><b>Afficher la popup sur le site</b><span>{f.is_active ? "Active — la popup s'affiche à l'arrivée" : "Inactive — aucune popup ne s'affiche"}</span></span>
             <span className="toggle"><input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} /><span className="piste" /></span>
           </label>
-          <div className="hint">💡 Pratique pour annoncer un événement, un menu spécial ou une fermeture exceptionnelle.</div>
+          <div className="hint">Pratique pour annoncer un événement, un menu spécial ou une fermeture exceptionnelle.</div>
         </div>
 
         <div className="bloc">
@@ -77,21 +77,42 @@ export default function TabPromo() {
                 <div className="champ"><label>Texte du bouton</label><input value={f.cta_label} onChange={(e) => setF({ ...f, cta_label: e.target.value })} placeholder="Réserver ma place" /></div>
                 <div className="champ"><label>Lien du bouton</label><input value={f.cta_url} onChange={(e) => setF({ ...f, cta_url: e.target.value })} placeholder="#contact ou tel:+33..." /></div>
               </div>
-              <div className="grid2">
-                <div className="champ"><label>Date de l'événement (optionnel)</label><input type="date" value={f.event_date} onChange={(e) => setF({ ...f, event_date: e.target.value })} /></div>
-                <div className="champ"><label>Image</label>
-                  <input ref={fileRef} type="file" accept="image/*" onChange={uploadImage} style={{ display: "none" }} />
-                  <button className="btn btn-ligne" onClick={() => fileRef.current?.click()} disabled={busy}>{busy ? "Envoi…" : (f.image_url ? "Changer l'image" : "🖼 Choisir une image")}</button>
-                </div>
+              {/* La date tenait la moitié de la carte pour dix caractères, et
+                  l'image se retrouvait coincée dans la cellule voisine sans
+                  vignette : chacune retrouve sa place. */}
+              <div className="champ champ-court">
+                <label>Date de l'événement (optionnel)</label>
+                <input type="date" value={f.event_date} onChange={(e) => setF({ ...f, event_date: e.target.value })} />
+                <span className="aide" style={{ fontSize: 11.5 }}>Sans date, le badge affiche simplement « Événement ».</span>
               </div>
-              <div className="desc">Sans date, le badge affiche simplement « Événement ».</div>
-              <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
+
+              <div className="champ">
+                <label>Image</label>
+                <input ref={fileRef} type="file" accept="image/*" onChange={uploadImage} style={{ display: "none" }} />
+                {f.image_url ? (
+                  <div className="media-champ">
+                    <img className="media-vignette" src={f.image_url} alt="" />
+                    <div className="media-actions">
+                      <button className="btn btn-mini btn-ligne" onClick={() => fileRef.current?.click()} disabled={busy}>{busy ? "Envoi…" : "Remplacer"}</button>
+                      {/* Il n'existait aucun moyen de retirer une image déjà posée. */}
+                      <button className="btn btn-mini btn-danger" onClick={() => setF({ ...f, image_url: "" })}>Retirer</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" className="media-vide" onClick={() => fileRef.current?.click()} disabled={busy}>
+                    <b>{busy ? "Envoi…" : "Choisir une image"}</b>
+                    <span>Elle s'affiche en haut de la popup, derrière le badge.</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="form-pied">
+                <span className="form-pied-aide">La popup n'apparaît que si l'interrupteur ci-dessus est actif.</span>
                 <button className="btn btn-accent" onClick={save} disabled={busy}>Enregistrer</button>
-                
               </div>
             </div>
 
-            <div>
+            <div className="apercu-col">
               <div className="eyebrow" style={{ marginBottom: 12 }}>Aperçu sur le site</div>
               <div className="promo-apercu">
                 <div className="promo-entete" style={f.image_url ? { backgroundImage: `url(${f.image_url})` } : undefined}>

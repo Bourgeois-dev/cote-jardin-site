@@ -128,6 +128,11 @@ tr:last-child td { border-bottom:none }
   border:1px solid var(--line); border-radius:8px; font-family:var(--font-body);
   font-size:15px; background:#fff; color:var(--ink) }
 .champ input:focus,.champ select:focus,.champ textarea:focus { outline:none; border-color:var(--admin-accent) }
+/* Texte d'aide sous un champ. La classe était utilisée dans plusieurs onglets
+   sans exister dans la feuille : l'aide s'affichait collée à l'input, à la
+   taille du corps de texte. */
+.champ .aide, .aide { display:block; font-size:12px; color:var(--ink-soft);
+  margin-top:5px; line-height:1.45 }
 .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px }
 @media(max-width:600px) { .grid2 { grid-template-columns:1fr } }
 
@@ -887,8 +892,43 @@ tr:last-child td { border-bottom:none }
 
 /* ── 11. AUTRES ONGLETS ─────────────────────────────────────────────────── */
 /* Ardoise — même patron que Bannière promo : carte blanche, aperçu à droite */
-.ardoise-img-actuelle img { display:block; width:100%; max-width:320px; height:180px; object-fit:cover; border-radius:8px; border:1px solid var(--line) }
-.ardoise-img-actuelle .actions-ligne { margin-top:10px }
+/* Champ média (photo du plat, image de la bannière) : même composant dans les
+   deux onglets. Vignette + actions quand une image existe, zone d'appel en
+   pointillés quand il n'y en a pas — au lieu d'un bouton seul qui ne dit pas
+   ce qu'on obtient. */
+.media-champ { display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap }
+.media-vignette { display:block; width:200px; height:132px; object-fit:cover;
+  border-radius:10px; border:1px solid var(--line); background:var(--cream) }
+.media-actions { display:flex; flex-direction:column; gap:8px; padding-top:2px }
+.media-vide { display:flex; flex-direction:column; align-items:center; gap:6px;
+  width:100%; max-width:360px; border:1px dashed var(--line); border-radius:10px;
+  padding:22px 16px; text-align:center; background:none; cursor:pointer;
+  font-family:var(--font-body); font-size:12.5px; color:var(--ink-soft) }
+.media-vide b { font-size:14px; color:var(--ink) }
+.media-vide:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
+.media-vide:hover b { color:var(--admin-accent) }
+.media-vide:disabled { cursor:default; opacity:.6 }
+
+/* Pied de formulaire : filet de séparation, aide à gauche, action à droite.
+   Le bouton d'enregistrement flottait seul en bas à gauche, sans rien qui le
+   relie au formulaire qu'il valide. */
+.form-pied { display:flex; align-items:center; justify-content:space-between;
+  gap:14px; flex-wrap:wrap; margin-top:20px; padding-top:16px; border-top:1px solid var(--line) }
+.form-pied-aide { font-size:12.5px; color:var(--ink-soft) }
+.champ-court { max-width:230px }
+
+/* L'aperçu suit la saisie : sur un formulaire long, il sortait de l'écran
+   pendant qu'on remplissait les champs. */
+.apercu-col { position:sticky; top:16px }
+
+@media(max-width:860px) { .apercu-col { position:static } }
+@media(max-width:700px) {
+  .form-pied { flex-direction:column-reverse; align-items:stretch }
+  .form-pied .btn { width:100% }
+  .form-pied-aide { text-align:center }
+  .champ-court { max-width:none }
+  .media-vignette { width:100%; max-width:280px; height:auto; aspect-ratio:3/2 }
+}
 
 .ardoise-apercu { border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.08) }
 .ardoise-apercu-img { height:140px; background:var(--cream) center/cover; display:flex; align-items:center; justify-content:center }
