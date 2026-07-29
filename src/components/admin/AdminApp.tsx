@@ -93,6 +93,9 @@ function AdminShell({ session }: { session: Session }) {
     "liste-attente": "liste_attente",
     "clients": "crm",
     "newsletter": "newsletter",
+    // L'onglet Contacts n'est QUE la liste des inscrits newsletter (opt-in
+    // actif) et les liens d'inscription tracés : il suit le même module.
+    "contacts": "newsletter",
   };
   // Dépendances entre modules. La liste d'attente et le CRM sont alimentés par
   // les réservations (trigger attach_customer) : sans le module Réservation ils
@@ -113,7 +116,12 @@ function AdminShell({ session }: { session: Session }) {
     if (t.key === "parametres" && features["reservation"] === false) return "Site & accès";
     return t.label;
   }
+  // Le tableau de bord n'appartient à aucun module : il en résume deux. Sans
+  // réservation NI newsletter (offre vitrine seule), il n'aurait rien à montrer
+  // et disparaît — c'est le seul onglet gouverné par deux flags à la fois.
+  const tableauUtile = features["reservation"] !== false || features["newsletter"] !== false;
   const TABS_VISIBLES = TABS.filter((t) => {
+    if (t.key === "tableau") return tableauUtile;
     const fk = FEATURE_MAP[t.key];
     if (!fk) return true; // pas de flag associé = toujours visible
     if (Object.keys(features).length === 0) return true; // flags pas encore chargés
@@ -132,7 +140,16 @@ function AdminShell({ session }: { session: Session }) {
     : sansResa
     ? <TabTableauNewsletter onNavigate={(tab) => naviguer(tab)} />
     : <TabTableau onNavigate={(tab, date, service) => { setForceDate(date); setForceService(service); naviguer(tab); }} />;
-  const Current = TABS_VISIBLES.find((t) => t.key === active)?.comp || TabTableau;
+  const Current = TABS_VISIBLES.find((t) => t.key === active)?.comp
+    || TABS_VISIBLES[0]?.comp || TabTableau;
+
+  // Les flags arrivent après le premier rendu : l'onglet retenu depuis le hash
+  // (ou « tableau » par défaut) peut se révéler masqué. On rebascule alors sur
+  // le premier onglet visible, sinon la navigation n'aurait plus d'élément actif.
+  useEffect(() => {
+    if (!flagsCharges || TABS_VISIBLES.length === 0) return;
+    if (!TABS_VISIBLES.some((t) => t.key === active)) naviguer(TABS_VISIBLES[0].key);
+  }, [flagsCharges, active]); // eslint-disable-line react-hooks/exhaustive-deps
   const siteUrl = import.meta.env.VITE_SITE_URL || "/";
 
   /** Navigation centralisée : garde "modifications non enregistrées" + sync du hash. */
@@ -269,11 +286,11 @@ function AdminShell({ session }: { session: Session }) {
         </div>
       </aside>
       <main className="main">
-        {active === "tableau"
+        {active === "tableau" && tableauUtile
           ? tableauDeBord
           : active === "reservations"
           ? <TabReservations initialDate={forceDate} initialService={forceService} />
-          : active === "features" && !isEditor
+          : active === "features" && !isEditor && tableauUtile
           ? tableauDeBord
           : <Current />}
       </main>

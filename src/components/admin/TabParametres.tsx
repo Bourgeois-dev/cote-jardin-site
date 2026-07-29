@@ -29,12 +29,21 @@ export default function TabParametres() {
   // qui en dépendent disparaissent : il ne reste que les blocs du site et les
   // comptes admin. Même source que AdminApp.tsx (table feature_flags).
   const [reservationOn, setReservationOn] = useState(true);
+  // Module Newsletter. Coupé, le bloc du site et l'opt-in de réservation
+  // disparaissent : il n'y a plus d'onglet Newsletter ni d'onglet Contacts pour
+  // exploiter ce que le formulaire récolterait.
+  const [newsletterFeature, setNewsletterFeature] = useState(true);
 
   useEffect(() => {
     fetchActive<ReservationSettings>("reservation_settings", "id").then((r) => { setS(r[0] || null); setLoading(false); });
     fetchContent("newsletter_enabled").then((c) => setNewsletterOn(c?.enabled ?? true));
-    supabase.from("feature_flags").select("enabled").eq("key", "reservation").maybeSingle()
-      .then(({ data }) => { if (data && data.enabled === false) setReservationOn(false); });
+    supabase.from("feature_flags").select("key,enabled").in("key", ["reservation", "newsletter"])
+      .then(({ data }) => {
+        (data || []).forEach((f: { key: string; enabled: boolean }) => {
+          if (f.enabled === false && f.key === "reservation") setReservationOn(false);
+          if (f.enabled === false && f.key === "newsletter") setNewsletterFeature(false);
+        });
+      });
   }, []);
 
   async function toggleNewsletter(v: boolean) {
@@ -92,6 +101,9 @@ export default function TabParametres() {
       </div></div>
       <div className="contenu"><div className="bloc">
         {/* ── Ce que voit le visiteur ─────────────────────────────────── */}
+        {/* Sans réservation NI newsletter, la section n'aurait plus un seul
+            interrupteur : on ne laisse pas un titre au-dessus du vide. */}
+        {(reservationOn || newsletterFeature) && (
         <div className="reglages-section">
           <div className="reglages-titre">Sur le site public</div>
           <div className="reglages-desc">Ce que le visiteur voit, ou non, sur le site.</div>
@@ -104,7 +116,7 @@ export default function TabParametres() {
               </label>
               {/* Réglage imbriqué, et non voisin : il ne veut rien dire sans la
                   réservation en ligne. Sa dépendance se lit maintenant à l'œil. */}
-              {s.enabled && (
+              {s.enabled && newsletterFeature && (
                 <div className="sous-reglages">
                   <label className="ligne-toggle">
                     <span className="lib"><b>Proposer la newsletter pendant la réservation</b><span>Ajoute une case facultative dans le formulaire.</span></span>
@@ -114,11 +126,14 @@ export default function TabParametres() {
               )}
             </>
           )}
-          <label className="ligne-toggle" style={reservationOn ? undefined : { paddingTop: 0 }}>
-            <span className="lib"><b>Bloc « Newsletter / actualités »</b><span>Affiche le formulaire d'inscription en bas du site. Appliqué aussitôt, sans enregistrement.</span></span>
-            <span className="toggle"><input type="checkbox" checked={newsletterOn} onChange={(e) => toggleNewsletter(e.target.checked)} /><span className="piste" /></span>
-          </label>
+          {newsletterFeature && (
+            <label className="ligne-toggle" style={reservationOn ? undefined : { paddingTop: 0 }}>
+              <span className="lib"><b>Bloc « Newsletter / actualités »</b><span>Affiche le formulaire d'inscription en bas du site. Appliqué aussitôt, sans enregistrement.</span></span>
+              <span className="toggle"><input type="checkbox" checked={newsletterOn} onChange={(e) => toggleNewsletter(e.target.checked)} /><span className="piste" /></span>
+            </label>
+          )}
         </div>
+        )}
 
         {/* Tout ce qui suit ne concerne que la réservation en ligne : réglages
             du widget, confirmation, liste d'attente, rappels J-1. Sans le
@@ -199,7 +214,9 @@ export default function TabParametres() {
           </div>
 
           <div className="form-pied">
-            <span className="form-pied-aide">Tout est enregistré d'un bloc, sauf « Bloc Newsletter / actualités » qui s'applique aussitôt.</span>
+            <span className="form-pied-aide">{newsletterFeature
+                ? "Tout est enregistré d'un bloc, sauf « Bloc Newsletter / actualités » qui s'applique aussitôt."
+                : "Tout est enregistré d'un bloc."}</span>
             <button className="btn btn-accent" onClick={save}>Enregistrer</button>
           </div>
           </>

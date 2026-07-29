@@ -78,7 +78,7 @@ export default function TabAvis() {
 
   return (
     <>
-      <div className="topbar"><div><h1>Avis clients</h1><div className="sous">Carrousel affiché avant la newsletter</div></div></div>
+      <div className="topbar"><div><h1>Avis clients</h1><div className="sous">Carrousel affiché en bas de page</div></div></div>
       <div className="contenu">
         {loading && rows.length === 0 && <Chargement />}
         <div className="bloc">

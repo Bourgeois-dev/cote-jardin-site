@@ -1,4 +1,5 @@
 import { useTable } from "../../hooks/useTable";
+import { supabase } from "../../lib/supabase";
 import Chargement from "./Chargement";
 
 interface FeatureFlag {
@@ -22,6 +23,22 @@ export default function TabFeatures() {
   const { rows, loading, update } = useTable<FeatureFlag>("feature_flags", "label");
   const actifs: Record<string, boolean> = {};
   rows.forEach((f) => { actifs[f.key] = f.enabled; });
+
+  /**
+   * Bascule d'un module. Cas particulier de la newsletter : le bloc du site est
+   * gouverné par site_content.newsletter_enabled, que le restaurateur règle
+   * depuis « Réservations & site ». Or ce réglage disparaît avec le module. Sans
+   * la propagation ci-dessous, on obtiendrait un formulaire toujours visible sur
+   * le site, plus aucun onglet pour en exploiter les inscriptions, et personne
+   * capable de l'éteindre. Le module est donc l'interrupteur maître.
+   */
+  async function basculer(f: FeatureFlag, val: boolean) {
+    await update(f.id, { enabled: val });
+    if (f.key === "newsletter") {
+      await supabase.from("site_content")
+        .upsert({ section_key: "newsletter_enabled", content: { enabled: val } }, { onConflict: "section_key" });
+    }
+  }
 
   return (
     <>
@@ -67,7 +84,7 @@ export default function TabFeatures() {
                   <input
                     type="checkbox"
                     checked={f.enabled}
-                    onChange={(e) => update(f.id, { enabled: e.target.checked })}
+                    onChange={(e) => basculer(f, e.target.checked)}
                   />
                   <span className="piste" />
                 </label>

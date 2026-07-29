@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTable } from "../../hooks/useTable";
+import { supabase } from "../../lib/supabase";
 import type { Reservation, Lead, RestaurantTable, OpeningHour, ReservationSettings } from "../../lib/types";
 import Chargement from "./Chargement";
 
@@ -33,6 +34,12 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
   // Pagination de la disponibilité, 7 jours (une semaine) à la fois.
   const nbSemaines = Math.ceil(horizon / 7);
   const [semaine, setSemaine] = useState(0);
+  // Module Newsletter : sans lui, plus rien ne récolte de contacts.
+  const [newsletterOn, setNewsletterOn] = useState(true);
+  useEffect(() => {
+    supabase.from("feature_flags").select("enabled").eq("key", "newsletter").maybeSingle()
+      .then(({ data }) => { if (data && data.enabled === false) setNewsletterOn(false); });
+  }, []);
 
   const today = new Date();
   const todayStr = ymdLocal(today);
@@ -413,8 +420,11 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
             <div className="stat"><div className="lib">Clients récurrents</div><div className="val">{tauxRecurrence}%</div><div className="det">{nbRecurrents} sur {nbClientsUniques} client(s)</div></div>
             <div className="stat"><div className="lib">Jour le plus demandé</div><div className="val" style={{ fontSize: jourTop ? undefined : 18 }}>{jourTop || "—"}</div><div className="det">{jourTop ? `${maxCouvJour} couverts cumulés` : "pas encore assez de données"}</div></div>
             {/* Déplacé depuis les cartes du haut : n'appelle aucune action
-                immédiate, c'est un indicateur de fond. */}
-            <div className="stat"><div className="lib">Contacts récoltés</div><div className="val">{leads.length}</div><div className="det">newsletter + réservations</div></div>
+                immédiate, c'est un indicateur de fond. Sans module Newsletter,
+                plus rien ne récolte de contacts : la carte n'a plus d'objet. */}
+            {newsletterOn && (
+              <div className="stat"><div className="lib">Contacts récoltés</div><div className="val">{leads.length}</div><div className="det">newsletter + réservations</div></div>
+            )}
           </div>
         </div>
 

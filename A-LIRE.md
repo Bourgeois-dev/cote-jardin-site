@@ -400,3 +400,78 @@ complet.
   (`cote-jardin-site/`, `app-template/`, `provisioning/templates/app/`).
 
 > Les zips contiennent l'intégralité des six envois.
+
+---
+
+# Module Newsletter sur `false` — masquage complet (29/07/2026, septième envoi)
+
+Symétrique de l'exercice « Essentiel + Newsletter », côté newsletter cette fois.
+
+## Onglet Contacts
+
+`"contacts": "newsletter"` ajouté à `FEATURE_MAP`. L'onglet n'est **que** la liste
+des inscrits opt-in et les liens d'inscription tracés (avec le QR code) : sans le
+module, il n'a plus de contenu possible.
+
+## Le piège du bloc newsletter sur le site — traité
+
+Le bloc du site n'est pas gouverné par le flag mais par
+`site_content.newsletter_enabled`, que le restaurateur règle depuis
+« Réservations & site ». Or ce réglage disparaît avec le module. En l'état, couper
+le module aurait donné : **formulaire toujours visible sur le site, aucun onglet
+pour exploiter les inscriptions, et personne capable de l'éteindre.**
+
+`TabFeatures.tsx` propage donc désormais la bascule : couper le module écrit
+`newsletter_enabled = false` dans `site_content`, le rallumer écrit `true`. Le
+module est l'interrupteur maître, le réglage du restaurateur reste disponible en
+dessous tant que le module vit.
+
+> Pourquoi pas faire lire le flag par le site ? La policy RLS de `feature_flags`
+> exige `is_admin()` : le visiteur anonyme ne peut pas la lire. Propager à
+> l'écriture est plus simple et ne touche pas à la sécurité.
+
+## Onglet « Réservations & site »
+
+- le toggle « Bloc Newsletter / actualités » disparaît ;
+- « Proposer la newsletter pendant la réservation » disparaît aussi — il dépend
+  des **deux** modules ;
+- si réservation ET newsletter sont coupés, la section « Sur le site public » n'a
+  plus un seul interrupteur : elle disparaît entièrement plutôt que de laisser un
+  titre au-dessus du vide ;
+- le pied de formulaire ne mentionne plus l'exception du bloc newsletter.
+
+## Tableau de bord
+
+- carte « Contacts récoltés » retirée de `TabTableau` (rien ne récolte plus) ;
+- **cas « ni réservation ni newsletter »** (offre vitrine seule) : l'onglet
+  Tableau de bord disparaît. C'est le seul onglet gouverné par deux flags à la
+  fois, il ne pouvait pas passer par `FEATURE_MAP`.
+
+## Deux corrections de robustesse au passage
+
+- Le repli de `Current` retombait en dur sur `TabTableau`, y compris quand cet
+  onglet était masqué. Il prend maintenant le premier onglet visible.
+- Les flags arrivent après le premier rendu : l'onglet retenu depuis le hash (ou
+  « tableau » par défaut) pouvait se révéler masqué, laissant une navigation sans
+  élément actif. Un effet rebascule sur le premier onglet visible.
+
+## Balayage
+
+Reste dans les onglets visibles : un commentaire de code dans `TabArdoise.tsx`
+(invisible), et `QrAffiche.tsx` qui ne sert qu'à l'onglet Contacts, désormais
+masqué. `TabAvis.tsx` annonçait « Carrousel affiché avant la newsletter » —
+reformulé en « Carrousel affiché en bas de page », vrai dans les deux cas et sans
+nouveau flag à lire.
+
+## Fichiers à remplacer (ce septième envoi)
+
+Dans les trois espaces (`cote-jardin-site/`, `app-template/`,
+`provisioning/templates/app/`) :
+
+- (modifié) `src/components/admin/AdminApp.tsx`
+- (modifié) `src/components/admin/TabParametres.tsx`
+- (modifié) `src/components/admin/TabTableau.tsx`
+- (modifié) `src/components/admin/TabFeatures.tsx`
+- (modifié) `src/components/admin/TabAvis.tsx`
+
+> Les zips contiennent l'intégralité des sept envois.
