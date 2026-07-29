@@ -141,7 +141,7 @@ export default function TabCarte() {
     }
   }
 
-  function nouveau() { setEdit({ name: "", category: catsOrdre[0] || "Plats", description: "", price: 0, is_active: true }); setNewCat(false); setCatText(""); }
+  function nouveau(cat?: string) { setEdit({ name: "", category: cat || catsOrdre[0] || "Plats", description: "", price: 0, is_active: true }); setNewCat(false); setCatText(""); }
 
   // Insertion en masse des plats validés depuis le scan d'ardoise. Les plats
   // arrivent MASQUÉS (is_active=false) : le restaurateur les rend visibles quand
@@ -212,8 +212,9 @@ export default function TabCarte() {
         {loading && rows.length === 0 && <Chargement />}<div className="bloc">
         <div className="bloc-tete"><div><h2>Vos plats</h2></div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button className="btn btn-ligne" onClick={() => setScanOuvert(true)}>📷 Scanner une ardoise</button>
-            <button className="btn btn-accent" onClick={nouveau}>+ Ajouter un plat</button>
+            <button className="btn btn-ligne" onClick={() => setScanOuvert(true)}>Scanner une ardoise</button>
+            {/* Sans la lambda, l'événement de clic partirait dans le paramètre `cat`. */}
+            <button className="btn btn-accent" onClick={() => nouveau()}>+ Ajouter un plat</button>
           </div>
         </div>
 
@@ -225,58 +226,79 @@ export default function TabCarte() {
           </div>
         </div>
 
+        {/* Un panneau par catégorie plutôt qu'un tableau unique : la carte d'un
+            restaurant se pense par section, et les actions restaient à 1 000 px
+            du nom du plat sur un grand écran. */}
         {ordered.length ? (
-          <table><thead><tr><th style={{ width: 30 }}></th><th style={{ width: 56 }}>Visible</th><th>Plat</th><th style={{ width: 110 }}>Prix</th><th></th></tr></thead>
+          <div className="carte-cats">
             {catsOrdre.filter((cat) => !catFiltre || cat === catFiltre).map((cat) => {
               const plats = ordered.filter((m) => m.category === cat && visible(m));
               if (enRecherche && !plats.length) return null;
+              const total = ordered.filter((m) => m.category === cat).length;
+              const masques = ordered.filter((m) => m.category === cat && !m.is_active).length;
               return (
-                <tbody key={cat}>
-                  <tr className="carte-cat-row"><td colSpan={5}>
-                    <div className="carte-cat-tete">
-                      <b>{cat}</b><span className="carte-cat-nb">{ordered.filter((m) => m.category === cat).length} plat(s)</span>
-                      {!enRecherche && (
-                        <span className="carte-cat-fleches">
-                          <button onClick={() => bougerCat(cat, -1)} disabled={catsOrdre.indexOf(cat) === 0} aria-label="Monter la catégorie">▲</button>
-                          <button onClick={() => bougerCat(cat, 1)} disabled={catsOrdre.indexOf(cat) === catsOrdre.length - 1} aria-label="Descendre la catégorie">▼</button>
-                        </span>
-                      )}
-                    </div>
-                  </td></tr>
-                  {plats.map((m) => (
-                    <tr key={m.id}
-                        className={m.is_active ? "" : "carte-plat-masque"}
+                <section className="carte-cat" key={cat}>
+                  <header className="carte-cat-tete">
+                    <b>{cat}</b>
+                    <span className="carte-cat-nb">
+                      {total} plat{total > 1 ? "s" : ""}
+                      {masques > 0 && <> · {masques} masqué{masques > 1 ? "s" : ""}</>}
+                    </span>
+                    {!enRecherche && (
+                      <span className="carte-cat-fleches">
+                        {/* Ajouter depuis l'en-tête pré-remplit la catégorie :
+                            avant, il fallait la resélectionner à chaque plat. */}
+                        <button className="carte-cat-ajout" onClick={() => nouveau(cat)} title={`Ajouter un plat dans « ${cat} »`}>+ Plat</button>
+                        <button onClick={() => bougerCat(cat, -1)} disabled={catsOrdre.indexOf(cat) === 0} aria-label="Monter la catégorie">▲</button>
+                        <button onClick={() => bougerCat(cat, 1)} disabled={catsOrdre.indexOf(cat) === catsOrdre.length - 1} aria-label="Descendre la catégorie">▼</button>
+                      </span>
+                    )}
+                  </header>
+
+                  {plats.length === 0 ? (
+                    <div className="carte-cat-vide">Aucun plat dans cette catégorie.</div>
+                  ) : plats.map((m) => (
+                    <div key={m.id}
+                        className={`carte-plat${m.is_active ? "" : " carte-plat-masque"}`}
                         draggable={!enRecherche}
                         onDragStart={() => { dragId.current = m.id; }}
                         onDragOver={(e) => e.preventDefault()}
-                        onDrop={() => onDropPlat(m)}
-                        style={enRecherche ? {} : { cursor: "grab" }}>
-                      <td className="drag-poignee" aria-hidden="true">{enRecherche ? "" : "⠿"}</td>
-                      <td><label className="toggle"><input type="checkbox" checked={m.is_active} onChange={(e) => update(m.id, { is_active: e.target.checked })} /><span className="piste" /></label></td>
-                      <td><b>{m.name}</b>{m.description && <div className="sub-desc">{m.description}</div>}</td>
-                      <td>
+                        onDrop={() => onDropPlat(m)}>
+                      <span className="drag-poignee" aria-hidden="true">{enRecherche ? "" : "⠿"}</span>
+                      <label className="toggle" title={m.is_active ? "Visible sur le site" : "Masqué"}>
+                        <input type="checkbox" checked={m.is_active} onChange={(e) => update(m.id, { is_active: e.target.checked })} />
+                        <span className="piste" />
+                      </label>
+                      <div className="carte-plat-nom">
+                        <b>{m.name}</b>
+                        {m.description && <div className="sub-desc">{m.description}</div>}
+                      </div>
+                      <div className="carte-plat-prix">
                         {prixEdit?.id === m.id ? (
                           <input className="prix-inline" autoFocus value={prixEdit.val}
                                  onChange={(e) => setPrixEdit({ id: m.id, val: e.target.value })}
                                  onBlur={validerPrix}
                                  onKeyDown={(e) => { if (e.key === "Enter") validerPrix(); if (e.key === "Escape") setPrixEdit(null); }} />
                         ) : (
-                          <button className="prix-btn" onClick={() => setPrixEdit({ id: m.id, val: String(m.price ?? "") })} title="Modifier le prix">
-                            {m.price ? `${m.price} €` : "—"}
+                          /* Un « — » muet ne disait pas qu'on pouvait cliquer. */
+                          <button className={m.price ? "prix-btn" : "prix-btn vide"} onClick={() => setPrixEdit({ id: m.id, val: String(m.price ?? "") })} title="Modifier le prix">
+                            {m.price ? `${m.price} €` : "+ prix"}
                           </button>
                         )}
-                      </td>
-                      <td><div className="actions-ligne">
+                      </div>
+                      <div className="carte-plat-actions">
                         <button className="btn btn-mini btn-ligne" onClick={() => modifier(m)}>Modifier</button>
-                        <button className="btn btn-mini btn-ligne" onClick={() => dupliquer(m)} title="Dupliquer">⧉</button>
-                        <button className="btn btn-mini btn-danger" onClick={() => supprimer(m)}>Supprimer</button>
-                      </div></td>
-                    </tr>
+                        {/* Dupliquer et supprimer en icônes : le mot « Supprimer »
+                            en rouge, répété à chaque ligne, dominait la page. */}
+                        <button className="carte-icone" onClick={() => dupliquer(m)} title="Dupliquer ce plat" aria-label={`Dupliquer ${m.name}`}>⧉</button>
+                        <button className="carte-icone danger" onClick={() => supprimer(m)} title="Supprimer ce plat" aria-label={`Supprimer ${m.name}`}>✕</button>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
+                </section>
               );
             })}
-          </table>
+          </div>
         ) : <div className="vide">Aucun plat. Ajoutez-en un.</div>}
       </div>
 
@@ -285,7 +307,7 @@ export default function TabCarte() {
         {menuFile ? (
           <div className="menu-file-actuel">
             <div className="menu-file-info">
-              <span className="menu-file-icone">📄</span>
+              <span className="menu-file-icone" aria-hidden="true">PDF</span>
               <div>
                 <b>{menuFile.name}</b>
                 <div className="sub-desc"><a href={menuFile.url} target="_blank" rel="noopener noreferrer">Voir le fichier en ligne</a></div>

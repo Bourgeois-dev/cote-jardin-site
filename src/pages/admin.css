@@ -1180,30 +1180,61 @@ a.cli-coord-val:hover { text-decoration:underline }
 .carte-outils { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:14px }
 .carte-outils .carnet-search { max-width:260px }
 .carte-cats-filtre { display:flex; gap:6px; flex-wrap:wrap }
-.carte-cat-row td { padding:0 !important; border-bottom:none !important }
+/* Un panneau par catégorie : la carte d'un restaurant se lit par section, et le
+   tableau unique éloignait les actions du nom du plat de toute la largeur. */
+.carte-cats { display:flex; flex-direction:column; gap:16px }
+.carte-cat { border:1px solid var(--line); border-radius:12px; overflow:hidden }
 .carte-cat-tete {
   display:flex; align-items:center; gap:10px;
-  background:var(--cream); border-radius:8px;
-  padding:9px 12px; margin:16px 0 6px;
-  font-size:14px;
+  background:var(--cream); border-bottom:1px solid var(--line);
+  padding:10px 14px; font-size:14px;
 }
 .carte-cat-nb { font-size:12px; color:var(--ink-soft) }
-.carte-cat-fleches { margin-left:auto; display:flex; gap:4px }
+.carte-cat-vide { padding:18px 14px; font-size:13px; color:var(--ink-soft); text-align:center }
+.carte-cat-fleches { margin-left:auto; display:flex; gap:6px; align-items:center }
 .carte-cat-fleches button {
   width:24px; height:24px; border:1px solid var(--line); background:#fff;
   border-radius:6px; cursor:pointer; font-size:10px; line-height:1; color:var(--ink-soft);
 }
 .carte-cat-fleches button:hover:not(:disabled) { border-color:var(--admin-accent); color:var(--admin-accent) }
 .carte-cat-fleches button:disabled { opacity:.35; cursor:default }
-.carte-plat-masque { opacity:.5 }
-.drag-poignee { color:var(--line); font-size:14px; user-select:none }
-tr:hover .drag-poignee { color:var(--ink-soft) }
+.carte-cat-ajout { width:auto !important; padding:0 10px; font-size:11.5px !important;
+  font-weight:700; font-family:var(--font-body) }
+
+/* Ligne de plat : poignée · visibilité · nom (extensible) · prix · actions. */
+.carte-plat { display:flex; align-items:center; gap:12px; padding:10px 14px;
+  border-bottom:1px solid var(--line); background:#fff; cursor:grab }
+.carte-plat:last-child { border-bottom:none }
+.carte-plat:hover { background:var(--a06) }
+.carte-plat-masque { opacity:.55 }
+.carte-plat-nom { flex:1; min-width:0 }
+.carte-plat-nom b { font-size:14px }
+.carte-plat-prix { flex-shrink:0; width:96px; text-align:right }
+.carte-plat-actions { display:flex; align-items:center; gap:6px; flex-shrink:0 }
+.carte-icone { width:30px; height:30px; border:1px solid var(--line); background:#fff;
+  border-radius:7px; cursor:pointer; font-size:13px; line-height:1; color:var(--ink-soft);
+  font-family:var(--font-body) }
+.carte-icone:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
+.carte-icone.danger:hover { border-color:var(--annule); color:var(--annule) }
+
+.drag-poignee { color:var(--line); font-size:14px; user-select:none; flex-shrink:0 }
+.carte-plat:hover .drag-poignee, tr:hover .drag-poignee { color:var(--ink-soft) }
 .prix-btn {
   background:none; border:1px dashed transparent; border-radius:6px;
   padding:4px 8px; cursor:pointer; font:inherit; color:var(--ink);
 }
 .prix-btn:hover { border-color:var(--line); background:var(--cream) }
+/* Prix absent : une invitation à cliquer, pas un tiret muet. */
+.prix-btn.vide { color:var(--ink-soft); font-size:12.5px; border-color:var(--line); border-style:dashed }
 .prix-inline { width:80px; border:1px solid var(--admin-accent); border-radius:6px; padding:4px 8px; font:inherit }
+
+@media(max-width:700px) {
+  .carte-plat { flex-wrap:wrap; gap:8px 10px }
+  .carte-plat-nom { flex:1 1 100%; order:1 }
+  .drag-poignee { order:0 }
+  .carte-plat-prix { order:2; width:auto; text-align:left; margin-right:auto }
+  .carte-plat-actions { order:3 }
+}
 
 /* Onglets de zones dans le plan de service (Salle / Terrasse…) */
 .zones-barre { display:flex; align-items:center; gap:6px; flex-wrap:wrap }
