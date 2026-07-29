@@ -105,6 +105,12 @@ function AdminShell({ session }: { session: Session }) {
     const parent = DEPENDANCES[fk];
     return parent ? features[parent] !== false : true;
   }
+  // Libellé d'onglet dépendant des modules actifs : « Réservations & site »
+  // n'a plus lieu de mentionner la réservation quand le module est coupé.
+  function libelle(t: { key: string; label: string }): string {
+    if (t.key === "parametres" && features["reservation"] === false) return "Site & accès";
+    return t.label;
+  }
   const TABS_VISIBLES = TABS.filter((t) => {
     const fk = FEATURE_MAP[t.key];
     if (!fk) return true; // pas de flag associé = toujours visible
@@ -235,7 +241,7 @@ function AdminShell({ session }: { session: Session }) {
                 onClick={() => naviguer(t.key)}
                 style={t.key === "features" ? { borderTop: "1px solid rgba(255,255,255,.1)", marginTop: 4, opacity: .7, fontSize: 12 } : undefined}
               >
-                {t.key === "features" ? "⚙ Fonctionnalités" : t.label}
+                {t.key === "features" ? "⚙ Fonctionnalités" : libelle(t)}
                 {pastille(t.key)}
               </button>
             </div>
@@ -267,7 +273,7 @@ function AdminShell({ session }: { session: Session }) {
                 className={active === t.key ? "actif" : ""}
                 onClick={() => { setMenuOpen(false); naviguer(t.key); }}
               >
-                {t.key === "features" ? "⚙ Fonctionnalités" : t.label}
+                {t.key === "features" ? "⚙ Fonctionnalités" : libelle(t)}
                 {pastille(t.key)}
               </button>
             </div>
