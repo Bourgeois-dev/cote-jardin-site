@@ -126,24 +126,41 @@ export default function TabPartenaires() {
           </label>
         </div>
         <div className="bloc">
-          <div className="bloc-tete"><div><h2>Vos partenaires</h2><div className="sous">Glissez-déposez pour réordonner</div></div><button className="btn btn-accent" onClick={() => setEdit({ name: "", description: "", category: "", image_url: "", website: "", location: "", partner_type: "", featured: false, is_active: true })}>+ Ajouter</button></div>
-          <table><thead><tr><th style={{ width: 40 }}></th><th style={{ width: 56 }}>Visible</th><th style={{ width: 64 }}>Image</th><th>Nom</th><th>Type</th><th></th></tr></thead><tbody>
-            {ordered.length ? ordered.map((p) => (
-              <tr key={p.id}
+          <div className="bloc-tete"><div><h2>Vos partenaires</h2><div className="sous">Glissez-déposez pour réordonner</div></div></div>
+          {/* Cartes plutôt que tableau : chaque partenaire est un petit
+              portrait — image, nom, type — pas une ligne de données. Le badge
+              numéroté rend l'ordre du site visible, comme dans la Galerie. */}
+          <div className="pa-grille">
+            {ordered.map((p, i) => (
+              <div className={`pa-carte${p.is_active ? "" : " pa-masque"}`} key={p.id}
                   draggable
                   onDragStart={() => { dragId.current = p.id; }}
                   onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => onDrop(p.id)}
-                  style={{ cursor: "grab" }}>
-                <td className="drag-poignee" aria-hidden="true">⠿</td>
-                <td><label className="toggle"><input type="checkbox" checked={p.is_active} onChange={(e) => update(p.id, { is_active: e.target.checked })} /><span className="piste" /></label></td>
-                <td>{p.image_url ? <img src={p.image_url} alt="" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 6 }} /> : <span style={{ color: "#bbb" }}>—</span>}</td>
-                <td><b>{p.name}</b>{p.featured && <span className="pill-featured" style={{ marginLeft: 6, fontSize: 11 }}>★ En avant</span>}{p.description && <div className="sub-desc">{p.description.slice(0, 70)}</div>}</td>
-                <td>{p.partner_type || "—"}</td>
-                <td><div className="actions-ligne"><button className="btn btn-mini btn-ligne" onClick={() => setEdit({ ...p })}>Modifier</button><button className="btn btn-mini btn-danger" onClick={() => supprimer(p)}>Supprimer</button></div></td>
-              </tr>
-            )) : <tr><td colSpan={6} className="vide">Aucun partenaire.</td></tr>}
-          </tbody></table>
+                  onDrop={() => onDrop(p.id)}>
+                <div className="pa-visuel">
+                  {p.image_url
+                    ? <img src={p.image_url} alt="" />
+                    : <span className="pa-initiale" aria-hidden="true">{(p.name || "?").trim().charAt(0).toUpperCase()}</span>}
+                  <span className="ga-num">{i + 1}</span>
+                  {p.featured && <span className="ga-badge pa-avant">★ En avant</span>}
+                  {!p.is_active && <span className="ga-badge">Masqué</span>}
+                </div>
+                <div className="pa-corps">
+                  <div className="pa-nom"><b>{p.name}</b>{p.partner_type && <span className="tag t-neutre">{p.partner_type}</span>}</div>
+                  {p.description && <div className="sub-desc pa-desc">{p.description}</div>}
+                </div>
+                <div className="ga-actions">
+                  <label className="toggle" title={p.is_active ? "Visible sur le site" : "Masqué"}><input type="checkbox" checked={p.is_active} onChange={(e) => update(p.id, { is_active: e.target.checked })} /><span className="piste" /></label>
+                  <button className="btn btn-mini btn-ligne" onClick={() => setEdit({ ...p })}>Modifier</button>
+                  <button className="carte-icone danger" onClick={() => supprimer(p)} title="Supprimer ce partenaire" aria-label={`Supprimer ${p.name}`}>✕</button>
+                </div>
+              </div>
+            ))}
+            <button type="button" className="ga-ajout" onClick={() => setEdit({ name: "", description: "", category: "", image_url: "", website: "", location: "", partner_type: "", featured: false, is_active: true })}>
+              <b>+ Ajouter</b>
+              <span>Producteur, fournisseur, artisan…</span>
+            </button>
+          </div>
         </div>
       </div>
     </>

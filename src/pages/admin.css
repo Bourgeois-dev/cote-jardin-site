@@ -87,6 +87,12 @@
   backdrop-filter:blur(8px); border-bottom:1px solid var(--line); padding:20px 32px;
   display:flex; align-items:center; justify-content:space-between }
 .topbar h1 { font-family:var(--font-body); font-weight:700; font-size:21px; letter-spacing:.01em }
+/* app.css (partagé) met h1,h2,h3 en serif : les intertitres de l'admin
+   (« Vos partenaires », « Vos avis »…) suivent la même bascule bâton que le
+   reste de l'interface. Les aperçus du site utilisent des div, pas des hn —
+   ils gardent donc leur serif. */
+.app h2, .modal-in h2 { font-family:var(--font-body); font-weight:700; letter-spacing:.01em }
+.bloc-tete h2 { font-size:16.5px }
 .topbar .sous { font-size:13px; color:var(--ink-soft) }
 .contenu { padding:26px 32px 70px; max-width:1980px }
 .contenu.pleine { max-width:none }
@@ -1007,7 +1013,7 @@ tr:last-child td { border-bottom:none }
 .ga-alerte { background:rgba(193,138,46,.94); color:#fff; border:none;
   cursor:pointer; font-family:var(--font-body) }
 .ga-alerte:hover { background:#a87824 }
-.ga-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-top:1px solid var(--line) }
+.ga-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 12px; border-top:1px solid var(--line); background:#fff; position:relative }
 .ga-actions .btn-mini { padding:5px 10px; font-size:12px }
 /* Tuile d'ajout : dans la grille, au format des photos. */
 .ga-ajout { display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -1018,6 +1024,32 @@ tr:last-child td { border-bottom:none }
 .ga-ajout:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
 .ga-ajout:hover b { color:var(--admin-accent) }
 .ga-ajout:disabled { cursor:default; opacity:.6 }
+
+/* Partenaires & Avis : cartes. Réutilise les badges (.ga-num, .ga-badge), les
+   actions (.ga-actions) et la tuile d'ajout (.ga-ajout) de la Galerie — un seul
+   vocabulaire visuel pour tous les contenus en grille de l'admin. */
+.pa-grille { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; margin-top:14px }
+.pa-carte { border:1px solid var(--line); border-radius:10px; background:#fff;
+  display:flex; flex-direction:column; overflow:hidden; cursor:grab }
+.pa-masque .pa-visuel, .pa-masque .pa-corps, .pa-masque .avis-tete, .pa-masque .avis-texte { opacity:.45 }
+.pa-visuel { position:relative; background:var(--cream) }
+.pa-visuel img { width:100%; aspect-ratio:16/7; object-fit:cover; display:block }
+/* Sans image : l'initiale du partenaire, pas un tiret gris. */
+.pa-initiale { display:flex; align-items:center; justify-content:center; aspect-ratio:16/7;
+  font-size:34px; font-weight:700; color:var(--admin-accent-light) }
+.pa-avant { background:var(--or); color:#fff; border:none }
+.pa-corps { padding:11px 14px 4px; flex:1 }
+.pa-nom { display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+.pa-nom b { font-size:14.5px }
+.pa-desc { margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
+
+/* Avis : la citation est le contenu — six lignes visibles, pas 90 caractères. */
+.avis-carte { cursor:default; padding-top:12px }
+.avis-tete { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 14px 6px }
+.avis-tete b { font-size:14.5px }
+.avis-texte { margin:0; padding:0 14px 10px; flex:1; font-size:13px; line-height:1.55;
+  color:var(--ink); display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden }
+.avis-texte::before { content:"« " } .avis-texte::after { content:" »" }
 
 /* Carte PDF */
 .menu-file-actuel { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; background:var(--cream); border:1px solid var(--line); border-radius:10px; padding:14px 16px }

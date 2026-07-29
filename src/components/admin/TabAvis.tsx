@@ -66,17 +66,30 @@ export default function TabAvis() {
           </label>
         </div>
         <div className="bloc">
-          <div className="bloc-tete"><div><h2>Vos avis</h2></div><button className="btn btn-accent" onClick={() => setEdit({ author: "", rating: 5, content: "", is_active: true })}>+ Ajouter un avis</button></div>
-          <table><thead><tr><th style={{ width: 56 }}>Visible</th><th>Auteur &amp; note</th><th>Avis</th><th></th></tr></thead><tbody>
-            {rows.length ? rows.map((r) => (
-              <tr key={r.id}>
-                <td><label className="toggle"><input type="checkbox" checked={r.is_active} onChange={(e) => update(r.id, { is_active: e.target.checked })} /><span className="piste" /></label></td>
-                <td><b>{r.author}</b><br /><Stars n={r.rating} /></td>
-                <td className="sub-desc">{r.content.slice(0, 90)}{r.content.length > 90 ? "…" : ""}</td>
-                <td><div className="actions-ligne"><button className="btn btn-mini btn-ligne" onClick={() => setEdit({ ...r })}>Modifier</button><button className="btn btn-mini btn-danger" onClick={() => supprimer(r)}>Supprimer</button></div></td>
-              </tr>
-            )) : <tr><td colSpan={4} className="vide">Aucun avis.</td></tr>}
-          </tbody></table>
+          <div className="bloc-tete"><div><h2>Vos avis</h2></div></div>
+          {/* Un avis est une citation : la carte la montre presque entière
+              (six lignes) au lieu de la tronquer à 90 caractères — c'est le
+              texte qu'on vient relire ici, pas une métadonnée. */}
+          <div className="pa-grille avis-grille">
+            {rows.map((r) => (
+              <div className={`pa-carte avis-carte${r.is_active ? "" : " pa-masque"}`} key={r.id}>
+                <div className="avis-tete">
+                  <b>{r.author}</b>
+                  <Stars n={r.rating} />
+                </div>
+                <blockquote className="avis-texte">{r.content}</blockquote>
+                <div className="ga-actions">
+                  <label className="toggle" title={r.is_active ? "Visible sur le site" : "Masqué"}><input type="checkbox" checked={r.is_active} onChange={(e) => update(r.id, { is_active: e.target.checked })} /><span className="piste" /></label>
+                  <button className="btn btn-mini btn-ligne" onClick={() => setEdit({ ...r })}>Modifier</button>
+                  <button className="carte-icone danger" onClick={() => supprimer(r)} title="Supprimer cet avis" aria-label={`Supprimer l'avis de ${r.author}`}>✕</button>
+                </div>
+              </div>
+            ))}
+            <button type="button" className="ga-ajout" onClick={() => setEdit({ author: "", rating: 5, content: "", is_active: true })}>
+              <b>+ Ajouter un avis</b>
+              <span>Recopié d'un avis Google, TripAdvisor…</span>
+            </button>
+          </div>
         </div>
       </div>
     </>
