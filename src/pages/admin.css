@@ -46,8 +46,9 @@
    section « MOBILE ≤ 820px — refonte complète ». Un seul point de vérité. */
 .side { background:var(--admin-ink); color:#fff; padding:22px 16px; display:flex;
   flex-direction:column; gap:2px; height:100vh; overflow-y:auto }
-.side .logo { font-family:var(--font-display); font-size:22px; padding:6px 10px 18px;
-  border-bottom:1px solid rgba(255,255,255,.14); margin-bottom:14px; line-height:1.05 }
+.side .logo { font-family:var(--font-body); font-weight:700; font-size:18px;
+  letter-spacing:.01em; padding:6px 10px 18px;
+  border-bottom:1px solid rgba(255,255,255,.14); margin-bottom:14px; line-height:1.15 }
 .side .logo small { display:block; font-family:var(--font-body); font-size:10px;
   letter-spacing:.18em; text-transform:uppercase; color:var(--admin-accent-light);
   font-weight:600; margin-top:5px }
@@ -85,7 +86,7 @@
 .topbar { position:sticky; top:0; z-index:10; background:rgba(244,241,234,.94);
   backdrop-filter:blur(8px); border-bottom:1px solid var(--line); padding:20px 32px;
   display:flex; align-items:center; justify-content:space-between }
-.topbar h1 { font-family:var(--font-display); font-size:26px }
+.topbar h1 { font-family:var(--font-body); font-weight:700; font-size:21px; letter-spacing:.01em }
 .topbar .sous { font-size:13px; color:var(--ink-soft) }
 .contenu { padding:26px 32px 70px; max-width:1980px }
 .contenu.pleine { max-width:none }
@@ -263,7 +264,7 @@ tr:last-child td { border-bottom:none }
 .login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--cream) }
 .login-card { background:#fff; border:1px solid var(--line); border-radius:16px; width:min(420px,92%); overflow:hidden; box-shadow:0 20px 60px rgba(26,34,56,.1) }
 .login-head { background:var(--admin-ink); color:var(--cream); padding:28px 32px }
-.login-head .marque { font-family:var(--font-display); font-size:28px }
+.login-head .marque { font-family:var(--font-body); font-weight:700; font-size:22px; letter-spacing:.01em }
 .login-head .role { font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--admin-accent-light); margin-top:4px }
 .login-body { padding:32px }
 .login-body h1 { font-size:22px; margin-bottom:6px }
@@ -334,7 +335,11 @@ tr:last-child td { border-bottom:none }
 
 .ps-entete { display:flex; align-items:center; justify-content:space-between; padding:16px 24px 14px; gap:16px; flex-shrink:0 }
 .ps-sous-titre { font-size:11px; color:var(--ink-soft); font-weight:700; letter-spacing:.14em; text-transform:uppercase }
-.ps-date-grande { font-family:var(--font-display); font-size:21px; font-weight:600; color:var(--ink);
+/* Date du plan de service : typo bâton — c'est une donnée d'interface, pas un
+   titre éditorial. Même choix pour les autres textes de données ci-dessous ;
+   la serif ne reste que sur l'identité (logo, connexion) et sur les aperçus
+   fidèles du site (ardoise, promo, affiche QR). */
+.ps-date-grande { font-family:var(--font-body); font-size:18px; font-weight:700; letter-spacing:.01em; color:var(--ink);
   display:flex; align-items:center; gap:10px; margin-top:2px }
 .ps-date-grande::first-letter { text-transform:uppercase }
 .ps-badge-auj { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
@@ -717,7 +722,7 @@ tr:last-child td { border-bottom:none }
 .ps-table-contenu { display:flex; flex-direction:column; justify-content:center; align-items:center;
   text-align:center; gap:2px; width:80%; pointer-events:none; z-index:2 }
 .ps-table-tete { display:flex; flex-direction:column; align-items:center; gap:2px }
-.ps-table-label { font-size:15px; font-weight:600; line-height:1; font-family:var(--font-display) }
+.ps-table-label { font-size:14px; font-weight:700; line-height:1; font-family:var(--font-body) }
 .ps-table.occupee .ps-table-label { color:#fff }
 .ps-table.libre   .ps-table-label { color:var(--ink) }
 .ps-table-cap { font-size:9.5px; font-weight:500 }
@@ -741,7 +746,7 @@ tr:last-child td { border-bottom:none }
 
 /* ── 07. PLAN DE SALLE (.tp-) ──────────────────────────────────────────── */
 .tp-nb-zones { display:flex; flex-direction:column; align-items:flex-end; gap:1px; flex-shrink:0 }
-.tp-nb-zones-chiffre { font-family:var(--font-display); font-size:38px; font-weight:400; color:var(--admin-accent); line-height:1 }
+.tp-nb-zones-chiffre { font-family:var(--font-body); font-size:32px; font-weight:700; color:var(--admin-accent); line-height:1 }
 .tp-nb-zones-label { font-size:11px; color:var(--ink-soft); letter-spacing:.06em }
 
 .tp-zones-barre { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:16px }
@@ -759,7 +764,7 @@ tr:last-child td { border-bottom:none }
 .tp-zone-main { background:#fff; border:1px solid var(--line); border-radius:16px; overflow:hidden }
 .tp-zone-entete { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--line); gap:12px; flex-wrap:wrap }
 .tp-zone-entete-gauche { display:flex; align-items:center; gap:14px }
-.tp-zone-nom { font-family:var(--font-display); font-size:20px; font-weight:500; color:var(--ink) }
+.tp-zone-nom { font-family:var(--font-body); font-size:16px; font-weight:700; color:var(--ink) }
 .tp-zone-stats { font-size:12px; font-weight:500; color:var(--ink-soft); background:var(--cream); border:1px solid var(--line); padding:3px 12px; border-radius:99px }
 .tp-zone-entete-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap }
 .tp-plan { position:relative; overflow:hidden; background:var(--cream);
@@ -780,7 +785,7 @@ tr:last-child td { border-bottom:none }
 .tp-table.selectionnee .tp-chaise  { stroke:var(--admin-accent-light) }
 .tp-table.selectionnee { filter:drop-shadow(0 0 0 var(--a12)); z-index:5 }
 .tp-table-texte { display:flex; flex-direction:column; align-items:center; gap:2px; pointer-events:none; z-index:2 }
-.tp-table-label { font-family:var(--font-display); font-size:17px; font-weight:600; color:var(--admin-accent); line-height:1 }
+.tp-table-label { font-family:var(--font-body); font-size:15px; font-weight:700; color:var(--admin-accent); line-height:1 }
 .tp-table-cap { font-size:10px; color:var(--ink-soft) }
 
 .tp-zone-pied { display:flex; align-items:center; gap:10px; padding:12px 20px; border-top:1px solid var(--line); font-size:13.5px; color:var(--ink-soft); flex-wrap:wrap }
@@ -791,7 +796,7 @@ tr:last-child td { border-bottom:none }
 .tp-panneau { background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px;
   display:flex; flex-direction:column; gap:0; align-self:start; position:sticky; top:72px; width:100% }
 .tp-panneau-tete { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px }
-.tp-panneau-titre { font-family:var(--font-display); font-size:20px; font-weight:500; color:var(--ink) }
+.tp-panneau-titre { font-family:var(--font-body); font-size:16px; font-weight:700; color:var(--ink) }
 .tp-panneau-zone-badge { font-size:10px; font-weight:700; letter-spacing:.14em; background:var(--cream); border:1px solid var(--line); color:var(--ink-soft); padding:3px 9px; border-radius:4px }
 .tp-panneau-section { margin-bottom:18px }
 .tp-panneau-label { font-size:9.5px; font-weight:700; letter-spacing:.2em; color:var(--ink-soft); text-transform:uppercase; margin-bottom:10px }
@@ -802,7 +807,7 @@ tr:last-child td { border-bottom:none }
 .tp-cap-btn:hover:not(:disabled) { border-color:var(--admin-accent); background:var(--a06) }
 .tp-cap-btn:disabled { opacity:.35; cursor:not-allowed }
 .tp-cap-val  { display:flex; flex-direction:column; align-items:center; gap:2px; flex:1 }
-.tp-cap-n    { font-family:var(--font-display); font-size:36px; font-weight:400; color:var(--ink); line-height:1 }
+.tp-cap-n    { font-family:var(--font-body); font-size:30px; font-weight:700; color:var(--ink); line-height:1 }
 .tp-cap-unit { font-size:11px; color:var(--ink-soft) }
 .tp-forme-toggle { display:grid; grid-template-columns:1fr 1fr; border:1.5px solid var(--line); border-radius:10px; overflow:hidden }
 .tp-forme-btn { padding:10px; font-size:13px; font-weight:600; background:#fff; border:none; cursor:pointer; color:var(--ink-soft); transition:.15s }
@@ -846,7 +851,7 @@ tr:last-child td { border-bottom:none }
 .clients-fiche { background:#fff; border:1px solid var(--line); border-radius:12px; padding:24px 26px; min-height:300px }
 .fiche-vide { display:flex; align-items:center; justify-content:center; min-height:260px }
 .fiche-tete { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:18px }
-.fiche-nom  { font-family:var(--font-display); font-size:24px; line-height:1.1 }
+.fiche-nom  { font-family:var(--font-body); font-size:19px; font-weight:700; line-height:1.15 }
 .fiche-coord { display:flex; flex-wrap:wrap; gap:24px; padding:14px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line) }
 .fiche-coord > div { display:flex; flex-direction:column; gap:2px }
 .fiche-lab  { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft) }
@@ -855,7 +860,7 @@ tr:last-child td { border-bottom:none }
 .fiche-stat  { background:var(--cream); border-radius:10px; padding:14px 10px; text-align:center }
 .fiche-stat b { display:block; font-family:var(--font-body); font-weight:700; font-size:24px; color:var(--admin-accent); line-height:1 }
 .fiche-stat span { font-size:11.5px; color:var(--ink-soft); margin-top:5px; display:block }
-.fiche-histo-titre { font-family:var(--font-display); font-size:18px; margin:22px 0 10px }
+.fiche-histo-titre { font-family:var(--font-body); font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin:22px 0 10px }
 .fiche-histo { width:100%; border-collapse:collapse; font-size:13.5px }
 .fiche-histo th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); font-weight:700; padding:7px 8px; border-bottom:1px solid var(--line) }
 .fiche-histo td { padding:8px; border-bottom:1px solid var(--line) }
@@ -1139,7 +1144,7 @@ tr:last-child td { border-bottom:none }
 /* En-tête fiche */
 .cli-fiche-tete { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:20px }
 .cli-fiche-tete-gauche { display:flex; flex-direction:column; gap:4px }
-.cli-fiche-nom { font-family:var(--font-display); font-size:28px; font-weight:500; color:var(--ink); display:flex; align-items:center; flex-wrap:wrap; gap:0 }
+.cli-fiche-nom { font-family:var(--font-body); font-size:22px; font-weight:700; color:var(--ink); display:flex; align-items:center; flex-wrap:wrap; gap:0 }
 
 /* Coordonnées */
 .cli-coord { display:flex; gap:48px; padding:18px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); margin-bottom:20px }
@@ -1151,7 +1156,7 @@ a.cli-coord-val:hover { text-decoration:underline }
 /* Stats */
 .cli-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:8px }
 .cli-stat { background:var(--cream); border:1px solid var(--line); border-radius:12px; padding:18px 14px; text-align:center }
-.cli-stat b { display:block; font-family:var(--font-display); font-size:36px; font-weight:400; color:var(--admin-accent); line-height:1; margin-bottom:6px }
+.cli-stat b { display:block; font-family:var(--font-body); font-size:30px; font-weight:700; color:var(--admin-accent); line-height:1; margin-bottom:6px }
 .cli-stat span { font-size:11px; color:var(--ink-soft); text-transform:none }
 
 /* Sections */
