@@ -297,3 +297,58 @@ Sans cette colonne, les désinscriptions n'étaient comptables qu'en volume tota
   `provisioning/templates/schema.sql`
 
 > Les zips contiennent l'intégralité des quatre envois.
+
+---
+
+# `rls_auto_enable()` / event trigger `ensure_rls` (29/07/2026, cinquième envoi)
+
+## Ce que la vérification a montré
+
+`ensure_rls` n'est pas une fonction maison : c'est l'option Supabase
+« Auto-enable RLS for new tables » (Dashboard → Authentication), documentée par
+Supabase et **opt-in**. Un projet neuf ne l'a pas — elle a donc bien été cochée à
+la main sur Côté Jardin à un moment, et un futur client ne l'aurait pas eue.
+
+Deuxième point vérifié, parce qu'il décidait de la solution : le rôle `postgres`
+de l'éditeur SQL n'est pas superutilisateur (`usesuper = false`), ce qui interdit
+normalement `create event trigger`. Sonde exécutée en production (event trigger
+temporaire créé à partir de la fonction existante, puis supprimé) : **la création
+passe**. Supabase autorise donc l'opération malgré l'absence de superuser.
+
+Conclusion : l'objet peut vivre dans `schema.sql`, et n'a pas à dépendre d'une
+case cochée dans le dashboard client par client.
+
+## Ce qui a été fait
+
+- `rls_auto_enable()` et `ensure_rls` ajoutés **en tête** des deux fichiers de
+  schéma, avant la première table — l'event trigger n'agit que sur les tables
+  créées après son installation.
+- Rejouable : `create or replace` pour la fonction, `drop event trigger if
+  exists` puis `create` pour le trigger (les event triggers n'acceptent pas
+  `if not exists`).
+- **Appliqué et testé en production sur Côté Jardin.** Test de bout en bout :
+  création d'une table jetable `ztest_rls_ltd` → `relrowsecurity = true`
+  automatiquement, puis suppression. Contrôle final : table de test absente,
+  `ensure_rls` présent, fonction présente, et **0 table du schéma `public` sans
+  RLS** sur les 23.
+- `SETUP-NOUVEAU-CLIENT.md` : encadré ajouté en section 10 — plus rien à cocher
+  dans le dashboard, avec la requête de vérification après provisioning.
+
+## Portée réelle
+
+Le schéma active déjà la RLS table par table ; le trigger ne change donc rien à
+l'état actuel. Il couvre ce qui viendra plus tard : migration à chaud, table de
+travail, table créée depuis le dashboard. C'est un filet, pas un correctif — une
+table oubliée sera inaccessible plutôt qu'ouverte en grand.
+
+## Fichiers à remplacer (ce cinquième envoi)
+
+### maj-cote-jardin.zip → repo `cote-jardin-site`
+- (modifié) `supabase/migrations/00000000000001_schema.sql`
+
+### maj-provisioning-kit.zip → repo `provisioning`
+- (modifié) `provisioning/templates/schema.sql`
+- (modifié) `provisioning/SETUP-NOUVEAU-CLIENT.md`
+
+> `app-template` n'est pas concerné (pas de schéma, pas de doc de provisioning).
+> Les zips contiennent l'intégralité des cinq envois.
