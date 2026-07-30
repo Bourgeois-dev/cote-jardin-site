@@ -349,7 +349,15 @@ export function BlocsNewsletter({ onNavigate, mode = "seul" }: {
                             // Délivrés = acceptés par les serveurs destinataires
                             // (envoyés moins les échecs). Ne dit PAS boîte de
                             // réception vs spam — aucun signal n'existe pour ça.
-                            const couvert = premierEvt && c.sent_at && c.sent_at >= premierEvt;
+                            // Couverte = la campagne a des événements (preuve
+                            // directe que le webhook la suivait), OU elle est
+                            // postérieure au premier événement enregistré. La
+                            // seule date ne suffit pas : pour la toute première
+                            // campagne post-webhook, le premier événement est un
+                            // clic sur CETTE campagne — donc toujours après son
+                            // envoi, et elle serait restée à « — » à tort.
+                            const aDesEvenements = clics[c.id] != null || bounces[c.id] != null;
+                            const couvert = aDesEvenements || (premierEvt && c.sent_at && c.sent_at >= premierEvt);
                             if (!couvert || envoyes === 0) return <span className="sub-desc">—</span>;
                             const del = Math.max(0, envoyes - (bounces[c.id] ?? 0));
                             return <>{del}<span className="sub-desc"> · {Math.round((del / envoyes) * 100)}%</span></>;
