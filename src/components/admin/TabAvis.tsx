@@ -10,7 +10,7 @@ function Stars({ n, onPick }: { n: number; onPick?: (v: number) => void }) {
     <span style={{ whiteSpace: "nowrap" }}>
       {[1, 2, 3, 4, 5].map((i) => (
         <svg key={i} onClick={onPick ? () => onPick(i) : undefined} viewBox="0 0 24 24" width={onPick ? 26 : 14} height={onPick ? 26 : 14}
-          fill={i <= n ? "var(--admin-accent)" : "none"} stroke="var(--admin-accent)" strokeWidth="1.5"
+          fill={i <= n ? "var(--or)" : "none"} stroke="var(--or)" strokeWidth="1.5"
           style={{ display: "inline-block", verticalAlign: "middle", cursor: onPick ? "pointer" : "default" }}>
           <path d="M12 2l2.9 6.3 6.8.8-5 4.6 1.3 6.7L12 17.8 5.9 20.4 7.2 13.7l-5-4.6 6.8-.8z" />
         </svg>
@@ -43,8 +43,9 @@ export default function TabAvis() {
       <>
         <div className="topbar"><div><h1>{edit.id ? "Modifier l'avis" : "Nouvel avis"}</h1><div className="sous">{edit.id ? `Avis de ${edit.author}` : "Recopiez un avis reçu sur Google, TripAdvisor ou en salle"}</div></div>
           <button className="btn btn-ligne" onClick={() => setEdit(null)}>← Retour à la liste</button></div>
-        <div className="contenu"><div className="bloc"><div className="form-duo">
-          <div>
+        {/* Aperçu supprimé (rendu instantané sur le site) : le formulaire est
+            resserré au lieu de flotter sur toute la largeur. */}
+        <div className="contenu"><div className="bloc"><div className="adm-form-etroit">
             <div className="grid2">
               <div className="champ"><label>Nom de l'auteur *</label><input value={edit.author} onChange={(e) => setEdit({ ...edit, author: e.target.value })} placeholder="Camille R." /><span className="aide">Tel qu'il apparaît sur l'avis d'origine — prénom et initiale suffisent.</span></div>
               <div className="champ"><label>Note</label><div style={{ paddingTop: 4 }}><Stars n={edit.rating || 5} onPick={(v) => setEdit({ ...edit, rating: v })} /></div></div>
@@ -57,20 +58,6 @@ export default function TabAvis() {
               <button className="btn btn-ligne" onClick={() => setEdit(null)}>Annuler</button>
               <button className="btn btn-accent" onClick={save}>{edit.id ? "Enregistrer" : "Ajouter l'avis"}</button>
             </div>
-          </div>
-          {/* Aperçu en direct — le patron de l'Ardoise et de la Bannière promo :
-              on voit la carte se construire pendant qu'on tape. */}
-          <div className="apercu-col">
-            <div className="eyebrow" style={{ marginBottom: 12 }}>Aperçu de la carte</div>
-            <div className="adm-pa-carte adm-avis-carte" style={{ cursor: "default" }}>
-              <div className="adm-avis-tete">
-                <b>{edit.author || "Nom de l'auteur"}</b>
-                <Stars n={edit.rating || 5} />
-              </div>
-              <blockquote className="adm-avis-texte" style={{ WebkitLineClamp: "unset" }}>{edit.content || "Le texte de l'avis apparaîtra ici…"}</blockquote>
-            </div>
-            <div className="apercu-note">Mise à jour en direct</div>
-          </div>
         </div></div></div>
       </>
     );

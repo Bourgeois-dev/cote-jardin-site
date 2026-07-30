@@ -692,3 +692,74 @@ CJ et PK également :
 > Rappel toujours pendant : redéployer `send-newsletter` (tags + exclusion) et
 > `newsletter-unsubscribe`, créer le webhook Resend + secret. Les zips
 > contiennent l'intégralité des onze envois.
+
+---
+
+# Correctif — délivrabilité à « — » sur la première campagne (30/07/2026, douzième envoi)
+
+Le garde-fou du onzième envoi considérait une campagne couverte si elle était
+postérieure au premier événement enregistré. Impossible pour la toute première
+campagne post-webhook : le premier événement est un clic sur CETTE campagne,
+donc toujours après son envoi — elle restait à « — » alors qu'elle avait des
+données. Constaté en production sur la campagne test de Victor (clic remonté,
+délivrés absent).
+
+Règle corrigée : couverte = la campagne a des événements enregistrés (preuve
+directe), OU elle est postérieure au premier événement (campagnes suivantes,
+même sans clic).
+
+## Fichier à remplacer (ce douzième envoi)
+
+- (modifié) `src/components/admin/TabTableauNewsletter.tsx` — trois espaces.
+
+> Les zips contiennent l'intégralité des douze envois.
+
+---
+
+# Onglets vitrine — habillage éditorial (30/07/2026, treizième envoi)
+
+Ardoise du jour, Avis clients, Partenaires et Bannière promo faisaient
+« back office » par rapport au reste de l'admin. Refonte visuelle + suppression
+des aperçus demandée.
+
+## Aperçus supprimés : Ardoise, Avis, Partenaires
+
+Le rendu étant instantané sur le site, la colonne d'aperçu alourdissait sans
+informer. Conséquences de mise en page :
+
+- **Ardoise** : la photo du plat devient elle-même le visuel de l'onglet — grand
+  panneau média (ratio 4/3, actions en surimpression sur dégradé) en vis-à-vis
+  des champs, composition `adm-edito`. Plus une vignette de 64px perdue dans un
+  champ.
+- **Avis / Partenaires (édition)** : sans colonne d'aperçu, un formulaire pleine
+  largeur flotte — resserré à 680px (`adm-form-etroit`).
+
+**Exception conservée : la Bannière promo garde son aperçu.** Une popup ne se
+voit pas sur le site sans recharger et attendre son déclenchement — c'est le
+seul des quatre où l'aperçu montre quelque chose d'invisible autrement. Il est
+en revanche mis en scène (panneau crème, ombre portée) au lieu d'être posé nu.
+
+## Habillage
+
+- Cartes Partenaires & Avis : rayon 14px, relief doux, réaction au survol
+  (élévation + ombre) — la grille respire au lieu d'aligner des rectangles plats.
+- Avis : registre citation — texte en italique, guillemet décoratif en filigrane
+  (Georgia, teinte `--a12`), **étoiles dorées** (`--or`) au lieu du bordeaux — le
+  bordeaux reste la couleur des actions, pas des notes.
+- Initiale des partenaires sans image : sur dégradé teinté plutôt que fond plat.
+- Tuiles d'ajout et zones média : mêmes rayons que les cartes, teinte au survol.
+
+Aucune classe existante renommée ; nouvelles classes préfixées `adm-` (règle
+anti-collision avec site.css). `admin.css` est un fichier FOND : identique dans
+les trois espaces, vérifié par MD5.
+
+## Fichiers à remplacer (ce treizième envoi)
+
+Dans les trois espaces :
+- (modifiés) `src/components/admin/TabArdoise.tsx`, `TabAvis.tsx`,
+  `TabPartenaires.tsx`
+- (modifié)  `src/pages/admin.css`
+
+`TabPromo.tsx` n'est pas modifié (habillage via CSS uniquement).
+
+> Les zips contiennent l'intégralité des treize envois.

@@ -1821,3 +1821,63 @@ a.cli-coord-val:hover { text-decoration:underline }
   .scan-plat-ligne1, .scan-plat-ligne2 { flex-wrap:wrap }
   .scan-in-cat, .scan-in-desc { width:100% }
 }
+
+
+/* ── ONGLETS VITRINE (Ardoise, Avis, Partenaires, Promo) — habillage éditorial.
+   Demande du 30/07 : ces onglets faisaient « back office » par rapport au reste.
+   Les aperçus d'Ardoise / Avis / Partenaires sont supprimés (le rendu est
+   instantané sur le site) ; celui de la Bannière promo reste — une popup ne se
+   voit pas sans recharger le site et attendre son déclenchement. ─────────── */
+
+/* Formulaire resserré : sans colonne d'aperçu, un formulaire pleine largeur
+   flotte. 680px = la mesure confortable d'une colonne de saisie. */
+.adm-form-etroit { max-width:680px }
+
+/* Composition éditoriale de l'Ardoise : la photo du plat EST le visuel de
+   l'onglet, en vis-à-vis des champs — un panneau média, pas une vignette de
+   64px perdue dans un champ. */
+.adm-edito { display:grid; grid-template-columns:minmax(240px,330px) 1fr; gap:28px; align-items:start }
+.adm-edito-media { position:relative; border-radius:14px; overflow:hidden; background:var(--cream) }
+.adm-edito-media img { width:100%; aspect-ratio:4/3; object-fit:cover; display:block }
+.adm-edito-media-actions { position:absolute; left:0; right:0; bottom:0; display:flex; gap:8px;
+  justify-content:flex-end; padding:10px;
+  background:linear-gradient(transparent, rgba(20,16,12,.45)) }
+.adm-edito-media-vide { display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:6px; width:100%; aspect-ratio:4/3; padding:18px; text-align:center; cursor:pointer;
+  background:transparent; border:1.5px dashed var(--line); border-radius:14px;
+  color:var(--ink-soft); font-family:var(--font-body);
+  transition:border-color .15s ease, background .15s ease, color .15s ease }
+.adm-edito-media-vide b { font-size:14.5px; color:var(--ink) }
+.adm-edito-media-vide span { font-size:12px }
+.adm-edito-media-vide:hover { border-color:var(--admin-accent); background:var(--a06); color:var(--admin-accent) }
+.adm-edito-media-vide:hover b { color:var(--admin-accent) }
+.adm-edito-media-vide:disabled { cursor:default; opacity:.6 }
+
+/* Cartes (Partenaires & Avis) : relief doux et réaction au survol — la grille
+   respire au lieu d'aligner des rectangles plats. */
+.adm-pa-carte { border-radius:14px; box-shadow:0 1px 2px rgba(29,26,22,.05);
+  transition:box-shadow .18s ease, transform .18s ease, border-color .18s ease }
+.adm-pa-carte:hover { border-color:var(--a25); box-shadow:0 10px 26px rgba(29,26,22,.10);
+  transform:translateY(-2px) }
+.adm-pa-initiale { background:linear-gradient(160deg, var(--a06), var(--a12)) }
+
+/* Avis : registre citation — texte en italique, guillemet décoratif en filigrane.
+   Les étoiles passent au doré (--or) côté TSX : le bordeaux reste aux actions. */
+.adm-avis-carte { position:relative; padding-top:16px }
+.adm-avis-carte::after { content:"\201D"; position:absolute; top:-4px; right:12px;
+  font:700 54px/1 Georgia,"Times New Roman",serif; color:var(--a12); pointer-events:none }
+.adm-avis-texte { font-style:italic; font-size:13.5px }
+
+/* Tuiles d'ajout et zones média : mêmes rayons que les cartes, teinte au survol. */
+.ga-ajout, .media-vide { border-radius:14px }
+.ga-ajout:hover, .media-vide:hover { background:var(--a06) }
+
+/* Aperçu de la Bannière promo : mis en scène (fond crème, ombre portée) plutôt
+   que posé nu à côté du formulaire. */
+.promo-admin-grid .apercu-col { background:var(--cream); border:1px solid var(--line);
+  border-radius:16px; padding:22px 20px; align-self:start }
+.promo-apercu { border-radius:16px; overflow:hidden; box-shadow:0 22px 48px rgba(29,26,22,.16) }
+
+@media (max-width:820px){
+  .adm-edito { grid-template-columns:1fr }
+}
