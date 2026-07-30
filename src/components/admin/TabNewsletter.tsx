@@ -1183,14 +1183,23 @@ export default function TabNewsletter() {
     setMode("nouveau");
   }
 
+  // Clics par campagne (personnes distinctes, via newsletter_events). Vide tant
+  // que le webhook Resend n'est pas en place ou pour les campagnes antérieures :
+  // on n'affiche alors rien plutôt qu'un zéro trompeur.
+  const [clics, setClics] = useState<Record<string, number>>({});
+
   async function charger() {
     setLoading(true);
-    const [{ data: camps }, { data: fold }] = await Promise.all([
+    const [{ data: camps }, { data: fold }, { data: ev }] = await Promise.all([
       supabase.from("newsletter_campaigns").select("*").order("created_at", { ascending: false }),
       supabase.from("newsletter_folders").select("name").order("name"),
+      supabase.rpc("newsletter_event_counts"),
     ]);
     setCampagnes(camps || []);
     setRegistreDossiers((fold || []).map((f: { name: string }) => f.name));
+    const parCamp: Record<string, number> = {};
+    (ev || []).forEach((e: { campaign_id: string; clicks: number }) => { parCamp[e.campaign_id] = Number(e.clicks); });
+    setClics(parCamp);
     setLoading(false);
   }
 
@@ -1562,6 +1571,12 @@ function dateRef(c: Campaign): string {
                         <span className="nl-cible-nb">{cibles != null ? cibles : "—"}</span>
                         <span className="nl-cible-lbl">
                           {cibles != null ? `destinataire${cibles > 1 ? "s" : ""}` : "à envoyer"}
+                          {/* Clics : personnes distinctes ayant cliqué au moins un
+                              lien (webhook Resend). Absent = pas de donnée
+                              (campagne antérieure au webhook), pas un zéro. */}
+                          {c.status === "sent" && clics[c.id] != null && (
+                            <span className="sub-desc"> · {clics[c.id]} clic{clics[c.id] > 1 ? "s" : ""}</span>
+                          )}
                           {!cibleUnique && (
                             <span className="sub-desc"> · {SEGMENTS[c.segment]?.label || c.segment}</span>
                           )}

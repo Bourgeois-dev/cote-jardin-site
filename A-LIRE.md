@@ -578,3 +578,117 @@ Dans les trois espaces :
 - (modifié) `src/components/admin/TabTableauNewsletter.tsx`
 
 > Les zips contiennent l'intégralité des neuf envois.
+
+---
+
+# Statistiques de clics — webhook Resend (30/07/2026, dixième envoi)
+
+Le taux de clic est le seul indicateur d'engagement fiable (les ouvertures sont
+quasi inexploitables depuis le proxy d'images d'Apple Mail). Plutôt que
+d'interroger l'API Resend à l'affichage — lent, soumis à quota, et données chez
+un tiers — Resend pousse chaque événement chez nous.
+
+## La chaîne
+
+1. **`send-newsletter`** ajoute `tags: [{ name: "campaign_id", … }]` à chaque
+   e-mail du batch. C'est l'attribution : l'événement webhook revient avec ce
+   tag. **Pas de tag en mode test** — un clic sur un e-mail de test ne compte pas.
+2. **`resend-webhook`** (nouvelle edge function, déployée sur Côté Jardin,
+   `verify_jwt = false`) reçoit `email.clicked` / `email.bounced` /
+   `email.complained`, vérifie la **signature svix** (HMAC-SHA256, comparaison à
+   temps constant, tolérance 5 min sur l'horodatage contre le rejeu) et insère
+   dans `newsletter_events`. Sans secret posé, la fonction refuse tout.
+   Réponses 200 sur tout ce qui est ignoré volontairement : un autre statut
+   pousserait Resend à réessayer puis à désactiver le webhook.
+3. **`newsletter_events`** (migration appliquée en production) : unicité
+   (campaign_id, email, type) — on compte les PERSONNES qui ont cliqué, pas les
+   clics répétés. Lecture admin par RLS ; écriture réservée au service role.
+   `newsletter_click_counts()` (RPC) agrège pour l'admin.
+4. **Affichage** : carte campagne « N destinataires · N clics » ; tableau des
+   dernières campagnes des tableaux de bord : colonne Clics avec pourcentage.
+   Pas de donnée = « — », jamais un zéro trompeur (campagnes antérieures au
+   webhook).
+
+## ⚠️ Actions manuelles (Côté Jardin)
+
+1. Dashboard Resend → Webhooks → Add webhook — URL :
+   `https://jdbxtygycrzqlyzqjpfg.supabase.co/functions/v1/resend-webhook`,
+   événements `email.clicked`, `email.bounced`, `email.complained`.
+2. Copier le Signing Secret (`whsec_…`) → secret Supabase `RESEND_WEBHOOK_SECRET`.
+3. Redéployer **`send-newsletter`** (les tags n'existent que dans le code livré).
+4. Vérifier le click tracking sur le domaine (Resend → Domains).
+
+`SETUP-NOUVEAU-CLIENT.md` documente la même procédure pour les futurs clients.
+
+## Fichiers à remplacer (ce dixième envoi)
+
+Dans les trois espaces :
+- (nouveau)  `supabase/functions/resend-webhook/index.ts`
+- (modifié)  `supabase/functions/send-newsletter/index.ts`
+- (modifiés) `src/components/admin/TabNewsletter.tsx`, `TabTableauNewsletter.tsx`
+
+CJ et PK également :
+- (modifié) `schema.sql` (table `newsletter_events` + RPC)
+
+PK également :
+- (modifié) `provisioning/SETUP-NOUVEAU-CLIENT.md`
+
+> Les zips contiennent l'intégralité des dix envois.
+
+---
+
+# Taux de délivrabilité + exclusion des adresses en échec (30/07/2026, onzième envoi)
+
+## Ce que « Délivrés » veut dire — et ne veut pas dire
+
+Délivrés = e-mails **acceptés par les serveurs destinataires**
+(`sent_count − bounces`). Ça ne dit PAS boîte de réception vs spam : aucun
+signal n'existe pour ça, chez personne. Le libellé et le code le rappellent.
+
+## RPC élargie
+
+`newsletter_click_counts()` est **remplacée** par `newsletter_event_counts()`
+(clics ET bounces par campagne). Migration appliquée en production ; l'ancienne
+fonction est supprimée — l'admin doit être redéployé en même temps que la base
+est à jour, sinon les compteurs de clics disparaissent (appel d'une RPC absente).
+
+## Affichage
+
+Colonne « Délivrés » (« 24 · 96 % ») dans le tableau des dernières campagnes des
+deux tableaux de bord. Aucune mention des bounces nulle part — c'est le chiffre
+positif qui est montré. La carte campagne ne change pas.
+
+Garde-fou d'honnêteté : une campagne envoyée **avant** le tout premier événement
+enregistré affiche « — », pas un 100 % que rien n'étaye. (Revers assumé : une
+campagne récente sans le moindre événement reste aussi à « — » — on préfère
+sous-afficher que surestimer.)
+
+## Exclusion des adresses en échec
+
+Une adresse qui a bouncé ne reçoit plus de campagne — c'est ce qui protège la
+réputation d'expéditeur. Deux exclusions **miroir**, commentées comme telles de
+part et d'autre (même exigence que pour `personnaliser()`) :
+
+- `newsletter_segment_counts()` (base) : la CTE `base` écarte les emails
+  présents dans `newsletter_events` en type `bounced` → les compteurs de
+  l'assistant reflètent les envois réels ;
+- `getOptinRecipients()` (`send-newsletter`) : même filtre à l'envoi.
+
+L'adresse reste dans le CRM et dans l'onglet Contacts — elle n'est plus
+destinataire, elle n'est pas effacée. Pas de distinction hard/soft bounce pour
+l'instant : Resend ne pousse quasiment que des échecs définitifs sur
+`email.bounced`, et un faux positif se corrige en supprimant la ligne de
+`newsletter_events`.
+
+## Fichiers à remplacer (ce onzième envoi)
+
+Dans les trois espaces :
+- (modifiés) `supabase/functions/send-newsletter/index.ts`,
+  `src/components/admin/TabNewsletter.tsx`, `TabTableauNewsletter.tsx`
+
+CJ et PK également :
+- (modifié) `schema.sql`
+
+> Rappel toujours pendant : redéployer `send-newsletter` (tags + exclusion) et
+> `newsletter-unsubscribe`, créer le webhook Resend + secret. Les zips
+> contiennent l'intégralité des onze envois.

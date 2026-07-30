@@ -43,11 +43,17 @@ async function getLogoUrl(): Promise<string> {
 // nom donnerait « Bonjour Durand » si on découpait `name` sur l'espace.
 async function getOptinRecipients(): Promise<Destinataire[]> {
   const { data } = await db.from("leads").select("email,first_name,last_name,unsubscribe_token").eq("consent", true);
+  // Adresses en échec (bounce, via le webhook Resend) : on cesse de leur
+  // écrire — protège la réputation d'expéditeur. MIROIR OBLIGATOIRE avec
+  // newsletter_segment_counts() côté base : même exclusion des deux côtés,
+  // sinon les compteurs affichés divergent des envois réels.
+  const { data: bounced } = await db.from("newsletter_events").select("email").eq("type", "bounced");
+  const exclus = new Set<string>((bounced || []).map((b: any) => String(b.email || "").toLowerCase()));
   const seen = new Set<string>();
   const out: Destinataire[] = [];
   (data || []).forEach((r: any) => {
     const e = (r.email || "").trim().toLowerCase();
-    if (!e || seen.has(e) || !isValidEmail(e)) return;
+    if (!e || seen.has(e) || !isValidEmail(e) || exclus.has(e)) return;
     seen.add(e);
     out.push({
       email: e,
@@ -612,6 +618,16 @@ Deno.serve(async (req: Request) => {
       const emails = batch.map((r) => ({
         from: `${RESTO_NAME} <${FROM_EMAIL}>`,
         to: [r.email],
+        // Attribution des événements webhook (clics, bounces) à la campagne :
+        // Resend renvoie ces tags dans chaque événement, resend-webhook s'en
+        // sert pour remplir newsletter_events. Pas de tag en mode test — un
+        // clic sur un e-mail de test ne doit pas compter dans les stats.
+        ...(estTest ? {} : { tags: [{ name: "campaign_id", value: campaign_id }] }),
+        // Attribution des événements webhook (clics, bounces) à la campagne :
+        // Resend renvoie ces tags dans chaque événement, resend-webhook s'en
+        // sert pour remplir newsletter_events. Pas de tag en mode test — un
+        // clic sur un e-mail de test ne doit pas compter dans les stats.
+        ...(estTest ? {} : { tags: [{ name: "campaign_id", value: campaign_id }] }),
         subject: remplacerPrenom(camp.subject || "", r.prenom, repliPrenom),
         html: renderTemplate(camp.template, personnaliser(camp.content, r.prenom, repliPrenom), r.name, logoUrl, r.token),
         // Bouton « Se désabonner » natif de Gmail/Yahoo (exigé depuis 2024 pour

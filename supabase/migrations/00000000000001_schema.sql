@@ -134,6 +134,14 @@ begin
     select lower(l.email) as email
     from public.leads l
     where l.consent = true and coalesce(l.email,'') <> ''
+      -- Adresse en échec (bounce) : on cesse de lui écrire — protège la
+      -- réputation d'expéditeur. MIROIR avec getOptinRecipients()
+      -- (send-newsletter/index.ts) : même exclusion des deux côtés, sinon les
+      -- compteurs affichés divergent des envois réels.
+      and not exists (
+        select 1 from public.newsletter_events e
+        where e.type = 'bounced' and e.email = lower(l.email)
+      )
   ),
   joined as (
     select b.email, c.is_vip, c.last_visit, c.bookings_count
@@ -1453,6 +1461,42 @@ create policy "admin_all_newsletter_sends" on public.newsletter_sends
   using (public.is_admin()) with check (public.is_admin());
 
 -- Registre des dossiers de campagnes (permet les dossiers vides persistants).
+create table if not exists public.newsletter_events (
+  -- Événements Resend par destinataire (webhook resend-webhook).
+  -- Unicité (campaign_id, email, type) : on compte les PERSONNES qui ont
+  -- cliqué, pas les clics répétés — le chiffre honnête pour un taux.
+  -- Écriture : uniquement l'edge function resend-webhook (service role).
+  id          uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references public.newsletter_campaigns(id) on delete cascade,
+  email       text not null,
+  type        text not null check (type in ('clicked','bounced','complained')),
+  url         text,
+  created_at  timestamptz not null default now(),
+  constraint uq_nl_event unique (campaign_id, email, type)
+);
+create index if not exists nl_events_campaign_idx on public.newsletter_events (campaign_id, type);
+alter table public.newsletter_events enable row level security;
+drop policy if exists "admin read events" on public.newsletter_events;
+create policy "admin read events" on public.newsletter_events
+  for select to authenticated using (is_admin());
+
+-- Clics et bounces par campagne (délivrés = sent_count - bounces, côté client).
+drop function if exists public.newsletter_click_counts();
+create or replace function public.newsletter_event_counts()
+returns table (campaign_id uuid, clicks bigint, bounces bigint)
+language sql
+security definer
+set search_path to 'public'
+as $$
+  select e.campaign_id,
+         count(*) filter (where e.type = 'clicked')::bigint,
+         count(*) filter (where e.type = 'bounced')::bigint
+  from public.newsletter_events e
+  where public.is_admin()
+  group by e.campaign_id
+$$;
+grant execute on function public.newsletter_event_counts() to authenticated;
+
 create table if not exists public.newsletter_folders (
   id         uuid primary key default gen_random_uuid(),
   name       text not null unique,

@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { useTable } from "../../hooks/useTable";
+import { supabase } from "../../lib/supabase";
 import type { Lead } from "../../lib/types";
 import Chargement from "./Chargement";
 
@@ -69,6 +71,27 @@ export function BlocsNewsletter({ onNavigate, mode = "seul" }: {
 } = {}) {
   const { rows: leads, loading } = useTable<Lead>("leads", "created_at", true);
   const { rows: campagnes } = useTable<Campagne>("newsletter_campaigns", "created_at", true);
+  // Clics et bounces par campagne (webhook Resend).
+  const [clics, setClics] = useState<Record<string, number>>({});
+  const [bounces, setBounces] = useState<Record<string, number>>({});
+  // Date du tout premier événement enregistré : les campagnes envoyées AVANT
+  // n'ont pas de données de délivrabilité — on affiche « — » plutôt qu'un
+  // 100 % que rien n'étaye. (Une campagne récente sans le moindre événement
+  // restera aussi à « — » : on préfère sous-afficher que surestimer.)
+  const [premierEvt, setPremierEvt] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.rpc("newsletter_event_counts").then(({ data }) => {
+      const mc: Record<string, number> = {};
+      const mb: Record<string, number> = {};
+      (data || []).forEach((e: { campaign_id: string; clicks: number; bounces: number }) => {
+        mc[e.campaign_id] = Number(e.clicks);
+        mb[e.campaign_id] = Number(e.bounces);
+      });
+      setClics(mc); setBounces(mb);
+    });
+    supabase.from("newsletter_events").select("created_at").order("created_at").limit(1)
+      .then(({ data }) => { if (data && data[0]) setPremierEvt(data[0].created_at); });
+  }, []);
 
   const today = new Date();
   const inscrits = leads.filter((l) => l.consent === true);
@@ -304,7 +327,7 @@ export function BlocsNewsletter({ onNavigate, mode = "seul" }: {
           ) : (
             <table className="tbl-cartes">
                 <thead>
-                  <tr><th>Objet</th><th>Envoyée le</th><th>Destinataires</th></tr>
+                  <tr><th>Objet</th><th>Envoyée le</th><th>Destinataires</th><th>Délivrés</th><th>Clics</th></tr>
                 </thead>
                 <tbody>
                   {recentes.map((c) => {
@@ -320,6 +343,22 @@ export function BlocsNewsletter({ onNavigate, mode = "seul" }: {
                           {partiel && (
                             <span className="sub-desc" style={{ color: "var(--annule)" }}> · {cibles - envoyes} en échec</span>
                           )}
+                        </td>
+                        <td data-label="Délivrés">
+                          {(() => {
+                            // Délivrés = acceptés par les serveurs destinataires
+                            // (envoyés moins les échecs). Ne dit PAS boîte de
+                            // réception vs spam — aucun signal n'existe pour ça.
+                            const couvert = premierEvt && c.sent_at && c.sent_at >= premierEvt;
+                            if (!couvert || envoyes === 0) return <span className="sub-desc">—</span>;
+                            const del = Math.max(0, envoyes - (bounces[c.id] ?? 0));
+                            return <>{del}<span className="sub-desc"> · {Math.round((del / envoyes) * 100)}%</span></>;
+                          })()}
+                        </td>
+                        <td data-label="Clics">
+                          {clics[c.id] != null
+                            ? <>{clics[c.id]}{envoyes > 0 && <span className="sub-desc"> · {Math.round((clics[c.id] / envoyes) * 100)}%</span>}</>
+                            : <span className="sub-desc">—</span>}
                         </td>
                       </tr>
                     );
