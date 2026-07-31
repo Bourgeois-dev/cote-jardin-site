@@ -264,7 +264,7 @@ function BlocsCanvas({ subject, content, restoName, logoUrl, avecPrenom, onBascu
         </div>
       )}
 
-      <div style={{ marginBottom: 18, maxWidth: 500, margin: "0 auto 18px" }}>
+      <div style={{ marginBottom: 18, maxWidth: 640, margin: "0 auto 18px" }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-soft)", marginBottom: 6 }}>
           Dans la boîte de réception
         </div>
@@ -278,7 +278,7 @@ function BlocsCanvas({ subject, content, restoName, logoUrl, avecPrenom, onBascu
         </div>
       </div>
 
-      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(80,100,60,.12)", maxWidth: 500, margin: "0 auto" }}>
+      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(80,100,60,.12)", maxWidth: 640, margin: "0 auto" }}>
         <div style={{ textAlign: "center", padding: "20px 30px 10px" }} title="Dans l'email, le logo renvoie vers le site">
           {logoUrl
             ? <img src={logoUrl} alt={restoName} style={{ height: 44, maxWidth: 200, objectFit: "contain", margin: "0 auto", display: "block", cursor: "pointer" }} />
@@ -1365,7 +1365,7 @@ function dateRef(c: Campaign): string {
       {/* Deux en-têtes distincts : la liste des campagnes, ou l'éditeur. Dans
           l'éditeur, le fil des étapes remplace les boutons — c'est le repère
           dont on a besoin à cet endroit. */}
-      <div className="topbar adm-vit">
+      <div className={`topbar adm-vit${mode === "nouveau" ? " large" : ""}`}>
         <div>
           <span className="adm-vit-eyebrow">Newsletter</span>
           <h1>{mode === "nouveau" ? "Nouvelle campagne" : "Newsletter"}</h1>
@@ -1407,7 +1407,7 @@ function dateRef(c: Campaign): string {
         </div>
       </div>
 
-      <div className={`contenu${mode === "nouveau" ? " adm-vit" : ""}`}>
+      <div className={`contenu${mode === "nouveau" ? " adm-vit large" : ""}`}>
 
         {mode === "nouveau" && (
           <NouveauForm key={prefill?.id || (prefill ? "dup" : "neuf")} initial={prefill}

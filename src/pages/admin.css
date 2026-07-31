@@ -1912,7 +1912,18 @@ a.cli-coord-val:hover { text-decoration:underline }
 /* Note : la maquette de Réseaux sociaux montrait une colonne plus étroite
    (880 px). Elle a été abandonnée au profit de la mesure commune : changer de
    largeur d'un onglet à l'autre se voit à chaque changement d'onglet, et cette
-   cohérence prime sur la reproduction littérale d'une maquette isolée. */
+   cohérence prime sur la reproduction littérale d'une maquette isolée.
+
+   Une seule exception, assumée : l'éditeur de campagne (.large). C'est le seul
+   écran qui affiche deux colonnes de travail — la composition et l'aperçu de
+   l'email côte à côte — et l'aperçu doit rester à la largeur d'un vrai message
+   (640 px). À 1060 px de mesure commune, la colonne de composition tombait à
+   604 px, trop étroit pour éditer un bloc à deux colonnes. */
+.topbar.adm-vit.large, .contenu.adm-vit.large {
+  padding-inline:max(32px, calc((100% - 1400px) / 2)) }
+.topbar.adm-vit.large::after {
+  left:max(32px, calc((100% - 1400px) / 2));
+  right:max(32px, calc((100% - 1400px) / 2)) }
 
 /* ─ En-tête de page ─ */
 /* Le filet s'arrête aux bords de la colonne, comme sur les maquettes — une
@@ -2438,7 +2449,10 @@ a.cli-coord-val:hover { text-decoration:underline }
 /* ─ L'éditeur n'est plus une carte ─ */
 .contenu.adm-vit .nl-editeur { background:none; border:none; border-radius:0;
   padding:0; margin-bottom:0 }
-.contenu.adm-vit .news-editor-grid { grid-template-columns:minmax(0,1fr) 400px; gap:56px }
+/* L'aperçu ne descend pas sous 640 px : en deçà, la maquette de l'email cesse
+   de ressembler à ce que recevra le destinataire. C'est la colonne de gauche
+   qui absorbe la variation. */
+.contenu.adm-vit .news-editor-grid { grid-template-columns:minmax(0,1fr) 640px; gap:56px }
 
 /* ─ Bandeau du logo ─ */
 .nl-logo-ligne { display:flex; align-items:center; gap:20px; padding:0 0 26px;
@@ -2495,8 +2509,10 @@ a.cli-coord-val:hover { text-decoration:underline }
   letter-spacing:.14em; color:var(--vit-label) }
 .nl-apercu-bascule { margin-left:auto; display:flex; gap:16px }
 
-@media (max-width: 1100px) {
-  .contenu.adm-vit .news-editor-grid { grid-template-columns:1fr; gap:28px }
+/* Empilement plus tôt : avec une colonne de 640 px fixes, la composition
+   devient inconfortable bien avant 1100 px. */
+@media (max-width: 1360px) {
+  .contenu.adm-vit .news-editor-grid { grid-template-columns:1fr; gap:32px }
 }
 @media (max-width: 820px) {
   .nl-fil { gap:14px }
@@ -2528,8 +2544,9 @@ a.cli-coord-val:hover { text-decoration:underline }
   .contenu.adm-vit .carte-plat-actions { gap:14px }
   /* Sans survol possible, les flèches restent visibles sur mobile. */
   .contenu.adm-vit .carte-cat-fleches button { opacity:1 }
-  .topbar.adm-vit, .contenu.adm-vit { padding-inline:16px }
-  .topbar.adm-vit::after { left:16px; right:16px }
+  .topbar.adm-vit, .contenu.adm-vit,
+  .topbar.adm-vit.large, .contenu.adm-vit.large { padding-inline:16px }
+  .topbar.adm-vit::after, .topbar.adm-vit.large::after { left:16px; right:16px }
   .topbar.adm-vit { padding-top:18px; padding-bottom:14px }
   .topbar.adm-vit h1 { font-size:25px }
   .contenu.adm-vit { padding-top:22px; padding-bottom:60px }
