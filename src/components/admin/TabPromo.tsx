@@ -56,16 +56,15 @@ export default function TabPromo() {
 
   return (
     <>
-      <div className="topbar"><div><h1>Bannière promo</h1><div className="sous">Popup affichée à l'arrivée sur le site quand elle est active</div></div></div>
-      <div className="contenu">
-        <div className="bloc">
-          <label className="ligne-toggle" style={{ paddingTop: 0 }}>
-            <span className="lib"><b>Afficher la popup sur le site</b><span>{f.is_active ? "Active — la popup s'affiche à l'arrivée" : "Inactive — aucune popup ne s'affiche"}</span></span>
-            <span className="toggle"><input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} /><span className="piste" /></span>
-          </label>
-          <div className="hint">Pratique pour annoncer un événement, un menu spécial ou une fermeture exceptionnelle.</div>
-        </div>
-
+      {/* Refonte Vitrine : toggle en en-tête ; l'usage (événement, menu
+          spécial, fermeture) est dit dans le sous-titre — plus de bloc dédié. */}
+      <div className="topbar adm-vit"><div><span className="adm-vit-eyebrow">Vitrine</span><h1>Bannière promo</h1><div className="sous">Popup affichée à l'arrivée sur le site quand elle est active — un événement, un menu spécial, une fermeture exceptionnelle.</div></div>
+        <label className="adm-vit-visible">
+          <span className="lib"><b>Popup active</b><span>{f.is_active ? "Active — la popup s'affiche à l'arrivée" : "Inactive — aucune popup ne s'affiche"}</span></span>
+          <span className="toggle"><input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} /><span className="piste" /></span>
+        </label>
+      </div>
+      <div className="contenu adm-vit">
         <div className="bloc">
           <div className="promo-admin-grid">
             <div>

@@ -72,12 +72,16 @@ export default function TabGalerie() {
 
   return (
     <>
-      <div className="topbar"><div><h1>Galerie</h1><div className="sous">Les photos affichées sur le site — glissez-déposez pour réordonner</div></div></div>
-      <div className="contenu">
-        {loading && rows.length === 0 && <Chargement />}<div className="bloc">
-        <div className="bloc-tete"><div><h2>Vos photos</h2><div className="desc">L'ordre ci-dessous est celui du site. Le numéro le rappelle ; glissez-déposez pour changer.</div></div>
-          <div><input ref={fileRef} type="file" accept="image/*" multiple onChange={upload} style={{ display: "none" }} /><button className="btn btn-accent" onClick={() => fileRef.current?.click()} disabled={upEnCours > 0}>{upEnCours > 0 ? `Envoi… (${upEnCours} restante${upEnCours > 1 ? "s" : ""})` : "+ Ajouter des photos"}</button></div>
+      {/* Refonte Vitrine : le bouton d'ajout vit dans l'en-tête de page ;
+          l'intertitre « Vos photos » disparaît (redondant avec le titre). */}
+      <div className="topbar adm-vit"><div><span className="adm-vit-eyebrow">Vitrine</span><h1>Galerie</h1><div className="sous">Les photos affichées sur le site, dans cet ordre — glissez-déposez pour réordonner.</div></div>
+        <div className="adm-vit-topbar-actions">
+          <input ref={fileRef} type="file" accept="image/*" multiple onChange={upload} style={{ display: "none" }} />
+          <button className="btn btn-accent" onClick={() => fileRef.current?.click()} disabled={upEnCours > 0}>{upEnCours > 0 ? `Envoi… (${upEnCours} restante${upEnCours > 1 ? "s" : ""})` : "+ Ajouter des photos"}</button>
         </div>
+      </div>
+      <div className="contenu adm-vit">
+        {loading && rows.length === 0 && <Chargement />}<div className="bloc">
         {err && <div className="err-inline">{err}</div>}
         <div className="galerie-admin">
           {ordered.map((g, i) => (
@@ -91,16 +95,16 @@ export default function TabGalerie() {
                 {/* L'ordre est LA fonction de cet écran : il doit se voir. */}
                 <span className="ga-num">{i + 1}</span>
                 {!g.is_active && <span className="ga-badge">Masquée</span>}
-                {/* Photo sans texte alternatif : invisible pour les lecteurs
-                    d'écran et les moteurs. La pastille disparaît dès qu'il est
-                    renseigné — c'est une liste de choses à faire intégrée. */}
-                {!g.alt && g.is_active && <button className="ga-badge ga-alerte" onClick={() => setEdit(g)} title="Ajouter une légende — elle sert aussi de description pour l'accessibilité et le référencement">Légende manquante</button>}
-                {g.caption && <div className="ga-legende">{g.caption}</div>}
               </div>
+              {/* La légende quitte la photo pour une ligne de saisie apparente
+                  sous la tuile (maquette) : elle montre le texte s'il existe,
+                  l'invite sinon — même modale d'édition qu'avant. L'ancienne
+                  pastille « Légende manquante » devient inutile : la ligne
+                  vide EST le rappel. */}
+              <button type="button" className={`adm-vit-legende${g.caption ? " saisie" : ""}`} onClick={() => setEdit(g)} title="Modifier la légende — elle sert aussi de description pour l'accessibilité et le référencement">{g.caption || "Ajouter une légende"}</button>
               <div className="ga-actions">
-                <label className="toggle" title={g.is_active ? "Visible sur le site" : "Masquée"}><input type="checkbox" checked={g.is_active} onChange={(e) => update(g.id, { is_active: e.target.checked })} /><span className="piste" /></label>
-                <button className="btn btn-mini btn-ligne" onClick={() => setEdit(g)}>Légende</button>
-                <button className="carte-icone danger" onClick={() => supprimer(g)} title="Supprimer cette photo" aria-label="Supprimer cette photo">✕</button>
+                <label className="adm-vit-affiche" title={g.is_active ? "Visible sur le site" : "Masquée"}><span className="toggle"><input type="checkbox" checked={g.is_active} onChange={(e) => update(g.id, { is_active: e.target.checked })} /><span className="piste" /></span><span className="adm-vit-etat">{g.is_active ? "Affichée" : "Masquée"}</span></label>
+                <button className="adm-vit-lien danger" onClick={() => supprimer(g)} aria-label="Supprimer cette photo">Retirer</button>
               </div>
             </div>
           ))}

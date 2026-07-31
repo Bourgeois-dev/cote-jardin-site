@@ -56,16 +56,15 @@ export default function TabArdoise() {
 
   return (
     <>
-      <div className="topbar"><div><h1>Ardoise du jour</h1><div className="sous">Le plat du jour affiché sur le site</div></div></div>
-      <div className="contenu">
-        {/* Toggle en tête, comme les autres onglets (Bannière promo, Newsletter…) */}
-        <div className="bloc">
-          <label className="ligne-toggle" style={{ paddingTop: 0 }}>
-            <span className="lib"><b>Afficher l'ardoise sur le site</b><span>{enabled ? "Active — le plat du jour s'affiche sur le site" : "Inactive — le bloc est masqué"}</span></span>
-            <span className="toggle"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} /><span className="piste" /></span>
-          </label>
-        </div>
-
+      {/* Refonte Vitrine : le toggle de visibilité vit dans l'en-tête de page,
+          où la question « visible ou pas ? » se pose — plus de bloc dédié. */}
+      <div className="topbar adm-vit"><div><span className="adm-vit-eyebrow">Vitrine</span><h1>Ardoise du jour</h1><div className="sous">Le plat du jour affiché sur le site.</div></div>
+        <label className="adm-vit-visible">
+          <span className="lib"><b>Visible sur le site</b><span>{enabled ? "Active — visible sur la page d'accueil" : "Inactive — le bloc est masqué"}</span></span>
+          <span className="toggle"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} /><span className="piste" /></span>
+        </label>
+      </div>
+      <div className="contenu adm-vit">
         {/* Aperçu supprimé (le rendu est instantané sur le site) : la photo du
             plat devient elle-même le visuel de l'onglet, en vis-à-vis des
             champs — composition éditoriale plutôt que formulaire nu. */}

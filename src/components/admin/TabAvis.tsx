@@ -41,11 +41,11 @@ export default function TabAvis() {
   if (edit) {
     return (
       <>
-        <div className="topbar"><div><h1>{edit.id ? "Modifier l'avis" : "Nouvel avis"}</h1><div className="sous">{edit.id ? `Avis de ${edit.author}` : "Recopiez un avis reçu sur Google, TripAdvisor ou en salle"}</div></div>
+        <div className="topbar adm-vit"><div><span className="adm-vit-eyebrow">Vitrine</span><h1>{edit.id ? "Modifier l'avis" : "Nouvel avis"}</h1><div className="sous">{edit.id ? `Avis de ${edit.author}` : "Recopiez un avis reçu sur Google, TripAdvisor ou en salle"}</div></div>
           <button className="btn btn-ligne" onClick={() => setEdit(null)}>← Retour à la liste</button></div>
         {/* Aperçu supprimé (rendu instantané sur le site) : le formulaire est
             resserré au lieu de flotter sur toute la largeur. */}
-        <div className="contenu"><div className="bloc"><div className="adm-form-etroit">
+        <div className="contenu adm-vit"><div className="bloc"><div className="adm-form-etroit">
             <div className="grid2">
               <div className="champ"><label>Nom de l'auteur *</label><input value={edit.author} onChange={(e) => setEdit({ ...edit, author: e.target.value })} placeholder="Camille R." /><span className="aide">Tel qu'il apparaît sur l'avis d'origine — prénom et initiale suffisent.</span></div>
               <div className="champ"><label>Note</label><div style={{ paddingTop: 4 }}><Stars n={edit.rating || 5} onPick={(v) => setEdit({ ...edit, rating: v })} /></div></div>
@@ -65,17 +65,21 @@ export default function TabAvis() {
 
   return (
     <>
-      <div className="topbar"><div><h1>Avis clients</h1><div className="sous">Carrousel affiché en bas de page</div></div></div>
-      <div className="contenu">
+      {/* Refonte Vitrine : toggle de visibilité en en-tête de page. */}
+      <div className="topbar adm-vit"><div><span className="adm-vit-eyebrow">Vitrine</span><h1>Avis clients</h1><div className="sous">Carrousel affiché en bas de page.</div></div>
+        <label className="adm-vit-visible">
+          <span className="lib"><b>Visible sur le site</b><span>{enabled ? `Visible — ${rows.filter((r) => r.is_active).length} avis` : "Masqué pour les visiteurs"}</span></span>
+          <span className="toggle"><input type="checkbox" checked={enabled} onChange={(e) => toggleBloc(e.target.checked)} /><span className="piste" /></span>
+        </label>
+      </div>
+      <div className="contenu adm-vit">
         {loading && rows.length === 0 && <Chargement />}
         <div className="bloc">
-          <label className="ligne-toggle" style={{ paddingTop: 0 }}>
-            <span className="lib"><b>Afficher le bloc « Avis clients » sur le site</b><span>{enabled ? `Visible — ${rows.filter((r) => r.is_active).length} avis` : "Masqué"}</span></span>
-            <span className="toggle"><input type="checkbox" checked={enabled} onChange={(e) => toggleBloc(e.target.checked)} /><span className="piste" /></span>
-          </label>
-        </div>
-        <div className="bloc">
-          <div className="bloc-tete"><div><h2>Vos avis</h2></div></div>
+          {/* L'ajout vit dans l'en-tête de section (maquette) : la tuile
+              d'ajout en fin de grille disparaît. */}
+          <div className="bloc-tete"><div><h2>Vos avis<span className="adm-vit-nb">{rows.filter((r) => r.is_active).length} publié{rows.filter((r) => r.is_active).length > 1 ? "s" : ""}</span></h2></div>
+            <button className="adm-vit-lien accent" onClick={() => setEdit({ author: "", rating: 5, content: "", is_active: true })}>+ Ajouter un avis</button>
+          </div>
           {/* Un avis est une citation : la carte la montre presque entière
               (six lignes) au lieu de la tronquer à 90 caractères — c'est le
               texte qu'on vient relire ici, pas une métadonnée. */}
@@ -88,17 +92,14 @@ export default function TabAvis() {
                 </div>
                 <blockquote className="adm-avis-texte">{r.content}</blockquote>
                 <div className="ga-actions">
-                  <label className="toggle" title={r.is_active ? "Visible sur le site" : "Masqué"}><input type="checkbox" checked={r.is_active} onChange={(e) => update(r.id, { is_active: e.target.checked })} /><span className="piste" /></label>
+                  <label className="adm-vit-affiche" title={r.is_active ? "Visible sur le site" : "Masqué"}><span className="toggle"><input type="checkbox" checked={r.is_active} onChange={(e) => update(r.id, { is_active: e.target.checked })} /><span className="piste" /></span><span className="adm-vit-etat">{r.is_active ? "Affiché" : "Masqué"}</span></label>
                   <button className="btn btn-mini btn-ligne" onClick={() => setEdit({ ...r })}>Modifier</button>
-                  <button className="carte-icone danger" onClick={() => supprimer(r)} title="Supprimer cet avis" aria-label={`Supprimer l'avis de ${r.author}`}>✕</button>
+                  <button className="adm-vit-lien danger" onClick={() => supprimer(r)} aria-label={`Supprimer l'avis de ${r.author}`}>Retirer</button>
                 </div>
               </div>
             ))}
-            <button type="button" className="ga-ajout" onClick={() => setEdit({ author: "", rating: 5, content: "", is_active: true })}>
-              <b>+ Ajouter un avis</b>
-              <span>Recopié d'un avis Google, TripAdvisor…</span>
-            </button>
           </div>
+          <div className="desc" style={{ marginTop: 22, fontStyle: "italic" }}>Recopiez vos avis Google ou TripAdvisor — ils s'affichent en entier dans le carrousel.</div>
         </div>
       </div>
     </>

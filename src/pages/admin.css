@@ -14,6 +14,7 @@
    09. CRM Clients         .clients-* .fiche-* .carnet-*
    10. Widget réservation  .panneau .creno .etapes
    11. Autres onglets      ardoise galerie carte bannière
+   12. Vitrine             .adm-vit — refonte éditoriale des 6 onglets vitrine
    ========================================================================== */
 
 
@@ -1880,4 +1881,161 @@ a.cli-coord-val:hover { text-decoration:underline }
 
 @media (max-width:820px){
   .adm-edito { grid-template-columns:1fr }
+}
+
+
+/* ── 12. VITRINE — refonte éditoriale (.adm-vit) ───────────────────────────
+   Habillage des six onglets « Vitrine » (Ardoise, Carte, Galerie, Avis,
+   Partenaires, Bannière) : registre éditorial proche du site public — fond
+   crème sans cartes blanches, filets fins, labels en petites capitales
+   espacées, champs soulignés, titres en Fraunces. Scopé par la classe
+   .adm-vit posée sur .topbar et .contenu : le reste de l'admin (gestion,
+   réservations, CRM…) garde son habillage d'interface. Zéro changement
+   fonctionnel. */
+
+.adm-vit {
+  --vit-line:   #e2d8c4;            /* filets */
+  --vit-card:   #faf6ec;            /* fond des cartes */
+  --vit-media:  #e9e1cf;            /* fonds de visuels vides */
+  --vit-label:  #8a7a5f;            /* labels petites capitales */
+  --vit-doux:   #9a8f7c;            /* actions secondaires */
+  --vit-encre:  #4a4438;            /* texte éditorial */
+}
+
+/* ─ En-tête de page ─ */
+.topbar.adm-vit { padding:26px 40px 20px; border-bottom:1px solid var(--vit-line);
+  align-items:flex-start }
+.adm-vit-eyebrow { display:block; font-size:10px; font-weight:700; letter-spacing:.3em;
+  text-transform:uppercase; color:var(--vit-label); margin-bottom:8px }
+.topbar.adm-vit h1 { font-family:var(--font-display); font-weight:500; font-size:31px;
+  letter-spacing:.005em; line-height:1.08 }
+.topbar.adm-vit .sous { margin-top:7px; font-size:13.5px }
+.adm-vit-visible { display:flex; align-items:center; gap:14px; cursor:pointer;
+  text-align:right; flex-shrink:0; margin-top:6px }
+.adm-vit-visible .lib b { display:block; font-size:12.5px; font-weight:700;
+  letter-spacing:.02em }
+.adm-vit-visible .lib span { display:block; font-size:11.5px; color:var(--ink-soft);
+  margin-top:2px }
+.adm-vit-topbar-actions { display:flex; align-items:center; gap:18px; flex-shrink:0;
+  margin-top:10px }
+
+/* ─ Blocs : plus de cartes blanches, des sections posées sur le fond ─ */
+.contenu.adm-vit { padding:30px 40px 80px }
+.contenu.adm-vit .bloc { background:none; border:none; border-radius:0; padding:0;
+  margin-bottom:42px }
+.contenu.adm-vit .bloc + .bloc { border-top:1px solid var(--vit-line); padding-top:34px }
+.contenu.adm-vit h2 { font-family:var(--font-display); font-weight:500; font-size:21px;
+  letter-spacing:.005em }
+.contenu.adm-vit .bloc-tete { margin-bottom:20px; align-items:baseline }
+.adm-vit-nb { font-size:12px; color:var(--vit-doux); margin-left:10px; letter-spacing:.02em }
+
+/* ─ Champs : soulignés, labels petites capitales ─ */
+.contenu.adm-vit .champ label { font-size:10.5px; letter-spacing:.22em; color:var(--vit-label);
+  margin-bottom:2px }
+.contenu.adm-vit .champ input, .contenu.adm-vit .champ select,
+.contenu.adm-vit .champ textarea, .contenu.adm-vit .carnet-search {
+  background:none; border:none; border-bottom:1px solid #d5c9b2; border-radius:0;
+  padding:9px 0; font-size:15px; color:var(--ink) }
+.contenu.adm-vit .champ input:focus, .contenu.adm-vit .champ select:focus,
+.contenu.adm-vit .champ textarea:focus, .contenu.adm-vit .carnet-search:focus {
+  outline:none; border-bottom-color:var(--admin-accent) }
+.contenu.adm-vit .champ .aide { font-style:italic; color:var(--vit-doux) }
+
+/* ─ Boutons ─ */
+.contenu.adm-vit .btn-accent, .topbar.adm-vit .btn-accent {
+  text-transform:uppercase; letter-spacing:.15em; font-size:12px; font-weight:700;
+  padding:13px 26px; border-radius:2px }
+.contenu.adm-vit .btn-ligne, .topbar.adm-vit .btn-ligne {
+  background:none; border:none; padding:6px 0; text-transform:uppercase; font-size:11px;
+  font-weight:700; letter-spacing:.16em; color:var(--ink); text-decoration:underline;
+  text-underline-offset:4px; text-decoration-thickness:1px }
+.contenu.adm-vit .btn-ligne:hover, .topbar.adm-vit .btn-ligne:hover { color:var(--admin-accent);
+  background:none }
+.adm-vit-lien { background:none; border:none; cursor:pointer; padding:6px 0;
+  text-transform:uppercase; font-size:10.5px; font-weight:700; letter-spacing:.16em;
+  color:var(--vit-doux); font-family:var(--font-body) }
+.adm-vit-lien:hover { color:var(--ink); text-decoration:underline; text-underline-offset:4px }
+.adm-vit-lien.danger:hover { color:var(--annule) }
+.adm-vit-lien.accent { color:var(--admin-accent); text-decoration:underline;
+  text-underline-offset:4px }
+.adm-vit-lien.accent:hover { color:var(--admin-accent-dark) }
+.contenu.adm-vit .form-pied { border-top:1px solid var(--vit-line); padding-top:20px;
+  margin-top:26px }
+.contenu.adm-vit .form-pied-aide { font-style:italic; color:var(--vit-doux) }
+
+/* ─ Toggles : état écrit à côté de la piste ─ */
+.contenu.adm-vit .toggle .piste { background:#cfc5af }
+.contenu.adm-vit .toggle input:checked + .piste { background:var(--admin-accent) }
+.adm-vit-etat { font-size:11px; color:var(--vit-doux); letter-spacing:.02em }
+.adm-vit-affiche { display:flex; align-items:center; gap:8px; cursor:pointer }
+
+/* ─ Cartes (avis, partenaires) ─ */
+.contenu.adm-vit .adm-pa-carte { background:var(--vit-card); border:1px solid var(--vit-line);
+  border-radius:0; box-shadow:none }
+.contenu.adm-vit .adm-avis-carte::before { content:"\201C"; display:block;
+  font-family:var(--font-display); font-size:44px; line-height:.6; color:#d8cdb4;
+  margin:6px 0 12px }
+.contenu.adm-vit .adm-avis-texte { font-family:var(--font-display); font-style:italic;
+  font-size:14.5px; line-height:1.8; color:var(--vit-encre) }
+.contenu.adm-vit .adm-avis-tete b { font-size:13.5px; letter-spacing:.02em }
+.contenu.adm-vit .adm-pa-nom b { font-family:var(--font-display); font-weight:500;
+  font-size:16.5px }
+.contenu.adm-vit .adm-pa-nom .tag { background:none; border:none; padding:0;
+  text-transform:uppercase; font-size:9.5px; font-weight:700; letter-spacing:.18em;
+  color:var(--vit-doux) }
+.contenu.adm-vit .adm-pa-visuel { background:var(--vit-media); border-radius:0 }
+.contenu.adm-vit .adm-pa-initiale { font-family:var(--font-display); font-weight:400;
+  font-size:34px; color:#b3a483 }
+.contenu.adm-vit .ga-actions { border-top:1px solid var(--vit-line); padding-top:12px;
+  margin-top:12px; display:flex; align-items:center; gap:10px }
+.contenu.adm-vit .ga-actions .btn-mini { margin-left:auto }
+.contenu.adm-vit .ga-num { background:#2b2620; border-radius:999px; font-size:10px }
+
+/* ─ Galerie ─ */
+.contenu.adm-vit .ga-item .ga-visuel { border:1px dashed #c6b898; background:var(--vit-media);
+  border-radius:0 }
+.contenu.adm-vit .ga-ajout { border:1px dashed #c6b898; border-radius:0; background:none }
+.adm-vit-legende { display:block; width:100%; background:none; border:none;
+  border-bottom:1px solid var(--vit-line); cursor:pointer; text-align:left; padding:8px 2px;
+  font-family:var(--font-display); font-style:italic; font-size:13px; color:var(--vit-doux) }
+.adm-vit-legende.saisie { color:var(--vit-encre) }
+.adm-vit-legende:hover { border-bottom-color:var(--admin-accent); color:var(--ink) }
+
+/* ─ La carte ─ */
+.contenu.adm-vit .carte-outils { border-bottom:1px solid var(--vit-line); padding-bottom:4px }
+.contenu.adm-vit .puce-mini { background:none; border:none; border-radius:0; padding:8px 2px;
+  text-transform:uppercase; font-size:11px; font-weight:700; letter-spacing:.15em;
+  color:var(--vit-doux) }
+.contenu.adm-vit .puce-mini:hover { color:var(--ink) }
+.contenu.adm-vit .puce-mini.active { color:var(--ink); background:none;
+  box-shadow:inset 0 -2px 0 var(--ink) }
+.contenu.adm-vit .carte-cat-tete { border-bottom:1px solid var(--vit-line) }
+.contenu.adm-vit .carte-cat-tete b { font-family:var(--font-display); font-weight:500;
+  font-size:22px; letter-spacing:.005em }
+.contenu.adm-vit .carte-cat-nb { font-size:12px; color:var(--vit-doux) }
+.contenu.adm-vit .carte-cat-ajout { background:none; border:none; text-transform:uppercase;
+  font-size:10.5px; font-weight:700; letter-spacing:.16em; color:var(--admin-accent) }
+.contenu.adm-vit .carte-plat { border-bottom:1px solid var(--vit-line); border-radius:0;
+  background:none; padding:15px 2px }
+.contenu.adm-vit .carte-plat-nom b { font-family:var(--font-display); font-weight:500;
+  font-size:16.5px; line-height:1.35 }
+.contenu.adm-vit .carte-plat-nom .sub-desc { font-style:italic; color:var(--vit-doux) }
+.contenu.adm-vit .prix-btn { background:none; border:none; text-transform:uppercase;
+  font-size:10.5px; font-weight:700; letter-spacing:.14em; color:var(--vit-doux) }
+.contenu.adm-vit .prix-btn:hover { color:var(--admin-accent) }
+.contenu.adm-vit .drag-poignee { color:#c6b898 }
+
+/* ─ Bannière promo : aperçu ─ */
+.contenu.adm-vit .promo-apercu { border-radius:0; box-shadow:none;
+  border:1px solid var(--vit-line) }
+.contenu.adm-vit .apercu-col .eyebrow { font-size:10px; letter-spacing:.3em;
+  color:var(--vit-label) }
+
+/* ─ Mobile ─ */
+@media (max-width: 820px) {
+  .topbar.adm-vit { padding:18px 16px 14px }
+  .topbar.adm-vit h1 { font-size:25px }
+  .contenu.adm-vit { padding:20px 16px 60px }
+  .adm-vit-visible { text-align:left; margin-top:2px }
+  .adm-vit-topbar-actions { flex-wrap:wrap; gap:12px }
 }

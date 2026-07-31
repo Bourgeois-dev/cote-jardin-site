@@ -180,8 +180,8 @@ export default function TabCarte() {
   if (edit) {
     return (
       <>
-        <div className="topbar"><div><h1>{edit.id ? "Modifier le plat" : "Nouveau plat"}</h1></div></div>
-        <div className="contenu"><div className="bloc">
+        <div className="topbar adm-vit"><div><span className="adm-vit-eyebrow">Vitrine</span><h1>{edit.id ? "Modifier le plat" : "Nouveau plat"}</h1></div></div>
+        <div className="contenu adm-vit"><div className="bloc">
           <div className="grid2">
             <div className="champ"><label>Nom du plat *</label><input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
             <div className="champ"><label>Catégorie</label>
@@ -207,16 +207,17 @@ export default function TabCarte() {
 
   return (
     <>
-      <div className="topbar"><div><h1>La carte</h1><div className="sous">Vos plats, dans l'ordre du site — glissez-déposez pour réordonner</div></div></div>
-      <div className="contenu">
-        {loading && rows.length === 0 && <Chargement />}<div className="bloc">
-        <div className="bloc-tete"><div><h2>Vos plats</h2></div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button className="btn btn-ligne" onClick={() => setScanOuvert(true)}>Scanner une ardoise</button>
-            {/* Sans la lambda, l'événement de clic partirait dans le paramètre `cat`. */}
-            <button className="btn btn-accent" onClick={() => nouveau()}>+ Ajouter un plat</button>
-          </div>
+      {/* Refonte Vitrine : les deux actions vivent dans l'en-tête de page ;
+          l'intertitre « Vos plats » disparaît (redondant avec le titre). */}
+      <div className="topbar adm-vit"><div><span className="adm-vit-eyebrow">Vitrine</span><h1>La carte</h1><div className="sous">Vos plats, dans l'ordre du site — glissez-déposez pour réordonner.</div></div>
+        <div className="adm-vit-topbar-actions">
+          <button className="btn btn-ligne" onClick={() => setScanOuvert(true)}>Scanner une ardoise</button>
+          {/* Sans la lambda, l'événement de clic partirait dans le paramètre `cat`. */}
+          <button className="btn btn-accent" onClick={() => nouveau()}>+ Ajouter un plat</button>
         </div>
+      </div>
+      <div className="contenu adm-vit">
+        {loading && rows.length === 0 && <Chargement />}<div className="bloc">
 
         <div className="carte-outils">
           <input className="carnet-search" placeholder="Rechercher un plat…" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -290,11 +291,12 @@ export default function TabCarte() {
                         )}
                       </div>
                       <div className="carte-plat-actions">
+                        {/* Refonte Vitrine : les trois actions en toutes lettres,
+                            en liens discrets — le registre éditorial absorbe la
+                            répétition qui motivait les icônes. */}
                         <button className="btn btn-mini btn-ligne" onClick={() => modifier(m)}>Modifier</button>
-                        {/* Dupliquer et supprimer en icônes : le mot « Supprimer »
-                            en rouge, répété à chaque ligne, dominait la page. */}
-                        <button className="carte-icone" onClick={() => dupliquer(m)} title="Dupliquer ce plat" aria-label={`Dupliquer ${m.name}`}>⧉</button>
-                        <button className="carte-icone danger" onClick={() => supprimer(m)} title="Supprimer ce plat" aria-label={`Supprimer ${m.name}`}>✕</button>
+                        <button className="adm-vit-lien" onClick={() => dupliquer(m)} aria-label={`Dupliquer ${m.name}`}>Dupliquer</button>
+                        <button className="adm-vit-lien danger" onClick={() => supprimer(m)} aria-label={`Supprimer ${m.name}`}>Retirer</button>
                       </div>
                     </div>
                   ))}

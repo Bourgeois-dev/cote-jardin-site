@@ -74,10 +74,10 @@ export default function TabPartenaires() {
       <>
         {/* Retour visible en topbar : « Annuler » tout en bas était la seule
             sortie d'un écran qui remplace la liste entière. */}
-        <div className="topbar"><div><h1>{edit.id ? "Modifier le partenaire" : "Nouveau partenaire"}</h1><div className="sous">{edit.id ? edit.name : "Producteur, fournisseur ou artisan mis à l'honneur sur le site"}</div></div>
+        <div className="topbar adm-vit"><div><span className="adm-vit-eyebrow">Vitrine</span><h1>{edit.id ? "Modifier le partenaire" : "Nouveau partenaire"}</h1><div className="sous">{edit.id ? edit.name : "Producteur, fournisseur ou artisan mis à l'honneur sur le site"}</div></div>
           <button className="btn btn-ligne" onClick={() => setEdit(null)}>← Retour à la liste</button></div>
         {/* Aperçu supprimé (rendu instantané sur le site) : formulaire resserré. */}
-        <div className="contenu"><div className="bloc"><div className="adm-form-etroit">
+        <div className="contenu adm-vit"><div className="bloc"><div className="adm-form-etroit">
           <div className="grid2">
             <div className="champ"><label>Nom *</label><input value={edit.name || ""} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
             <div className="champ"><label>Type de partenaire</label>
@@ -133,16 +133,18 @@ export default function TabPartenaires() {
 
   return (
     <>
-      <div className="topbar"><div><h1>Partenaires</h1><div className="sous">Vos producteurs et fournisseurs</div></div></div>
-      <div className="contenu">
+      {/* Refonte Vitrine : toggle de visibilité en en-tête de page. */}
+      <div className="topbar adm-vit"><div><span className="adm-vit-eyebrow">Vitrine</span><h1>Partenaires</h1><div className="sous">Vos producteurs et fournisseurs mis à l'honneur sur le site.</div></div>
+        <label className="adm-vit-visible">
+          <span className="lib"><b>Visible sur le site</b><span>{enabled ? "Actif — le bandeau s'affiche sur le site" : "Masqué pour les visiteurs"}</span></span>
+          <span className="toggle"><input type="checkbox" checked={enabled} onChange={(e) => toggleBloc(e.target.checked)} /><span className="piste" /></span>
+        </label>
+      </div>
+      <div className="contenu adm-vit">
         <div className="bloc">
-          <label className="ligne-toggle" style={{ paddingTop: 0 }}>
-            <span className="lib"><b>Afficher le bloc « Partenaires » sur le site</b><span>{enabled ? "Visible" : "Masqué"}</span></span>
-            <span className="toggle"><input type="checkbox" checked={enabled} onChange={(e) => toggleBloc(e.target.checked)} /><span className="piste" /></span>
-          </label>
-        </div>
-        <div className="bloc">
-          <div className="bloc-tete"><div><h2>Vos partenaires</h2><div className="sous">Glissez-déposez pour réordonner</div></div></div>
+          <div className="bloc-tete"><div><h2>Vos partenaires<span className="adm-vit-nb">{rows.length} référence{rows.length > 1 ? "s" : ""} · glissez-déposez pour réordonner</span></h2></div>
+            <button className="adm-vit-lien accent" onClick={() => setEdit({ name: "", description: "", category: "", image_url: "", website: "", location: "", partner_type: "", featured: false, is_active: true })}>+ Ajouter un partenaire</button>
+          </div>
           {/* Cartes plutôt que tableau : chaque partenaire est un petit
               portrait — image, nom, type — pas une ligne de données. Le badge
               numéroté rend l'ordre du site visible, comme dans la Galerie. */}
@@ -166,17 +168,14 @@ export default function TabPartenaires() {
                   {p.description && <div className="sub-desc adm-pa-desc">{p.description}</div>}
                 </div>
                 <div className="ga-actions">
-                  <label className="toggle" title={p.is_active ? "Visible sur le site" : "Masqué"}><input type="checkbox" checked={p.is_active} onChange={(e) => update(p.id, { is_active: e.target.checked })} /><span className="piste" /></label>
+                  <label className="adm-vit-affiche" title={p.is_active ? "Visible sur le site" : "Masqué"}><span className="toggle"><input type="checkbox" checked={p.is_active} onChange={(e) => update(p.id, { is_active: e.target.checked })} /><span className="piste" /></span><span className="adm-vit-etat">{p.is_active ? "Affiché" : "Masqué"}</span></label>
                   <button className="btn btn-mini btn-ligne" onClick={() => setEdit({ ...p })}>Modifier</button>
-                  <button className="carte-icone danger" onClick={() => supprimer(p)} title="Supprimer ce partenaire" aria-label={`Supprimer ${p.name}`}>✕</button>
+                  <button className="adm-vit-lien danger" onClick={() => supprimer(p)} aria-label={`Supprimer ${p.name}`}>Retirer</button>
                 </div>
               </div>
             ))}
-            <button type="button" className="ga-ajout" onClick={() => setEdit({ name: "", description: "", category: "", image_url: "", website: "", location: "", partner_type: "", featured: false, is_active: true })}>
-              <b>+ Ajouter</b>
-              <span>Producteur, fournisseur, artisan…</span>
-            </button>
           </div>
+          <div className="desc" style={{ marginTop: 22, fontStyle: "italic" }}>L'ordre des cartes est celui du bandeau « Partenaires » du site.</div>
         </div>
       </div>
     </>
