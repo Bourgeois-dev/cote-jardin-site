@@ -1902,25 +1902,37 @@ a.cli-coord-val:hover { text-decoration:underline }
   --vit-encre:  #4a4438;            /* texte éditorial */
 }
 
+/* ─ Colonne de lecture ─
+   Maquettes : l'en-tête et le contenu partagent une même colonne centrée — le
+   filet sous le titre s'arrête exactement à la largeur des lignes de contenu.
+   padding-inline calculé plutôt que max-width : il s'applique identiquement à
+   .topbar (sticky, fond pleine largeur) et à .contenu, qui ne sont pas
+   imbriqués l'un dans l'autre. */
+.topbar.adm-vit, .contenu.adm-vit { padding-inline:max(40px, calc((100% - 1060px) / 2)) }
+
 /* ─ En-tête de page ─ */
-.topbar.adm-vit { padding:26px 40px 20px; border-bottom:1px solid var(--vit-line);
-  align-items:flex-start }
-.adm-vit-eyebrow { display:block; font-size:10px; font-weight:700; letter-spacing:.3em;
-  text-transform:uppercase; color:var(--vit-label); margin-bottom:8px }
-.topbar.adm-vit h1 { font-family:var(--font-display); font-weight:500; font-size:31px;
-  letter-spacing:.005em; line-height:1.08 }
-.topbar.adm-vit .sous { margin-top:7px; font-size:13.5px }
+.topbar.adm-vit { padding-top:26px; padding-bottom:25px;
+  border-bottom:1px solid var(--vit-line); align-items:flex-end }
+.adm-vit-eyebrow { display:block; font-size:9.5px; font-weight:700; letter-spacing:.22em;
+  text-transform:uppercase; color:var(--vit-label); margin-bottom:9px }
+/* Corps calés sur la maquette par mesure de LARGEUR de texte, pas de hauteur de
+   glyphe : les captures utilisent une autre police (consigne : garder Fraunces
+   et Karla), dont les proportions cap/chasse diffèrent. La largeur est ce qui
+   pilote la mise en page — retours à la ligne, alignement des colonnes. */
+.topbar.adm-vit h1 { font-family:var(--font-display); font-weight:500; font-size:39px;
+  letter-spacing:.005em; line-height:1.06 }
+.topbar.adm-vit .sous { margin-top:9px; font-size:13.5px }
 .adm-vit-visible { display:flex; align-items:center; gap:14px; cursor:pointer;
-  text-align:right; flex-shrink:0; margin-top:6px }
+  text-align:right; flex-shrink:0; margin-bottom:6px }
 .adm-vit-visible .lib b { display:block; font-size:12.5px; font-weight:700;
   letter-spacing:.02em }
 .adm-vit-visible .lib span { display:block; font-size:11.5px; color:var(--ink-soft);
   margin-top:2px }
-.adm-vit-topbar-actions { display:flex; align-items:center; gap:18px; flex-shrink:0;
-  margin-top:10px }
+.adm-vit-topbar-actions { display:flex; align-items:center; gap:22px; flex-shrink:0;
+  margin-bottom:6px }
 
 /* ─ Blocs : plus de cartes blanches, des sections posées sur le fond ─ */
-.contenu.adm-vit { padding:30px 40px 80px }
+.contenu.adm-vit { padding-top:42px; padding-bottom:80px }
 .contenu.adm-vit .bloc { background:none; border:none; border-radius:0; padding:0;
   margin-bottom:42px }
 .contenu.adm-vit .bloc + .bloc { border-top:1px solid var(--vit-line); padding-top:34px }
@@ -1943,11 +1955,11 @@ a.cli-coord-val:hover { text-decoration:underline }
 
 /* ─ Boutons ─ */
 .contenu.adm-vit .btn-accent, .topbar.adm-vit .btn-accent {
-  text-transform:uppercase; letter-spacing:.15em; font-size:12px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.13em; font-size:10.5px; font-weight:700;
   padding:13px 26px; border-radius:2px }
 .contenu.adm-vit .btn-ligne, .topbar.adm-vit .btn-ligne {
-  background:none; border:none; padding:6px 0; text-transform:uppercase; font-size:11px;
-  font-weight:700; letter-spacing:.16em; color:var(--ink); text-decoration:underline;
+  background:none; border:none; padding:6px 0; text-transform:uppercase; font-size:10px;
+  font-weight:600; letter-spacing:.12em; color:var(--ink); text-decoration:underline;
   text-underline-offset:4px; text-decoration-thickness:1px }
 .contenu.adm-vit .btn-ligne:hover, .topbar.adm-vit .btn-ligne:hover { color:var(--admin-accent);
   background:none }
@@ -1965,7 +1977,10 @@ a.cli-coord-val:hover { text-decoration:underline }
 .contenu.adm-vit .form-pied-aide { font-style:italic; color:var(--vit-doux) }
 
 /* ─ Toggles : état écrit à côté de la piste ─ */
+.contenu.adm-vit .toggle { width:30px; height:18px }
 .contenu.adm-vit .toggle .piste { background:#cfc5af }
+.contenu.adm-vit .toggle .piste::before { width:12px; height:12px; left:3px; top:3px }
+.contenu.adm-vit .toggle input:checked + .piste::before { transform:translateX(12px) }
 .contenu.adm-vit .toggle input:checked + .piste { background:var(--admin-accent) }
 .adm-vit-etat { font-size:11px; color:var(--vit-doux); letter-spacing:.02em }
 .adm-vit-affiche { display:flex; align-items:center; gap:8px; cursor:pointer }
@@ -2002,30 +2017,6 @@ a.cli-coord-val:hover { text-decoration:underline }
 .adm-vit-legende.saisie { color:var(--vit-encre) }
 .adm-vit-legende:hover { border-bottom-color:var(--admin-accent); color:var(--ink) }
 
-/* ─ La carte ─ */
-.contenu.adm-vit .carte-outils { border-bottom:1px solid var(--vit-line); padding-bottom:4px }
-.contenu.adm-vit .puce-mini { background:none; border:none; border-radius:0; padding:8px 2px;
-  text-transform:uppercase; font-size:11px; font-weight:700; letter-spacing:.15em;
-  color:var(--vit-doux) }
-.contenu.adm-vit .puce-mini:hover { color:var(--ink) }
-.contenu.adm-vit .puce-mini.active { color:var(--ink); background:none;
-  box-shadow:inset 0 -2px 0 var(--ink) }
-.contenu.adm-vit .carte-cat-tete { border-bottom:1px solid var(--vit-line) }
-.contenu.adm-vit .carte-cat-tete b { font-family:var(--font-display); font-weight:500;
-  font-size:22px; letter-spacing:.005em }
-.contenu.adm-vit .carte-cat-nb { font-size:12px; color:var(--vit-doux) }
-.contenu.adm-vit .carte-cat-ajout { background:none; border:none; text-transform:uppercase;
-  font-size:10.5px; font-weight:700; letter-spacing:.16em; color:var(--admin-accent) }
-.contenu.adm-vit .carte-plat { border-bottom:1px solid var(--vit-line); border-radius:0;
-  background:none; padding:15px 2px }
-.contenu.adm-vit .carte-plat-nom b { font-family:var(--font-display); font-weight:500;
-  font-size:16.5px; line-height:1.35 }
-.contenu.adm-vit .carte-plat-nom .sub-desc { font-style:italic; color:var(--vit-doux) }
-.contenu.adm-vit .prix-btn { background:none; border:none; text-transform:uppercase;
-  font-size:10.5px; font-weight:700; letter-spacing:.14em; color:var(--vit-doux) }
-.contenu.adm-vit .prix-btn:hover { color:var(--admin-accent) }
-.contenu.adm-vit .drag-poignee { color:#c6b898 }
-
 /* ─ Bannière promo : aperçu ─ */
 .contenu.adm-vit .promo-apercu { border-radius:0; box-shadow:none;
   border:1px solid var(--vit-line) }
@@ -2036,8 +2027,10 @@ a.cli-coord-val:hover { text-decoration:underline }
 /* Compteur dans les h2 : reste en bâton même dans un titre serif */
 .adm-vit-nb { font-family:var(--font-body); font-weight:400 }
 /* Liens d'en-tête de page (« Scanner une ardoise ») : capitales sans soulignement */
-.topbar.adm-vit .btn-ligne { text-decoration:none }
-.topbar.adm-vit .btn-ligne:hover { text-decoration:underline; text-underline-offset:4px }
+.topbar.adm-vit .btn-ligne { text-decoration:none; font-size:9.5px;
+  color:var(--vit-doux) }
+.topbar.adm-vit .btn-ligne:hover { text-decoration:underline; text-underline-offset:4px;
+  color:var(--ink) }
 
 /* Zones photo : pointillés + icône, liens posés dessous */
 .adm-vit-media { border:1px dashed #b9ab8c; border-radius:0; background:var(--vit-media);
@@ -2090,34 +2083,144 @@ a.cli-coord-val:hover { text-decoration:underline }
 .contenu.adm-vit .ga-ajout span { font-family:var(--font-display); font-style:italic;
   font-size:12.5px; color:var(--vit-doux) }
 
-/* La carte : recherche à gauche, filtres poussés à droite */
-.contenu.adm-vit .carte-outils { justify-content:space-between; align-items:flex-end;
-  margin-bottom:22px }
-.contenu.adm-vit .carte-outils .carnet-search { max-width:340px; flex:1 }
-.contenu.adm-vit .carte-cats-filtre { margin-left:auto; display:flex; gap:22px }
-/* « + prix » : petite mention bas-de-casse, pas un bouton */
-.contenu.adm-vit .prix-btn, .contenu.adm-vit .prix-btn.vide { text-transform:none;
-  letter-spacing:.02em; font-size:12.5px; font-weight:600; border:none; background:none;
+/* ══ LA CARTE — reproduction de la maquette ══════════════════════════════
+   Écart corrigé : l'admin étalait les catégories sur deux colonnes en
+   panneaux-cartes bordés. La maquette est une colonne unique de largeur de
+   lecture contenue, sans cartes — des sections séparées par des filets, à la
+   manière d'une carte de restaurant imprimée. */
+
+/* Barre d'outils : recherche à gauche, filtres à droite, filet de séparation
+   sous l'ensemble (le trait large de la maquette). */
+.contenu.adm-vit .carte-outils { display:flex; justify-content:space-between;
+  align-items:flex-end; gap:24px; margin:0 0 42px; padding-bottom:0; border-bottom:none }
+.contenu.adm-vit .carte-outils .carnet-search { max-width:320px; flex:0 1 320px;
+  background:none; border:none; border-bottom:1px solid #d5c9b2; border-radius:0;
+  padding:9px 0; font-size:14.5px }
+.contenu.adm-vit .carte-outils .carnet-search::placeholder { color:#a9a08c }
+.contenu.adm-vit .carte-outils .carnet-search:focus { outline:none;
+  border-bottom-color:var(--admin-accent) }
+.contenu.adm-vit .carte-cats-filtre { display:flex; gap:26px; flex-wrap:wrap;
+  margin-left:auto; padding-bottom:8px }
+.contenu.adm-vit .puce-mini { background:none; border:none; border-radius:0; padding:2px 0;
+  text-transform:uppercase; font-size:10px; font-weight:600; letter-spacing:.13em;
   color:var(--vit-doux) }
-.contenu.adm-vit .prix-btn:hover { color:var(--admin-accent); background:none }
-/* « + Plat » d'en-tête de catégorie : encre, pas bordeaux */
-.contenu.adm-vit .carte-cat-ajout { color:var(--ink); text-decoration:underline;
-  text-underline-offset:4px }
+.contenu.adm-vit .puce-mini:hover { color:var(--ink); background:none }
+.contenu.adm-vit .puce-mini.active { color:var(--ink); background:none; font-weight:700;
+  box-shadow:inset 0 -1px 0 var(--ink) }
+
+/* Une seule colonne : la carte se lit de haut en bas. */
+.contenu.adm-vit .carte-cats { display:block }
+.contenu.adm-vit .carte-cat { border:none; border-radius:0; background:none; padding:0;
+  overflow:visible; margin-bottom:48px }
+.contenu.adm-vit .carte-cat:last-child { margin-bottom:0 }
+
+/* En-tête de section : titre serif, compteur discret, « + PLAT » à droite,
+   filet fin dessous. */
+.contenu.adm-vit .carte-cat-tete { background:none; padding:0 0 10px; min-height:0;
+  border-bottom:1px solid var(--vit-line); align-items:baseline; gap:14px }
+.contenu.adm-vit .carte-cat-tete b { font-family:var(--font-display); font-weight:500;
+  font-size:25px; letter-spacing:.005em; line-height:1.1 }
+.contenu.adm-vit .carte-cat-nb { font-size:12.5px; color:var(--vit-doux); font-weight:400 }
+/* Les flèches sont sorties du flux (position:absolute) : dans la maquette,
+   « + PLAT » touche le bord droit de la colonne. Elles réapparaissent à sa
+   gauche au survol, sans décaler quoi que ce soit. */
+.contenu.adm-vit .carte-cat-fleches { margin-left:auto; gap:0; position:relative }
+.contenu.adm-vit .carte-cat-fleches button:nth-of-type(2) { position:absolute;
+  right:calc(100% + 20px); top:50%; transform:translateY(-50%) }
+.contenu.adm-vit .carte-cat-fleches button:nth-of-type(3) { position:absolute;
+  right:calc(100% + 4px); top:50%; transform:translateY(-50%) }
+.contenu.adm-vit .carte-cat-ajout { width:auto !important; padding:0 !important;
+  background:none; border:none; text-transform:uppercase; font-size:10px !important;
+  font-weight:600; letter-spacing:.13em; color:var(--vit-doux) }
 .contenu.adm-vit .carte-cat-ajout:hover { color:var(--admin-accent) }
-/* Flèches monter/descendre : absentes de la maquette — gardées mais discrètes */
-.contenu.adm-vit .carte-cat-fleches button { border:none; background:none; color:#c6b898;
-  font-size:11px; padding:2px 4px }
-.contenu.adm-vit .carte-cat-fleches button:hover:not(:disabled) { color:var(--ink) }
+/* Les flèches ▲▼ n'apparaissent pas sur la maquette mais restent la seule
+   façon de réordonner les sections : elles s'effacent et ne se montrent qu'au
+   survol de l'en-tête. */
+.contenu.adm-vit .carte-cat-fleches button:not(.carte-cat-ajout) { width:auto; height:auto;
+  border:none; background:none; border-radius:0; color:#c6b898; font-size:10px; padding:0 2px;
+  opacity:0; transition:opacity .15s }
+.contenu.adm-vit .carte-cat-tete:hover .carte-cat-fleches button:not(.carte-cat-ajout) { opacity:1 }
+.contenu.adm-vit .carte-cat-fleches button:not(.carte-cat-ajout):hover:not(:disabled) { color:var(--ink) }
+.contenu.adm-vit .carte-cat-fleches button:not(.carte-cat-ajout):disabled { opacity:0 }
+.contenu.adm-vit .carte-cat-tete:hover .carte-cat-fleches button:not(.carte-cat-ajout):disabled { opacity:.3 }
+.contenu.adm-vit .carte-cat-vide { padding:22px 0; text-align:left; font-style:italic;
+  color:var(--vit-doux); border-bottom:1px solid var(--vit-line) }
+
+/* Ligne de plat : aérée, filet fin, nom en serif — pas une ligne de tableau. */
+.contenu.adm-vit .carte-plat { background:none; border-radius:0; padding:16px 12px;
+  border-bottom:1px solid var(--vit-line); gap:18px; align-items:center }
+.contenu.adm-vit .carte-plat:last-child { border-bottom:1px solid var(--vit-line) }
+.contenu.adm-vit .carte-plat:hover { background:none }
+.contenu.adm-vit .carte-plat:hover .carte-plat-nom b { color:var(--admin-accent) }
+/* Bloc du nom borné comme dans la maquette (~575 px) : sans cela, sur un grand
+   écran le nom s'étire et les noms longs ne reviennent jamais à la ligne. Le
+   prix est poussé à droite par margin-left:auto pour que les actions restent
+   collées au bord de la colonne. */
+.contenu.adm-vit .carte-plat-nom { flex:0 1 575px; max-width:575px }
+.contenu.adm-vit .carte-plat-prix { margin-left:auto }
+.contenu.adm-vit .carte-plat-nom b { font-family:var(--font-display); font-weight:500;
+  font-size:18px; line-height:1.35; letter-spacing:.005em; transition:color .13s }
+.contenu.adm-vit .carte-plat-nom .sub-desc { font-family:var(--font-display);
+  font-style:italic; font-size:13px; color:var(--vit-doux); margin-top:3px }
+.contenu.adm-vit .drag-poignee { color:#cdc0a4; font-size:13px }
+
+/* Prix : « + prix » est une invitation discrète, souligné ; un prix saisi
+   s'affiche en clair. */
+.contenu.adm-vit .carte-plat-prix { min-width:76px }
+.contenu.adm-vit .prix-btn { background:none; border:none; border-radius:0; padding:2px 0;
+  font-family:var(--font-body); font-size:13px; font-weight:500; color:var(--ink);
+  text-transform:none; letter-spacing:0 }
+.contenu.adm-vit .prix-btn:hover { background:none; border:none; color:var(--admin-accent) }
+.contenu.adm-vit .prix-btn.vide { font-size:11px; color:var(--vit-doux);
+  border:none; text-decoration:underline; text-underline-offset:4px }
+.contenu.adm-vit .prix-inline { width:78px; background:none; border:none;
+  border-bottom:1px solid var(--admin-accent); border-radius:0; padding:2px 0;
+  font-size:13.5px; text-align:right }
+
+/* Actions : trois mots en petites capitales, « Modifier » seul souligné. */
+.contenu.adm-vit .carte-plat-actions { gap:19px; margin-left:26px }
+.contenu.adm-vit .carte-plat-actions .btn-ligne { padding:0; font-size:10px;
+  letter-spacing:.12em; font-weight:600; text-decoration:underline;
+  text-underline-offset:5px; color:var(--ink) }
+.contenu.adm-vit .carte-plat-actions .adm-vit-lien { padding:0; font-size:10px;
+  letter-spacing:.12em; font-weight:600; color:var(--vit-doux); text-decoration:none }
+.contenu.adm-vit .carte-plat-actions .adm-vit-lien:hover { color:var(--ink);
+  text-decoration:none }
+.contenu.adm-vit .carte-plat-actions .adm-vit-lien.danger:hover { color:var(--annule) }
+
+/* Carte téléchargeable : même colonne que le reste. */
+.contenu.adm-vit .menu-file-actuel { background:var(--vit-card);
+  border:1px solid var(--vit-line); border-radius:0 }
+
+/* Sur mobile, la règle de base (≤700 px) fait passer le nom sur sa propre ligne
+   et remet le prix à gauche. Les sélecteurs .contenu.adm-vit étant plus
+   spécifiques, ils l'emportaient et cassaient cette mise en page : on rend la
+   main explicitement au même point de rupture. */
+@media (max-width: 700px) {
+  .contenu.adm-vit .carte-plat { padding:14px 0; gap:8px 12px }
+  .contenu.adm-vit .carte-plat-nom { flex:1 1 100%; max-width:none }
+  .contenu.adm-vit .carte-plat-prix { margin-left:0 }
+  .contenu.adm-vit .carte-plat-actions { margin-left:auto }
+}
 
 /* ─ Mobile ─ */
 @media (max-width: 820px) {
   .contenu.adm-vit .adm-avis-grille { grid-template-columns:1fr }
   .adm-vit-promo-duo { grid-template-columns:1fr }
   .contenu.adm-vit .adm-edito { grid-template-columns:1fr }
-  .contenu.adm-vit .carte-cats-filtre { margin-left:0; flex-wrap:wrap; gap:14px }
-  .topbar.adm-vit { padding:18px 16px 14px }
+  .contenu.adm-vit .carte-outils { flex-direction:column; align-items:stretch; gap:14px }
+  .contenu.adm-vit .carte-outils .carnet-search { max-width:none; flex:1 1 auto }
+  .contenu.adm-vit .carte-cats-filtre { margin-left:0; flex-wrap:wrap; gap:14px;
+    padding-bottom:0 }
+  .contenu.adm-vit .carte-cat-tete b { font-size:21px }
+  .contenu.adm-vit .carte-cat { margin-bottom:34px }
+  .contenu.adm-vit .carte-plat-actions { gap:14px }
+  /* Sans survol possible, les flèches restent visibles sur mobile. */
+  .contenu.adm-vit .carte-cat-fleches button { opacity:1 }
+  .topbar.adm-vit, .contenu.adm-vit { padding-inline:16px }
+  .topbar.adm-vit { padding-top:18px; padding-bottom:14px }
   .topbar.adm-vit h1 { font-size:25px }
-  .contenu.adm-vit { padding:20px 16px 60px }
+  .contenu.adm-vit { padding-top:22px; padding-bottom:60px }
   .adm-vit-visible { text-align:left; margin-top:2px }
   .adm-vit-topbar-actions { flex-wrap:wrap; gap:12px }
 }
