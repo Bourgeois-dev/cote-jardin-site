@@ -87,19 +87,20 @@ export default function TabParametres() {
   // d'anormal : on n'affiche l'alerte que si la réservation est censée servir.
   if (!s && reservationOn) return (
     <>
-      <div className="topbar"><div><h1>Réservations & site</h1></div></div>
-      <div className="contenu"><div className="bloc"><p>Aucun réglage de réservation trouvé. Contactez le support technique.</p></div></div>
+      <div className="topbar adm-vit"><div><span className="adm-vit-eyebrow">Paramètres</span><h1>Réservations &amp; site</h1></div></div>
+      <div className="contenu adm-vit"><div className="bloc"><p>Aucun réglage de réservation trouvé. Contactez le support technique.</p></div></div>
     </>
   );
   return (
     <>
-      <div className="topbar"><div>
+      <div className="topbar adm-vit"><div>
+        <span className="adm-vit-eyebrow">Paramètres</span>
         <h1>{reservationOn ? "Réservations & site" : "Site & accès"}</h1>
         <div className="sous">{reservationOn
-          ? "Widget de réservation, blocs du site et automatismes"
-          : "Blocs du site et accès à l'administration"}</div>
+          ? "Widget de réservation, blocs du site et automatismes."
+          : "Blocs du site et accès à l'administration."}</div>
       </div></div>
-      <div className="contenu"><div className="bloc">
+      <div className="contenu adm-vit"><div className="bloc">
         {/* ── Ce que voit le visiteur ─────────────────────────────────── */}
         {/* Sans réservation NI newsletter, la section n'aurait plus un seul
             interrupteur : on ne laisse pas un titre au-dessus du vide. */}
@@ -149,8 +150,8 @@ export default function TabParametres() {
               <div className="reglages-note">La réservation en ligne est désactivée : ces règles ne s'appliquent pas tant qu'elle reste éteinte. La durée d'occupation, elle, sert aussi au plan de service.</div>
             )}
             <div className="grid2">
-              <div className="champ"><label>Horizon de réservation (jours)</label><input type="number" min="1" value={s.booking_horizon_days} onChange={(e) => setS({ ...s, booking_horizon_days: Number(e.target.value) })} /><span className="champ-aide">Jusqu'à combien de jours à l'avance un client peut réserver.</span></div>
-              <div className="champ"><label>Délai minimum (heures)</label><input type="number" value={s.min_advance_hours} onChange={(e) => setS({ ...s, min_advance_hours: Number(e.target.value) })} /><span className="champ-aide">Combien de temps avant le service la réservation reste possible.</span></div>
+              <div className="champ"><label>Horizon de réservation · jours</label><input type="number" min="1" value={s.booking_horizon_days} onChange={(e) => setS({ ...s, booking_horizon_days: Number(e.target.value) })} /><span className="champ-aide">Jusqu'à combien de jours à l'avance un client peut réserver.</span></div>
+              <div className="champ"><label>Délai minimum · heures</label><input type="number" value={s.min_advance_hours} onChange={(e) => setS({ ...s, min_advance_hours: Number(e.target.value) })} /><span className="champ-aide">Combien de temps avant le service la réservation reste possible.</span></div>
               <div className="champ"><label>Seuil groupe (→ téléphone)</label><input type="number" value={s.phone_threshold} onChange={(e) => setS({ ...s, phone_threshold: Number(e.target.value) })} /><span className="champ-aide">À partir de ce nombre de couverts, le client est invité à appeler.</span></div>
               <div className="champ"><label>Couverts max par créneau</label><input type="number" min="1" value={s.max_covers_per_slot || ""} placeholder="Illimité" onChange={(e) => setS({ ...s, max_covers_per_slot: e.target.value ? Number(e.target.value) : null })} /><span className="champ-aide">Toutes tables confondues, sur un même horaire. Vide = pas de limite.</span></div>
             </div>
@@ -187,7 +188,7 @@ export default function TabParametres() {
                   </span>
                   <span className="toggle"><input type="checkbox" checked={!!s.auto_confirm_same_day} onChange={(e) => setS({ ...s, auto_confirm_same_day: e.target.checked })} /><span className="piste" /></span>
                 </label>
-                <div className="champ"><label>Repasser en validation manuelle à partir de … absences</label>
+                <div className="champ"><label>Validation manuelle à partir de … absences</label>
                   <input type="number" min="0" max="10" value={s.auto_confirm_block_noshow ?? 1}
                     onChange={(e) => setS({ ...s, auto_confirm_block_noshow: Number(e.target.value) })} />
                   <span className="champ-aide">Un client déjà absent sans prévenir repasse en validation manuelle. Il est reconnu par son e-mail ou son téléphone. 0 pour désactiver.</span>
@@ -197,7 +198,7 @@ export default function TabParametres() {
           </div>
 
           {/* ── Créneau complet, puis rappels ───────────────────────────── */}
-          <div className="reglages-section">
+          <div className="reglages-section reglages-section-simple">
             <div className="reglages-titre">Quand un créneau est complet</div>
             <label className="ligne-toggle" style={{ paddingTop: 0 }}>
               <span className="lib"><b>Liste d'attente</b><span>Propose au client de s'inscrire ; il est prévenu si une table se libère.</span></span>
@@ -205,7 +206,7 @@ export default function TabParametres() {
             </label>
           </div>
 
-          <div className="reglages-section">
+          <div className="reglages-section reglages-section-simple">
             <div className="reglages-titre">Rappels automatiques</div>
             <label className="ligne-toggle" style={{ paddingTop: 0 }}>
               <span className="lib"><b>Rappel la veille</b><span>E-mail envoyé à J-1, avec un lien d'annulation — il fait baisser les absences.</span></span>
@@ -224,30 +225,32 @@ export default function TabParametres() {
       </div>
 
       <div className="bloc">
-        <div className="bloc-tete"><div><h2>Comptes admin</h2><div className="desc">Les emails autorisés à se connecter à l'administration.</div></div></div>
+        <div className="reglages-titre">Comptes admin</div>
+        <div className="reglages-desc">Les e-mails autorisés à se connecter à l'administration.</div>
         {admins.length > 0 && (
           <div className="liste-admins">
+            {/* Trois colonnes : nom, e-mail, action — le nom et l'adresse
+                étaient empilés, ce qui rendait la liste difficile à parcourir. */}
             {admins.map((a) => (
               <div key={a.id} className="ligne-admin">
-                <div>
-                  <b>{a.label || a.email}</b>
-                  {a.label && <div className="sub-desc">{a.email}</div>}
-                </div>
-                <button className="btn btn-mini btn-danger" disabled={admins.length <= 1}
+                <b className="adm-acces-nom">{a.label}</b>
+                <span className="adm-acces-mail">{a.email}</span>
+                <button className="adm-vit-lien danger" disabled={admins.length <= 1}
                   title={admins.length <= 1 ? "Impossible de retirer le dernier accès admin" : undefined}
                   onClick={() => supprimerAdmin(a)}>Retirer</button>
               </div>
             ))}
           </div>
         )}
-        <div className="grid2" style={{ marginTop: 14 }}>
+        {/* Saisie et action sur une seule ligne, comme la maquette. */}
+        <div className="adm-acces-ajout">
           <div className="champ"><label>Email</label><input type="email" value={nouvEmail} onChange={(e) => setNouvEmail(e.target.value)} placeholder="prenom@email.com" /></div>
-          <div className="champ"><label>Nom (optionnel)</label><input value={nouvLabel} onChange={(e) => setNouvLabel(e.target.value)} placeholder="Ex. Accueil, Marie…" /></div>
+          <div className="champ"><label>Nom · optionnel</label><input value={nouvLabel} onChange={(e) => setNouvLabel(e.target.value)} placeholder="Ex. Accueil, Marie…" /></div>
+          <button className="adm-vit-lien accent" onClick={ajouterAdmin}>+ Ajouter un accès</button>
         </div>
         {erreurAdmin && <div className="err-inline">{erreurAdmin}</div>}
-        <button className="btn btn-ligne" style={{ marginTop: 6 }} onClick={ajouterAdmin}>+ Ajouter un accès admin</button>
-        <div className="hint" style={{ marginTop: 16 }}>
-          💡 Ajouter un email ici ne crée pas le compte de connexion : la personne doit d'abord exister dans Supabase (Dashboard → Authentication → Users → Add user) avec ce même email. Cette liste détermine simplement qui, parmi les comptes existants, a accès à l'administration.
+        <div className="adm-note">
+          Ajouter un e-mail ici ne crée pas le compte de connexion : la personne doit d'abord exister dans Supabase (Dashboard → Authentication → Users → Add user) avec ce même e-mail. Cette liste détermine simplement qui, parmi les comptes existants, a accès à l'administration.
         </div>
       </div></div>
     </>

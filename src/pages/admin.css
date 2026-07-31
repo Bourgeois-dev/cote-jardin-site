@@ -1955,7 +1955,7 @@ a.cli-coord-val:hover { text-decoration:underline }
 .adm-vit-nb { font-size:12px; color:var(--vit-doux); margin-left:10px; letter-spacing:.02em }
 
 /* ─ Champs : soulignés, labels petites capitales ─ */
-.contenu.adm-vit .champ label { font-size:10.5px; letter-spacing:.22em; color:var(--vit-label);
+.contenu.adm-vit .champ label { font-size:10px; letter-spacing:.13em; color:var(--vit-label);
   margin-bottom:2px }
 .contenu.adm-vit .champ input, .contenu.adm-vit .champ select,
 .contenu.adm-vit .champ textarea, .contenu.adm-vit .carnet-search {
@@ -2280,6 +2280,143 @@ a.cli-coord-val:hover { text-decoration:underline }
   .contenu.adm-vit .rs-lien { flex:1 1 100%; order:3 }
   .contenu.adm-vit .rs-actions { margin-left:auto; gap:16px }
   .contenu.adm-vit .rs-lien { flex:1 1 100% }
+}
+
+/* ══ PARAMÈTRES — Réservations & site, Contacts ═══════════════════════════
+   Mêmes conventions éditoriales que les onglets Vitrine (la classe s'appelle
+   toujours .adm-vit pour raison historique : elle désigne aujourd'hui
+   l'habillage éditorial, Vitrine ET Paramètres). */
+
+/* ─ Titres de section ─ */
+.contenu.adm-vit .reglages-section { border-top:1px solid var(--vit-line); margin-top:44px;
+  padding-top:38px }
+/* La règle de base neutralise le filet de la première section ; le sélecteur
+   ci-dessus étant plus spécifique, il faut la reprendre explicitement — sinon
+   un filet parasite double celui de l'en-tête de page. */
+.contenu.adm-vit .reglages-section:first-of-type { border-top:none; margin-top:0; padding-top:0 }
+.contenu.adm-vit .reglages-titre { font-family:var(--font-display); font-weight:500;
+  font-size:24.5px; letter-spacing:.005em; text-transform:none; color:var(--ink);
+  margin-bottom:6px; line-height:1.15 }
+.contenu.adm-vit .reglages-desc { font-size:12.5px; color:var(--ink-soft); margin-bottom:26px;
+  max-width:70ch }
+/* Une section à réglage unique n'a pas besoin d'un titre de section : son
+   libellé devient un surtitre posé au-dessus de l'interrupteur. */
+.contenu.adm-vit .reglages-section-simple .reglages-titre { font-family:var(--font-body);
+  font-size:10.5px; font-weight:700; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--vit-label); margin-bottom:0 }
+.contenu.adm-vit .reglages-note { background:none; border:none; border-left:2px solid var(--or);
+  border-radius:0; padding:2px 0 2px 16px; font-style:italic; color:var(--vit-doux);
+  margin-bottom:20px }
+
+/* ─ Lignes d'interrupteur ─ */
+.contenu.adm-vit .ligne-toggle { border-bottom:1px solid var(--vit-line); padding:18px 0;
+  align-items:flex-start }
+.contenu.adm-vit .ligne-toggle .lib b { font-size:12px; margin-bottom:3px }
+.contenu.adm-vit .ligne-toggle .lib span { font-size:12.5px; line-height:1.5;
+  color:var(--vit-doux); max-width:78ch }
+.contenu.adm-vit .ligne-toggle .toggle { width:46px; height:26px; margin-top:2px }
+.contenu.adm-vit .ligne-toggle .toggle .piste::before { width:18px; height:18px; left:4px; top:4px }
+.contenu.adm-vit .ligne-toggle .toggle input:checked + .piste::before { transform:translateX(20px) }
+
+/* Réglages subordonnés : un simple filet vertical remplace le cadre crème —
+   la dépendance se lit sans qu'un encadré vienne alourdir la page. */
+.contenu.adm-vit .sous-reglages { background:none; border:none; border-radius:0;
+  border-left:1px solid var(--vit-line); margin:0 0 0 2px; padding:6px 0 6px 30px;
+  gap:6px }
+.contenu.adm-vit .sous-reglages .ligne-toggle:last-child { border-bottom:1px solid var(--vit-line) }
+.contenu.adm-vit .sous-reglages .champ { margin-top:18px }
+
+/* ─ Comptes admin ─ */
+.contenu.adm-vit .liste-admins { margin:0 0 8px }
+.contenu.adm-vit .ligne-admin { display:flex; align-items:baseline; gap:24px; padding:15px 6px;
+  border-bottom:1px solid var(--vit-line) }
+.contenu.adm-vit .ligne-admin:last-child { border-bottom:1px solid var(--vit-line) }
+.adm-acces-nom { flex:0 0 210px; font-size:13.5px; font-weight:700 }
+.adm-acces-mail { flex:1; min-width:0; font-size:13.5px; color:var(--vit-encre);
+  overflow-wrap:anywhere }
+.contenu.adm-vit .ligne-admin .adm-vit-lien { flex-shrink:0 }
+.adm-acces-ajout { display:flex; align-items:flex-end; gap:32px; margin-top:26px }
+.adm-acces-ajout .champ { flex:1; margin-bottom:0; min-width:0 }
+.adm-acces-ajout .adm-vit-lien { flex-shrink:0; padding-bottom:10px }
+.adm-note { margin-top:26px; font-family:var(--font-display); font-style:italic;
+  font-size:12.5px; line-height:1.7; color:var(--vit-doux); max-width:92ch }
+
+/* ─ Contacts : liens par canal ─ */
+.contenu.adm-vit .ct-liens { gap:0; margin-top:8px }
+.contenu.adm-vit .ct-lien { gap:24px; padding:15px 6px; flex-wrap:nowrap;
+  border-bottom:1px solid var(--vit-line) }
+.contenu.adm-vit .ct-lien-nom { flex:0 0 140px; min-width:0; font-size:13.5px; font-weight:700 }
+.contenu.adm-vit .ct-lien-nom-perso { font-family:var(--font-display); font-style:italic;
+  font-weight:400; color:var(--vit-doux) }
+.contenu.adm-vit .ct-lien-url { flex:1; min-width:0; background:none; border:none;
+  border-radius:0; padding:0; font-size:12.5px; color:var(--vit-encre);
+  overflow-wrap:anywhere }
+.contenu.adm-vit .ct-lien-perso { border-top:none; padding-top:15px; margin-top:0 }
+.contenu.adm-vit .ct-perso-input { flex:1; min-width:0; background:none; border:none;
+  border-bottom:1px solid #d5c9b2; border-radius:0; padding:7px 0; font-size:13.5px }
+.contenu.adm-vit .ct-perso-input:focus { outline:none; border-bottom-color:var(--admin-accent) }
+.ct-creer-vide { flex-shrink:0; text-transform:uppercase; font-size:10px; font-weight:600;
+  letter-spacing:.13em; color:#c3baa8 }
+.contenu.adm-vit .ct-copier { flex-shrink:0 }
+.contenu.adm-vit .ct-aide { font-style:italic; color:var(--vit-doux) }
+
+/* ─ Contacts : affiche QR ─ */
+.qr-duo { display:grid; grid-template-columns:1fr minmax(0,380px); gap:56px; align-items:start;
+  margin-top:8px }
+.contenu.adm-vit .qr-editeur { display:block; margin:0 }
+.contenu.adm-vit .qr-champ { margin-bottom:24px }
+.contenu.adm-vit .qr-champ span { font-size:10.5px; letter-spacing:.22em;
+  color:var(--vit-label) }
+.contenu.adm-vit .qr-champ input { background:none; border:none;
+  border-bottom:1px solid #d5c9b2; border-radius:0; padding:8px 0; font-size:14px }
+.contenu.adm-vit .qr-champ input:focus { outline:none; border-bottom-color:var(--admin-accent) }
+.contenu.adm-vit .qr-url { text-align:left; margin-top:6px; font-style:italic;
+  color:var(--vit-doux) }
+.contenu.adm-vit .qr-url code { background:none; border:none; padding:0;
+  color:var(--vit-encre) }
+.contenu.adm-vit .qr-zone-impression { padding:0 }
+.contenu.adm-vit .qr-affiche { background:var(--vit-card); border:1px solid var(--vit-line);
+  border-radius:0; box-shadow:none; max-width:none }
+/* Les sélecteurs .contenu.adm-vit ci-dessus l'emportent en spécificité sur le
+   bloc @media print générique : sans ce rappel, l'affiche partirait à
+   l'imprimante avec sa bordure et son fond crème. */
+@media print {
+  .qr-duo { display:block }
+  .contenu.adm-vit .qr-zone-impression { position:absolute; inset:0; display:flex;
+    align-items:center; justify-content:center; padding:0 }
+  .contenu.adm-vit .qr-affiche { background:#fff; border:none; box-shadow:none;
+    max-width:none; width:auto; padding:0; transform:scale(1.35); transform-origin:center }
+}
+
+/* ─ Contacts : filtres et tableau ─ */
+.contenu.adm-vit .ct-filtres { gap:26px; margin:0 0 6px }
+.contenu.adm-vit .ct-filtre { background:none; border:none; border-radius:0; padding:8px 0;
+  text-transform:uppercase; font-size:10.5px; font-weight:600; letter-spacing:.14em;
+  color:var(--vit-doux) }
+.contenu.adm-vit .ct-filtre:hover { background:none; border:none; color:var(--ink) }
+.contenu.adm-vit .ct-filtre.actif { background:none; border:none; color:var(--ink);
+  font-weight:700; box-shadow:inset 0 -1px 0 var(--ink) }
+.contenu.adm-vit .ct-filtre-nb { background:none; color:inherit; padding:0; font-weight:400 }
+.contenu.adm-vit table { border-collapse:collapse; width:100% }
+.contenu.adm-vit thead th { text-align:left; padding:12px 6px; border-bottom:1px solid var(--vit-line);
+  text-transform:uppercase; font-size:10px; font-weight:700; letter-spacing:.18em;
+  color:var(--vit-label); background:none }
+.contenu.adm-vit tbody td { padding:15px 6px; border-bottom:1px solid var(--vit-line);
+  font-size:13.5px; background:none }
+.contenu.adm-vit tbody tr:hover td { background:none }
+.contenu.adm-vit tbody td:first-child { font-weight:700 }
+.contenu.adm-vit tbody td:nth-child(3) { text-transform:uppercase; font-size:10.5px;
+  letter-spacing:.13em; color:var(--vit-doux) }
+.contenu.adm-vit tbody td:last-child { text-align:right; color:var(--vit-encre) }
+
+@media (max-width: 900px) {
+  .qr-duo { grid-template-columns:1fr; gap:32px }
+}
+@media (max-width: 700px) {
+  .contenu.adm-vit .ligne-admin, .contenu.adm-vit .ct-lien { flex-wrap:wrap; gap:6px 16px }
+  .adm-acces-nom, .contenu.adm-vit .ct-lien-nom { flex:1 1 100% }
+  .adm-acces-ajout { flex-wrap:wrap; gap:18px }
+  .adm-acces-ajout .champ { flex:1 1 100% }
 }
 
 /* Sur mobile, la règle de base (≤700 px) fait passer le nom sur sa propre ligne

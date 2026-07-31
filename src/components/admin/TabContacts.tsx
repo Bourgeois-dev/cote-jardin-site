@@ -59,17 +59,15 @@ export default function TabContacts() {
 
   return (
     <>
-      <div className="topbar">
-        <div><h1>Contacts</h1><div className="sous">Inscrits newsletter (opt-in actif)</div></div>
+      <div className="topbar adm-vit">
+        <div><span className="adm-vit-eyebrow">Paramètres</span><h1>Contacts</h1><div className="sous">Inscrits à la newsletter (opt-in actif).</div></div>
       </div>
-      <div className="contenu">
+      <div className="contenu adm-vit">
         {loading && allRows.length === 0 && <Chargement />}
 
         <div className="bloc">
-          <div className="bloc-tete">
-            <div><h2>Liens d'inscription par canal</h2>
-              <div className="sous">Partagez le bon lien sur chaque réseau : la source de chaque inscription sera tracée automatiquement.</div></div>
-          </div>
+          <div className="reglages-titre">Liens d'inscription par canal</div>
+          <div className="reglages-desc">Partagez le bon lien sur chaque réseau : la source de chaque inscription sera tracée automatiquement.</div>
           {reseauxActifs.length === 0 && (
             <p className="ct-aide">Ajoutez vos réseaux sociaux dans Paramètres pour générer leurs liens.</p>
           )}
@@ -78,20 +76,23 @@ export default function TabContacts() {
               <div key={s.id} className="ct-lien">
                 <span className="ct-lien-nom">{libelleSource(`newsletter:${s.platform}`)}</span>
                 <code className="ct-lien-url">{lien(s.platform)}</code>
-                <button className="btn btn-ligne ct-copier" onClick={() => copier(s.platform)}>
+                <button className="adm-vit-lien accent ct-copier" onClick={() => copier(s.platform)}>
                   {copie === s.platform ? "Copié !" : "Copier"}
                 </button>
               </div>
             ))}
             <div className="ct-lien ct-lien-perso">
-              <input className="ct-perso-input" placeholder="Autre canal (ex. flyer, google, qr-menu)…"
+              <span className="ct-lien-nom ct-lien-nom-perso">Autre canal</span>
+              <input className="ct-perso-input" placeholder="ex. flyer, google, qr-menu…"
                 value={persoSource} onChange={(e) => setPersoSource(e.target.value)} />
-              {persoPropre && (<>
-                <code className="ct-lien-url">{lien(persoPropre)}</code>
-                <button className="btn btn-ligne ct-copier" onClick={() => copier(persoPropre)}>
-                  {copie === persoPropre ? "Copié !" : "Copier"}
-                </button>
-              </>)}
+              {persoPropre
+                ? <><code className="ct-lien-url">{lien(persoPropre)}</code>
+                    <button className="adm-vit-lien accent ct-copier" onClick={() => copier(persoPropre)}>
+                      {copie === persoPropre ? "Copié !" : "Copier"}
+                    </button></>
+                /* L'appel à l'action reste visible champ vide : sinon la ligne
+                   paraissait inerte tant qu'on n'avait rien tapé. */
+                : <span className="ct-creer-vide">+ Créer le lien</span>}
             </div>
           </div>
         </div>
@@ -101,16 +102,16 @@ export default function TabContacts() {
         <div className="bloc">
           <div className="bloc-tete">
             <div><h2>{visibles.length} contact{visibles.length > 1 ? "s" : ""}</h2></div>
-            <button className="btn btn-ligne" onClick={exportCsv}>Exporter en CSV</button>
+            <button className="adm-vit-lien accent" onClick={exportCsv}>Exporter en CSV</button>
           </div>
           {sources.length > 1 && (
             <div className="ct-filtres">
               <button className={`ct-filtre${filtre === "toutes" ? " actif" : ""}`} onClick={() => setFiltre("toutes")}>
-                Toutes <span className="ct-filtre-nb">{rows.length}</span>
+                Toutes <span className="ct-filtre-nb">· {rows.length}</span>
               </button>
               {sources.map(([src, nb]) => (
                 <button key={src} className={`ct-filtre${filtre === src ? " actif" : ""}`} onClick={() => setFiltre(src)}>
-                  {libelleSource(src)} <span className="ct-filtre-nb">{nb}</span>
+                  {libelleSource(src)} <span className="ct-filtre-nb">· {nb}</span>
                 </button>
               ))}
             </div>

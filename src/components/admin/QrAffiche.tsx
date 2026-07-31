@@ -54,44 +54,44 @@ export default function QrAffiche({ lien }: { lien: (src: string) => string }) {
     <div className="bloc">
       <div className="bloc-tete">
         <div>
-          <h2>Affiche QR pour les tables</h2>
-          <div className="sous">
-            Imprimez et posez sur les tables : les clients s'inscrivent en scannant,
-            et ces inscriptions apparaissent sous la source choisie.
+          <div className="reglages-titre">Affiche QR pour les tables</div>
+          <div className="reglages-desc">Imprimez et posez sur les tables : les inscriptions apparaissent sous la source choisie.</div>
+        </div>
+        <button className="adm-vit-lien accent qr-no-print" onClick={imprimer}>Imprimer</button>
+      </div>
+
+      {/* Réglages à gauche, aperçu de l'affiche à droite (maquette). L'aperçu
+          reste le seul élément imprimé — la règle @media print ne change pas. */}
+      <div className="qr-duo">
+        <div className="qr-col qr-no-print">
+          <div className="qr-editeur">
+            <label className="qr-champ qr-champ-large">
+              <span>Source · pour le suivi</span>
+              <input value={source} onChange={(e) => setSource(e.target.value)} placeholder="qr-table" />
+            </label>
+            <label className="qr-champ qr-champ-large">
+              <span>Titre de l'affiche</span>
+              <input value={titre} onChange={(e) => setTitre(e.target.value)} maxLength={40} />
+            </label>
+            <label className="qr-champ qr-champ-large">
+              <span>Message</span>
+              <input value={message} onChange={(e) => setMessage(e.target.value)} maxLength={130} />
+            </label>
+          </div>
+          <p className="qr-url">Ce QR ouvre : <code>{url}</code></p>
+        </div>
+
+        {/* Zone imprimée : seule cette partie apparaît sur le papier */}
+        <div className="qr-zone-impression">
+          <div className="qr-affiche">
+            {restoName && <div className="qr-affiche-resto">{restoName}</div>}
+            <div className="qr-affiche-titre">{titre}</div>
+            <p className="qr-affiche-message">{message}</p>
+            <div className="qr-affiche-code"><QrSvg texte={url} /></div>
+            <div className="qr-affiche-pied">Scannez avec l'appareil photo de votre téléphone</div>
           </div>
         </div>
-        <button className="btn btn-ligne qr-no-print" onClick={imprimer}>Imprimer</button>
       </div>
-
-      <div className="qr-editeur qr-no-print">
-        <label className="qr-champ">
-          <span>Source (pour le suivi)</span>
-          <input value={source} onChange={(e) => setSource(e.target.value)} placeholder="qr-table" />
-        </label>
-        <label className="qr-champ">
-          <span>Titre de l'affiche</span>
-          <input value={titre} onChange={(e) => setTitre(e.target.value)} maxLength={40} />
-        </label>
-        <label className="qr-champ qr-champ-large">
-          <span>Message</span>
-          <input value={message} onChange={(e) => setMessage(e.target.value)} maxLength={130} />
-        </label>
-      </div>
-
-      {/* Zone imprimée : seule cette partie apparaît sur le papier */}
-      <div className="qr-zone-impression">
-        <div className="qr-affiche">
-          {restoName && <div className="qr-affiche-resto">{restoName}</div>}
-          <div className="qr-affiche-titre">{titre}</div>
-          <p className="qr-affiche-message">{message}</p>
-          <div className="qr-affiche-code"><QrSvg texte={url} /></div>
-          <div className="qr-affiche-pied">Scannez avec l'appareil photo de votre téléphone</div>
-        </div>
-      </div>
-
-      <p className="qr-url qr-no-print">
-        Ce QR ouvre : <code>{url}</code>
-      </p>
     </div>
   );
 }
