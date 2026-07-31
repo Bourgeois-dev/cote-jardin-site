@@ -2430,6 +2430,97 @@ a.cli-coord-val:hover { text-decoration:underline }
   .adm-acces-ajout .champ { flex:1 1 100% }
 }
 
+/* ══ NEWSLETTER — liste des campagnes ════════════════════════════════════
+   La grille de cartes devient une liste groupée par état : on lit d'abord ce
+   qui reste à faire, puis l'historique. */
+
+/* Email de bienvenue : une ligne de réglage, pas une campagne. */
+.contenu.adm-vit .nl-trigger { background:none; border:none; border-radius:0; padding:0;
+  border-bottom:1px solid var(--vit-line); margin:0 0 26px }
+.contenu.adm-vit .nl-trigger-tete { display:flex; align-items:baseline; gap:18px;
+  padding:0 0 18px; flex-wrap:wrap }
+.contenu.adm-vit .nl-trigger-pastille { background:none; border:none; padding:0;
+  text-transform:uppercase; font-size:9.5px; font-weight:700; letter-spacing:.2em;
+  color:var(--admin-accent) }
+.contenu.adm-vit .nl-trigger-nom { font-size:13.5px; font-weight:700 }
+.contenu.adm-vit .nl-trigger-lbl { font-size:12.5px; color:var(--vit-doux) }
+.contenu.adm-vit .nl-trigger-tete .adm-vit-lien { margin-left:auto }
+.contenu.adm-vit .nl-trigger-apercu { border:none; background:none; padding:0 0 24px }
+
+/* Filtres d'état à gauche, dossiers à droite. */
+.nl-barre-filtres { display:flex; align-items:baseline; justify-content:space-between;
+  gap:26px; flex-wrap:wrap; margin-bottom:14px }
+.contenu.adm-vit .nl-barre-filtres .filtres-resa { gap:24px; margin:0; flex-wrap:wrap }
+.contenu.adm-vit .nl-dossiers { gap:20px; margin:0; flex-wrap:wrap; justify-content:flex-end }
+.contenu.adm-vit .nl-doss-puce { background:none; border:none; border-radius:0; padding:0;
+  text-transform:uppercase; font-size:10px; font-weight:600; letter-spacing:.13em;
+  color:var(--vit-doux); display:inline-flex; align-items:baseline; gap:5px }
+.contenu.adm-vit .nl-doss-puce.on { color:var(--ink); box-shadow:inset 0 -1px 0 var(--ink) }
+.contenu.adm-vit .nl-doss-nom { background:none; border:none; padding:0; font:inherit;
+  letter-spacing:inherit; text-transform:inherit; color:inherit }
+.contenu.adm-vit .nl-doss-x { background:none; border:none; padding:0 0 0 2px; font-size:9px;
+  color:#c6b898 }
+.contenu.adm-vit .nl-doss-x:hover { color:var(--annule) }
+
+/* Période */
+.nl-periode { display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  padding-bottom:22px; border-bottom:1px solid var(--vit-line); margin-bottom:30px }
+.nl-periode-lab { text-transform:uppercase; font-size:10px; font-weight:700;
+  letter-spacing:.13em; color:var(--vit-label) }
+.nl-periode-au { font-size:12.5px; color:var(--vit-doux) }
+.contenu.adm-vit .nl-periode input[type="date"] { width:auto; background:none; border:none;
+  border-bottom:1px solid #d5c9b2; border-radius:0; padding:6px 0; font-size:13.5px }
+.contenu.adm-vit .nl-periode input[type="date"]:focus { outline:none;
+  border-bottom-color:var(--admin-accent) }
+
+/* Groupes */
+.nl-groupe { margin-bottom:38px }
+.nl-groupe:last-child { margin-bottom:0 }
+.contenu.adm-vit .nl-groupe-tete { font-family:var(--font-display); font-weight:500;
+  font-size:24.5px; letter-spacing:.005em; display:flex; align-items:baseline; gap:12px;
+  padding-bottom:9px; border-bottom:1px solid var(--vit-line); margin-bottom:2px }
+
+/* Ligne de campagne */
+.nl-l { display:flex; align-items:center; gap:18px; padding:13px 4px;
+  border-bottom:1px solid var(--vit-line) }
+.nl-l-vignette { width:52px; height:52px; flex-shrink:0; overflow:hidden;
+  background:var(--vit-media); display:flex; align-items:center; justify-content:center }
+.nl-l-vignette img { width:100%; height:100%; object-fit:cover; display:block }
+.nl-l-vignette.vide span { font-family:var(--font-display); font-size:19px; color:#b3a483 }
+.nl-l-ident { flex:1; min-width:0 }
+.nl-l-ident b { display:block; font-family:var(--font-display); font-weight:500; font-size:16px;
+  line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.nl-l-meta { display:block; font-size:12px; color:var(--vit-doux); margin-top:3px }
+.nl-l-alerte { display:block; font-size:11.5px; color:var(--annule); margin-top:3px }
+.nl-l-tag { flex-shrink:0 }
+.contenu.adm-vit .nl-l-tag { border-radius:0; font-size:9.5px; letter-spacing:.16em;
+  text-transform:uppercase; font-weight:600; padding:5px 10px }
+.nl-l-date { flex:0 0 148px; text-align:right; font-size:12px; color:var(--vit-doux) }
+.nl-l-planif { color:var(--admin-accent); font-weight:600 }
+.nl-l-actions { display:flex; align-items:center; gap:18px; flex-shrink:0 }
+.contenu.adm-vit .nl-l-actions .btn-ligne { padding:0; font-size:10px; letter-spacing:.13em;
+  font-weight:600 }
+.contenu.adm-vit .nl-l-actions .adm-vit-lien { font-size:10px; letter-spacing:.13em }
+.contenu.adm-vit .nl-menu-btn { background:none; border:none; color:var(--vit-doux);
+  font-size:15px; line-height:1; padding:0 2px }
+.contenu.adm-vit .nl-menu-btn:hover { color:var(--ink) }
+.contenu.adm-vit .nl-menu { border-radius:0; border-color:var(--vit-line) }
+
+@media (max-width: 900px) {
+  .nl-barre-filtres { flex-direction:column; gap:12px }
+  .contenu.adm-vit .nl-dossiers { justify-content:flex-start }
+  .nl-l { flex-wrap:wrap; gap:10px 14px }
+  .nl-l-ident { flex:1 1 60% }
+  .nl-l-date { flex:0 0 auto; text-align:left; order:5 }
+  .nl-l-actions { margin-left:auto; order:6 }
+  .contenu.adm-vit .nl-groupe-tete { font-size:21px }
+}
+@media (max-width: 560px) {
+  .nl-l-vignette { width:42px; height:42px }
+  .nl-l-ident b { font-size:14.5px }
+  .nl-l-tag { order:4 }
+}
+
 /* ══ NEWSLETTER — éditeur de campagne ════════════════════════════════════
    Le fil des étapes vit dans l'en-tête de page ; l'éditeur perd sa carte
    blanche et adopte les conventions éditoriales (filets, champs soulignés,

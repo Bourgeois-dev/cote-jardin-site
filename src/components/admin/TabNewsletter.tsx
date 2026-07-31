@@ -1373,7 +1373,7 @@ function dateRef(c: Campaign): string {
       <div className={`topbar adm-vit${mode === "nouveau" ? " large" : ""}`}>
         <div>
           <span className="adm-vit-eyebrow">Newsletter</span>
-          <h1>{mode === "nouveau" ? "Nouvelle campagne" : "Newsletter"}</h1>
+          <h1>{mode === "nouveau" ? "Nouvelle campagne" : "Campagnes"}</h1>
           <div className="sous">{mode === "nouveau"
             ? "Composez avec des blocs — aucun format imposé : ajoutez, réordonnez, supprimez."
             : `Campagnes email — ${campagnesGrille.length} au total`}</div>
@@ -1412,7 +1412,7 @@ function dateRef(c: Campaign): string {
         </div>
       </div>
 
-      <div className={`contenu${mode === "nouveau" ? " adm-vit large" : ""}`}>
+      <div className={`contenu adm-vit${mode === "nouveau" ? " large" : ""}`}>
 
         {mode === "nouveau" && (
           <NouveauForm key={prefill?.id || (prefill ? "dup" : "neuf")} initial={prefill}
@@ -1422,44 +1422,57 @@ function dateRef(c: Campaign): string {
 
         {mode === "liste" && (
           <>
-            {/* Filtres */}
-            <div className="filtres-resa" style={{ marginBottom: 20 }}>
+            {/* Filtres d'état à gauche, dossiers à droite : deux façons de
+                trancher la même liste, sur une seule ligne. */}
+            <div className="nl-barre-filtres">
+            <div className="filtres-resa">
               <button className={`puce-mini${filtre === "toutes" ? " active" : ""}`} onClick={() => setFiltre("toutes")}>
-                Toutes{campagnesGrille.length > 0 ? ` (${campagnesGrille.length})` : ""}
+                Toutes{campagnesGrille.length > 0 ? ` · ${campagnesGrille.length}` : ""}
               </button>
               <button className={`puce-mini${filtre === "scheduled" ? " active" : ""}`} onClick={() => setFiltre("scheduled")}>
-                Planifiées {nbScheduled > 0 && <span className="ps-pip">{nbScheduled}</span>}
+                Planifiées{nbScheduled > 0 ? ` · ${nbScheduled}` : ""}
               </button>
               <button className={`puce-mini${filtre === "draft" ? " active" : ""}`} onClick={() => setFiltre("draft")}>
-                Brouillons {nbDraft > 0 && <span className="ps-pip">{nbDraft}</span>}
+                Brouillons{nbDraft > 0 ? ` · ${nbDraft}` : ""}
               </button>
               <button className={`puce-mini${filtre === "sent" ? " active" : ""}`} onClick={() => setFiltre("sent")}>
-                Envoyées{nbSent > 0 ? ` (${nbSent})` : ""}
+                Envoyées{nbSent > 0 ? ` · ${nbSent}` : ""}
               </button>
             </div>
+            {dossiers.length > 0 && (
+              <div className="nl-dossiers">
+                <button className={`nl-doss-puce ${filtreDossier === "tous" ? "on" : ""}`} onClick={() => setFiltreDossier("tous")}>
+                  Tous · {campagnes.length}
+                </button>
+                {dossiers.map((d) => (
+                  <span key={d} className={`nl-doss-puce ${filtreDossier === d ? "on" : ""}`}>
+                    <button className="nl-doss-nom" onClick={() => setFiltreDossier(d)}>{d} · {compteDossier(d)}</button>
+                    <button className="nl-doss-x" aria-label={`Supprimer le dossier ${d}`} onClick={() => supprimerDossier(d)}>✕</button>
+                  </span>
+                ))}
+                {nbSansDossier > 0 && (
+                  <button className={`nl-doss-puce ${filtreDossier === "__sans__" ? "on" : ""}`} onClick={() => setFiltreDossier("__sans__")}>
+                    Sans dossier · {nbSansDossier}
+                  </button>
+                )}
+              </div>
+            )}
+            </div>
 
-            {/* Section « Automatisation » : le Welcome, email transactionnel envoyé
-                automatiquement à chaque inscription. Présenté à part, avec compteur
-                agrégé et aperçu complet déroulant. */}
+            {/* Le Welcome, email transactionnel envoyé à chaque inscription.
+                Une seule ligne : c'est un réglage qui tourne tout seul, pas une
+                campagne à gérer. Il s'annonce et s'efface. */}
             {welcomeLignes.length > 0 && (
               <div className="nl-trigger">
                 <div className="nl-trigger-tete">
-                  <div className="nl-trigger-info">
-                    <span className="nl-trigger-pastille">⚡ Automatique</span>
-                    <div>
-                      <b>Email de bienvenue</b>
-                      <div className="sub-desc">Envoyé automatiquement à chaque nouvelle inscription à la newsletter.</div>
-                    </div>
-                  </div>
-                  <div className="nl-trigger-stat">
-                    <span className="nl-trigger-nb">{welcomeEnvois}</span>
-                    <span className="nl-trigger-lbl">
-                      envoi{welcomeEnvois > 1 ? "s" : ""}
-                      {welcomeDernier && <span className="sub-desc"> · dernier {fmtDatetime(welcomeDernier)}</span>}
-                    </span>
-                  </div>
-                  <button className="btn btn-mini btn-ligne" onClick={() => setWelcomeOuvert((v) => !v)}>
-                    {welcomeOuvert ? "▲ Masquer l'aperçu" : "▼ Voir l'aperçu"}
+                  <span className="nl-trigger-pastille">Automatique</span>
+                  <b className="nl-trigger-nom">Email de bienvenue</b>
+                  <span className="nl-trigger-lbl">
+                    envoyé à chaque nouvelle inscription — {welcomeEnvois} envoi{welcomeEnvois > 1 ? "s" : ""}
+                    {welcomeDernier && `, dernier le ${fmtDatetime(welcomeDernier)}`}
+                  </span>
+                  <button className="adm-vit-lien accent" onClick={() => setWelcomeOuvert((v) => !v)}>
+                    {welcomeOuvert ? "Masquer l'aperçu" : "Voir l'aperçu"}
                   </button>
                 </div>
                 {welcomeOuvert && (
@@ -1471,43 +1484,17 @@ function dateRef(c: Campaign): string {
             )}
 
             {/* Filtre par période d'envoi/planification */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--ink-soft)" }}>
-                du
-                <input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)}
-                  style={{ width: "auto", padding: "7px 10px", fontSize: 13, borderRadius: 8, border: "1px solid var(--line)", background: "#fff", color: "var(--ink)" }} />
-                au
-                <input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)}
-                  style={{ width: "auto", padding: "7px 10px", fontSize: 13, borderRadius: 8, border: "1px solid var(--line)", background: "#fff", color: "var(--ink)" }} />
-              </div>
+            <div className="nl-periode">
+              <span className="nl-periode-lab">Période</span>
+              <input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)} aria-label="À partir du" />
+              <span className="nl-periode-au">au</span>
+              <input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} aria-label="Jusqu'au" />
               {filtresDateActifs && (
                 <button className="btn btn-mini btn-ligne" onClick={() => { setDateDebut(""); setDateFin(""); }}>
                   ✕ Réinitialiser
                 </button>
               )}
             </div>
-
-            {/* Barre de dossiers : n'apparaît que si au moins un dossier existe */}
-            {dossiers.length > 0 && (
-              <div className="nl-dossiers">
-                <button className={`nl-doss-puce ${filtreDossier === "tous" ? "on" : ""}`} onClick={() => setFiltreDossier("tous")}>
-                  Tous <span className="ps-pip">{campagnes.length}</span>
-                </button>
-                {dossiers.map((d) => (
-                  <span key={d} className={`nl-doss-puce ${filtreDossier === d ? "on" : ""}`}>
-                    <button className="nl-doss-nom" onClick={() => setFiltreDossier(d)}>
-                      📁 {d} <span className="ps-pip">{compteDossier(d)}</span>
-                    </button>
-                    <button className="nl-doss-x" aria-label={`Supprimer le dossier ${d}`} onClick={() => supprimerDossier(d)}>✕</button>
-                  </span>
-                ))}
-                {nbSansDossier > 0 && (
-                  <button className={`nl-doss-puce ${filtreDossier === "__sans__" ? "on" : ""}`} onClick={() => setFiltreDossier("__sans__")}>
-                    Sans dossier <span className="ps-pip">{nbSansDossier}</span>
-                  </button>
-                )}
-              </div>
-            )}
 
             {loading && <p className="vide">Chargement…</p>}
 
@@ -1536,96 +1523,98 @@ function dateRef(c: Campaign): string {
             )}
 
             {!loading && affichees.length > 0 && (
-              <div className="nl-grille">
-                {affichees.map((c) => {
-                  const st = STATUS_LABELS[c.status] || { label: c.status, cls: "" };
-                  const cibles = c.recipients_count;
-                  // Date de référence lisible selon le statut.
-                  const dateLbl = c.status === "scheduled" && c.scheduled_at
-                    ? <span style={{ color: "var(--admin-accent)", fontWeight: 700 }}>→ {fmtDatetime(c.scheduled_at)}</span>
-                    : <span>{fmtDatetime(c.sent_at || c.scheduled_at) || "—"}</span>;
-                  const img = premiereImage(c.content);
+              /* Regroupement par état, comme la maquette : on lit d'abord ce
+                 qui reste à faire (brouillons, planifiées), puis l'historique. */
+              <>
+                {(["draft", "scheduled", "sent", "failed"] as const).map((etat) => {
+                  const lot = affichees.filter((c) => c.status === etat);
+                  if (!lot.length) return null;
+                  const titres: Record<string, string> = {
+                    draft: "Brouillons", scheduled: "Planifiées",
+                    sent: "Envoyées", failed: "En échec",
+                  };
                   return (
-                    <div className="nl-carte" key={c.id}>
-                      {/* Vignette : première image du contenu, ou placeholder discret */}
-                      <div className={`nl-carte-vignette ${img ? "" : "vide"}`}>
-                        {img ? <img src={img} alt="" loading="lazy" /> : <span>Pas d'image</span>}
-                      </div>
-                      {/* En-tête : objet + menu ⋯ */}
-                      <div className="nl-carte-tete">
-                        <div className="nl-carte-titre">
-                          <b title={c.subject}>{c.subject}</b>
-                        </div>
-                        <div className="carte-menu">
-                          <button className="nl-menu-btn" aria-label="Actions" aria-haspopup="true"
-                            aria-expanded={menuOuvert === c.id}
-                            onClick={() => setMenuOuvert(menuOuvert === c.id ? null : c.id)}>⋯</button>
-                          {menuOuvert === c.id && (
-                            <div className="nl-menu" role="menu">
+                    <section className="nl-groupe" key={etat}>
+                      <h2 className="nl-groupe-tete">{titres[etat]}
+                        <span className="adm-vit-nb">{lot.length} campagne{lot.length > 1 ? "s" : ""}</span>
+                      </h2>
+                      {lot.map((c) => {
+                        const st = STATUS_LABELS[c.status] || { label: c.status, cls: "" };
+                        const cibles = c.recipients_count;
+                        const dateLbl = c.status === "scheduled" && c.scheduled_at
+                          ? <span className="nl-l-planif">→ {fmtDatetime(c.scheduled_at)}</span>
+                          : <span>{fmtDatetime(c.sent_at || c.scheduled_at) || "—"}</span>;
+                        const img = premiereImage(c.content);
+                        return (
+                          <div className="nl-l" key={c.id}>
+                            <span className={`nl-l-vignette${img ? "" : " vide"}`}>
+                              {img ? <img src={img} alt="" loading="lazy" />
+                                   : <span aria-hidden="true">{(c.subject || "?").trim().charAt(0).toUpperCase()}</span>}
+                            </span>
+
+                            <span className="nl-l-ident">
+                              <b title={c.subject}>{c.subject}</b>
+                              <span className="nl-l-meta">
+                                {cibles != null ? `${cibles} destinataire${cibles > 1 ? "s" : ""}` : "à envoyer"}
+                                {!cibleUnique && ` · ${SEGMENTS[c.segment]?.label || c.segment}`}
+                                {c.folder && ` · ${c.folder}`}
+                                {/* Clics : personnes distinctes ayant cliqué au moins un lien
+                                    (webhook Resend). Absent = pas de donnée, pas un zéro. */}
+                                {c.status === "sent" && clics[c.id] != null && ` · ${clics[c.id]} clic${clics[c.id] > 1 ? "s" : ""}`}
+                              </span>
+                              {c.status === "sent" && c.sent_count != null && cibles != null && c.sent_count < cibles && (
+                                <span className="nl-l-alerte">{c.sent_count} / {cibles} envoyés</span>
+                              )}
+                              {c.error_message && <span className="nl-l-alerte">{c.error_message.slice(0, 70)}</span>}
+                            </span>
+
+                            <span className={`nl-l-tag tag ${st.cls}`}>{st.label}</span>
+                            <span className="nl-l-date">{dateLbl}</span>
+
+                            <span className="nl-l-actions">
                               {c.status === "draft" && (
-                                <>
-                                  <button role="menuitem" onClick={() => { setMenuOuvert(null); reprendre(c); }}>✎ Reprendre</button>
-                                  <button role="menuitem" onClick={() => { setMenuOuvert(null); envoyer(c); }}>⚡ Envoyer</button>
-                                </>
+                                <button className="btn btn-mini btn-ligne" onClick={() => reprendre(c)}>Reprendre</button>
                               )}
                               {c.status === "scheduled" && (
-                                <button role="menuitem" onClick={() => { setMenuOuvert(null); annuler(c); }}>Annuler l'envoi</button>
+                                <button className="btn btn-mini btn-ligne" onClick={() => annuler(c)}>Annuler l'envoi</button>
                               )}
                               {TEMPLATES[c.template] && (
-                                <button role="menuitem" onClick={() => { setMenuOuvert(null); dupliquer(c); }}>⧉ Dupliquer</button>
+                                <button className="adm-vit-lien" onClick={() => dupliquer(c)}>Dupliquer</button>
                               )}
-                              <div className="nl-menu-sep" />
-                              {dossiers.filter((d) => d !== c.folder).map((d) => (
-                                <button role="menuitem" key={d} onClick={() => deplacer(c, d)}>📁 Ranger dans « {d} »</button>
-                              ))}
-                              <button role="menuitem" onClick={() => deplacerVersNouveau(c)}>📁＋ Nouveau dossier…</button>
-                              {c.folder && (
-                                <button role="menuitem" onClick={() => deplacer(c, null)}>↩ Retirer du dossier</button>
-                              )}
+                              {/* Une campagne envoyée n'est pas supprimable : elle porte
+                                  l'historique et les statistiques. Règle conservée. */}
                               {(c.status === "draft" || c.status === "failed") && (
-                                <>
-                                  <div className="nl-menu-sep" />
-                                  <button role="menuitem" className="danger" onClick={() => { setMenuOuvert(null); supprimer(c); }}>Supprimer</button>
-                                </>
+                                <button className="adm-vit-lien danger" onClick={() => supprimer(c)}>Supprimer</button>
                               )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Ciblage mis en avant */}
-                      <div className="nl-carte-cible">
-                        <span className="nl-cible-nb">{cibles != null ? cibles : "—"}</span>
-                        <span className="nl-cible-lbl">
-                          {cibles != null ? `destinataire${cibles > 1 ? "s" : ""}` : "à envoyer"}
-                          {/* Clics : personnes distinctes ayant cliqué au moins un
-                              lien (webhook Resend). Absent = pas de donnée
-                              (campagne antérieure au webhook), pas un zéro. */}
-                          {c.status === "sent" && clics[c.id] != null && (
-                            <span className="sub-desc"> · {clics[c.id]} clic{clics[c.id] > 1 ? "s" : ""}</span>
-                          )}
-                          {!cibleUnique && (
-                            <span className="sub-desc"> · {SEGMENTS[c.segment]?.label || c.segment}</span>
-                          )}
-                        </span>
-                      </div>
-
-                      {/* Pied : statut + date + dossier */}
-                      <div className="nl-carte-pied">
-                        <span className={`tag ${st.cls}`}>{st.label}</span>
-                        <span className="nl-carte-date">{dateLbl}</span>
-                      </div>
-                      {c.folder && <span className="nl-carte-dossier">📁 {c.folder}</span>}
-                      {c.status === "sent" && c.sent_count != null && cibles != null && c.sent_count < cibles && (
-                        <div className="nl-carte-alerte">⚠ {c.sent_count} / {cibles} envoyés</div>
-                      )}
-                      {c.error_message && (
-                        <div className="nl-carte-alerte">⚠ {c.error_message.slice(0, 60)}</div>
-                      )}
-                    </div>
+                              {/* Le rangement en dossier reste au menu : il ouvre une
+                                  liste variable, qui n'a pas sa place en ligne. */}
+                              <span className="carte-menu">
+                                <button className="nl-menu-btn" aria-label={`Autres actions pour ${c.subject}`}
+                                  aria-haspopup="true" aria-expanded={menuOuvert === c.id}
+                                  onClick={() => setMenuOuvert(menuOuvert === c.id ? null : c.id)}>⋯</button>
+                                {menuOuvert === c.id && (
+                                  <div className="nl-menu" role="menu">
+                                    {c.status === "draft" && (
+                                      <button role="menuitem" onClick={() => { setMenuOuvert(null); envoyer(c); }}>Envoyer maintenant</button>
+                                    )}
+                                    {dossiers.filter((d) => d !== c.folder).map((d) => (
+                                      <button role="menuitem" key={d} onClick={() => deplacer(c, d)}>Ranger dans « {d} »</button>
+                                    ))}
+                                    <button role="menuitem" onClick={() => deplacerVersNouveau(c)}>Nouveau dossier…</button>
+                                    {c.folder && (
+                                      <button role="menuitem" onClick={() => deplacer(c, null)}>Retirer du dossier</button>
+                                    )}
+                                  </div>
+                                )}
+                              </span>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </section>
                   );
                 })}
-              </div>
+              </>
             )}
           </>
         )}
