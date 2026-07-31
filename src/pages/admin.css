@@ -1909,6 +1909,15 @@ a.cli-coord-val:hover { text-decoration:underline }
    .topbar (sticky, fond pleine largeur) et à .contenu, qui ne sont pas
    imbriqués l'un dans l'autre. */
 .topbar.adm-vit, .contenu.adm-vit { padding-inline:max(40px, calc((100% - 1060px) / 2)) }
+/* Colonne resserrée pour les écrans peu denses (Réseaux sociaux) : la maquette
+   correspondante montre une mesure de 880 px, plus juste pour une simple liste
+   de sept lignes. */
+.topbar.adm-vit.etroit, .contenu.adm-vit.etroit {
+  padding-inline:max(40px, calc((100% - 880px) / 2)) }
+/* La liste démarre juste sous le filet d'en-tête : pas de respiration
+   supplémentaire, la première ligne fait office d'entrée en matière. */
+.contenu.adm-vit.etroit { padding-top:16px }
+.contenu.adm-vit.etroit .form-pied { margin-top:40px }
 
 /* ─ En-tête de page ─ */
 .topbar.adm-vit { padding-top:26px; padding-bottom:25px;
@@ -2191,6 +2200,62 @@ a.cli-coord-val:hover { text-decoration:underline }
 /* Carte téléchargeable : même colonne que le reste. */
 .contenu.adm-vit .menu-file-actuel { background:var(--vit-card);
   border:1px solid var(--vit-line); border-radius:0 }
+
+/* ══ RÉSEAUX SOCIAUX — reproduction de la maquette ═══════════════════════
+   La grille de cartes devient une liste : une ligne de 85 px par réseau,
+   pastille ronde de 40 px, nom + état, champ souligné, « Tester » et
+   interrupteur alignés à droite. */
+.contenu.adm-vit .rs-grille { display:block; margin-top:0 }
+.contenu.adm-vit .rs-carte { display:flex; align-items:center; gap:0; padding:0 6px;
+  min-height:85px; background:none; border:none; border-radius:0;
+  border-bottom:1px solid var(--vit-line) }
+.contenu.adm-vit .rs-carte.actif { background:none; border-color:var(--vit-line) }
+
+/* Pastille : cercle plein en accent quand le réseau est publié, simple filet
+   sinon — l'état se lit d'un coup d'œil sur toute la colonne. */
+.contenu.adm-vit .rs-icone { width:40px; height:40px; flex-shrink:0; margin-right:24px;
+  border-radius:50%; border:1px solid #ddd4c4; background:none; color:#b3a483 }
+.contenu.adm-vit .rs-icone svg { width:18px; height:18px }
+.contenu.adm-vit .rs-carte.actif .rs-icone { background:var(--admin-accent); color:#fff;
+  border-color:var(--admin-accent) }
+
+.contenu.adm-vit .rs-ident { flex:0 0 154px; min-width:0; display:flex;
+  flex-direction:column; gap:2px }
+.contenu.adm-vit .rs-nom { font-weight:700; font-size:13px; letter-spacing:.01em;
+  flex:none }
+.contenu.adm-vit .rs-etat { font-family:var(--font-display); font-style:italic;
+  font-size:12px; color:var(--vit-doux) }
+.contenu.adm-vit .rs-carte.actif .rs-etat { color:var(--admin-accent); font-style:normal;
+  font-family:var(--font-body); font-size:11.5px }
+
+.contenu.adm-vit .rs-lien { flex:0 1 452px; min-width:0 }
+.contenu.adm-vit .rs-input { width:100%; background:none; border:none;
+  border-bottom:1px solid #d5c9b2; border-radius:0; padding:8px 0; font-size:14px;
+  color:var(--ink) }
+.contenu.adm-vit .rs-input::placeholder { color:#c3baa8 }
+.contenu.adm-vit .rs-input:focus { outline:none; border-bottom-color:var(--admin-accent) }
+.contenu.adm-vit .rs-input.err { border-bottom-color:var(--annule) }
+.contenu.adm-vit .rs-err { display:block; margin-top:5px; font-size:11.5px;
+  color:var(--annule) }
+
+.contenu.adm-vit .rs-actions { margin-left:auto; display:flex; align-items:center;
+  gap:24px; flex-shrink:0 }
+/* Interrupteur plus grand que dans les tableaux : la ligne fait 85 px et la
+   maquette le montre à cette taille. */
+.contenu.adm-vit .rs-actions .toggle { width:40px; height:22px }
+.contenu.adm-vit .rs-actions .toggle .piste::before { width:16px; height:16px; left:3px; top:3px }
+.contenu.adm-vit .rs-actions .toggle input:checked + .piste::before { transform:translateX(18px) }
+.contenu.adm-vit .rs-tester { text-transform:uppercase; font-size:10px; font-weight:600;
+  letter-spacing:.13em; color:var(--admin-accent); text-decoration:underline;
+  text-underline-offset:5px; white-space:nowrap }
+.contenu.adm-vit .rs-tester:hover { color:var(--admin-accent-dark) }
+
+@media (max-width: 820px) {
+  .contenu.adm-vit .rs-carte { flex-wrap:wrap; gap:12px 0; padding:16px 0; min-height:0 }
+  .contenu.adm-vit .rs-ident { flex:1 1 auto }
+  .contenu.adm-vit .rs-lien { flex:1 1 100%; order:3 }
+  .contenu.adm-vit .rs-actions { margin-left:auto; gap:16px }
+}
 
 /* Sur mobile, la règle de base (≤700 px) fait passer le nom sur sa propre ligne
    et remet le prix à gauche. Les sélecteurs .contenu.adm-vit étant plus

@@ -90,12 +90,13 @@ export default function TabSocial() {
 
   return (
     <>
-      <div className="topbar"><div><h1>Réseaux sociaux</h1><div className="sous">Liens affichés dans le pied de page</div></div></div>
-      <div className="contenu">
+      {/* Refonte Vitrine : la grille de cartes devient une liste — une ligne par
+          réseau, pastille ronde / nom + état / lien / actions. L'énoncé qui
+          servait d'intertitre remonte en sous-titre de page. */}
+      <div className="topbar adm-vit etroit"><div><span className="adm-vit-eyebrow">Vitrine</span><h1>Réseaux sociaux</h1><div className="sous">Renseignez un lien, puis activez le réseau : son icône apparaît dans le pied de page du site.</div></div></div>
+      <div className="contenu adm-vit etroit">
         {loading && rows.length === 0 && <Chargement />}
         <div className="bloc">
-          <div className="bloc-tete"><div><h2>Vos réseaux</h2><div className="desc">Renseignez un lien, puis activez le réseau : son icône apparaît dans le pied de page du site.</div></div></div>
-
           <div className="rs-grille">
             {PLATEFORMES.map((p, i) => {
               const r = byKey[p.key];
@@ -104,28 +105,29 @@ export default function TabSocial() {
               const err = erreurs[p.key];
               return (
                 <div className={`rs-carte${actif ? " actif" : ""}`} key={p.key}>
-                  <div className="rs-tete">
-                    <span className="rs-icone" aria-hidden="true">{SOCIAL_SVG[p.key]}</span>
+                  <span className="rs-icone" aria-hidden="true">{SOCIAL_SVG[p.key]}</span>
+                  <div className="rs-ident">
                     <span className="rs-nom">{p.label}</span>
+                    <span className="rs-etat">{actif ? "Affiché" : "Non affiché"}</span>
+                  </div>
+                  <div className="rs-lien">
+                    <input
+                      className={err ? "rs-input err" : "rs-input"}
+                      value={val(p.key)}
+                      placeholder={p.ph}
+                      aria-label={`Lien ${p.label}`}
+                      onChange={(e) => { setUrls({ ...urls, [p.key]: e.target.value }); if (err) poserErreur(p.key, ""); }}
+                    />
+                    {/* Le message d'erreur reste sous le champ qu'il concerne. */}
+                    {err && <span className="rs-err">{err}</span>}
+                  </div>
+                  <div className="rs-actions">
+                    {/* Vérifier un lien d'un clic vaut mieux que le relire caractère par caractère. */}
+                    {urlValide(lien) && <a className="rs-tester" href={lien} target="_blank" rel="noopener noreferrer">Tester ↗</a>}
                     <label className="toggle" title={actif ? "Masquer du footer" : "Afficher dans le footer"}>
                       <input type="checkbox" checked={actif} onChange={(e) => basculer(p.key, e.target.checked, i)} />
                       <span className="piste" />
                     </label>
-                  </div>
-                  <input
-                    className={err ? "rs-input err" : "rs-input"}
-                    value={val(p.key)}
-                    placeholder={p.ph}
-                    aria-label={`Lien ${p.label}`}
-                    onChange={(e) => { setUrls({ ...urls, [p.key]: e.target.value }); if (err) poserErreur(p.key, ""); }}
-                  />
-                  <div className="rs-pied">
-                    {err
-                      ? <span className="rs-err">{err}</span>
-                      : urlValide(lien)
-                        // Vérifier un lien d'un clic vaut mieux que le relire caractère par caractère.
-                        ? <a className="rs-tester" href={lien} target="_blank" rel="noopener noreferrer">Tester le lien ↗</a>
-                        : <span className="rs-etat">{actif ? "Affiché dans le footer" : "Non affiché"}</span>}
                   </div>
                 </div>
               );
