@@ -93,8 +93,8 @@ export default function TabSocial() {
       {/* Refonte Vitrine : la grille de cartes devient une liste — une ligne par
           réseau, pastille ronde / nom + état / lien / actions. L'énoncé qui
           servait d'intertitre remonte en sous-titre de page. */}
-      <div className="topbar adm-vit etroit"><div><span className="adm-vit-eyebrow">Vitrine</span><h1>Réseaux sociaux</h1><div className="sous">Renseignez un lien, puis activez le réseau : son icône apparaît dans le pied de page du site.</div></div></div>
-      <div className="contenu adm-vit etroit">
+      <div className="topbar adm-vit"><div><span className="adm-vit-eyebrow">Vitrine</span><h1>Réseaux sociaux</h1><div className="sous">Renseignez un lien, puis activez le réseau : son icône apparaît dans le pied de page du site.</div></div></div>
+      <div className="contenu adm-vit">
         {loading && rows.length === 0 && <Chargement />}
         <div className="bloc">
           <div className="rs-grille">

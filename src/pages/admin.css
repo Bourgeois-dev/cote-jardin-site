@@ -1909,19 +1909,23 @@ a.cli-coord-val:hover { text-decoration:underline }
    .topbar (sticky, fond pleine largeur) et à .contenu, qui ne sont pas
    imbriqués l'un dans l'autre. */
 .topbar.adm-vit, .contenu.adm-vit { padding-inline:max(40px, calc((100% - 1060px) / 2)) }
-/* Colonne resserrée pour les écrans peu denses (Réseaux sociaux) : la maquette
-   correspondante montre une mesure de 880 px, plus juste pour une simple liste
-   de sept lignes. */
-.topbar.adm-vit.etroit, .contenu.adm-vit.etroit {
-  padding-inline:max(40px, calc((100% - 880px) / 2)) }
-/* La liste démarre juste sous le filet d'en-tête : pas de respiration
-   supplémentaire, la première ligne fait office d'entrée en matière. */
-.contenu.adm-vit.etroit { padding-top:16px }
-.contenu.adm-vit.etroit .form-pied { margin-top:40px }
+/* Note : la maquette de Réseaux sociaux montrait une colonne plus étroite
+   (880 px). Elle a été abandonnée au profit de la mesure commune : changer de
+   largeur d'un onglet à l'autre se voit à chaque changement d'onglet, et cette
+   cohérence prime sur la reproduction littérale d'une maquette isolée. */
 
 /* ─ En-tête de page ─ */
-.topbar.adm-vit { padding-top:26px; padding-bottom:25px;
-  border-bottom:1px solid var(--vit-line); align-items:flex-end }
+/* Le filet s'arrête aux bords de la colonne, comme sur les maquettes — une
+   bordure posée sur .topbar traverserait toute la largeur, la barre étant
+   pleine largeur et seule sa marge intérieure la contenant. D'où le trait en
+   pseudo-élément, calé sur la même mesure que le contenu.
+   .topbar est en position:sticky, ce qui suffit à ancrer un enfant absolu. */
+.topbar.adm-vit { padding-top:26px; padding-bottom:25px; border-bottom:none;
+  align-items:flex-end }
+.topbar.adm-vit::after { content:""; position:absolute; bottom:0; height:1px;
+  background:var(--vit-line);
+  left:max(40px, calc((100% - 1060px) / 2));
+  right:max(40px, calc((100% - 1060px) / 2)) }
 .adm-vit-eyebrow { display:block; font-size:9.5px; font-weight:700; letter-spacing:.22em;
   text-transform:uppercase; color:var(--vit-label); margin-bottom:9px }
 /* Corps calés sur la maquette par mesure de LARGEUR de texte, pas de hauteur de
@@ -2248,7 +2252,7 @@ a.cli-coord-val:hover { text-decoration:underline }
 .contenu.adm-vit .rs-carte.actif .rs-etat { color:var(--admin-accent); font-style:normal;
   font-family:var(--font-body); font-size:11.5px }
 
-.contenu.adm-vit .rs-lien { flex:0 1 452px; min-width:0 }
+.contenu.adm-vit .rs-lien { flex:1 1 auto; min-width:0 }
 .contenu.adm-vit .rs-input { width:100%; background:none; border:none;
   border-bottom:1px solid #d5c9b2; border-radius:0; padding:8px 0; font-size:14px;
   color:var(--ink) }
@@ -2258,7 +2262,7 @@ a.cli-coord-val:hover { text-decoration:underline }
 .contenu.adm-vit .rs-err { display:block; margin-top:5px; font-size:11.5px;
   color:var(--annule) }
 
-.contenu.adm-vit .rs-actions { margin-left:auto; display:flex; align-items:center;
+.contenu.adm-vit .rs-actions { margin-left:44px; display:flex; align-items:center;
   gap:24px; flex-shrink:0 }
 /* Interrupteur plus grand que dans les tableaux : la ligne fait 85 px et la
    maquette le montre à cette taille. */
@@ -2275,6 +2279,7 @@ a.cli-coord-val:hover { text-decoration:underline }
   .contenu.adm-vit .rs-ident { flex:1 1 auto }
   .contenu.adm-vit .rs-lien { flex:1 1 100%; order:3 }
   .contenu.adm-vit .rs-actions { margin-left:auto; gap:16px }
+  .contenu.adm-vit .rs-lien { flex:1 1 100% }
 }
 
 /* Sur mobile, la règle de base (≤700 px) fait passer le nom sur sa propre ligne
@@ -2303,6 +2308,7 @@ a.cli-coord-val:hover { text-decoration:underline }
   /* Sans survol possible, les flèches restent visibles sur mobile. */
   .contenu.adm-vit .carte-cat-fleches button { opacity:1 }
   .topbar.adm-vit, .contenu.adm-vit { padding-inline:16px }
+  .topbar.adm-vit::after { left:16px; right:16px }
   .topbar.adm-vit { padding-top:18px; padding-bottom:14px }
   .topbar.adm-vit h1 { font-size:25px }
   .contenu.adm-vit { padding-top:22px; padding-bottom:60px }
