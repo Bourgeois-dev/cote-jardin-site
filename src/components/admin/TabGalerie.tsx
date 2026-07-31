@@ -112,7 +112,7 @@ export default function TabGalerie() {
               arrivera est l'endroit où on clique pour l'ajouter. */}
           <button type="button" className="ga-ajout" onClick={() => fileRef.current?.click()} disabled={upEnCours > 0}>
             <b>{upEnCours > 0 ? "Envoi…" : "+ Ajouter"}</b>
-            <span>JPG ou PNG · plusieurs fichiers possibles</span>
+            <span>JPG ou PNG — plusieurs fichiers possibles</span>
           </button>
         </div>
       </div></div>

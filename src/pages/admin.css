@@ -1956,9 +1956,10 @@ a.cli-coord-val:hover { text-decoration:underline }
   color:var(--vit-doux); font-family:var(--font-body) }
 .adm-vit-lien:hover { color:var(--ink); text-decoration:underline; text-underline-offset:4px }
 .adm-vit-lien.danger:hover { color:var(--annule) }
-.adm-vit-lien.accent { color:var(--admin-accent); text-decoration:underline;
-  text-underline-offset:4px }
-.adm-vit-lien.accent:hover { color:var(--admin-accent-dark) }
+.adm-vit-lien.accent { color:var(--ink); text-decoration:underline;
+  text-underline-offset:5px; text-decoration-thickness:1px }
+.adm-vit-lien.accent:hover { color:var(--admin-accent) }
+.adm-vit-lien:disabled { opacity:.45; cursor:default; text-decoration:none; color:var(--vit-doux) }
 .contenu.adm-vit .form-pied { border-top:1px solid var(--vit-line); padding-top:20px;
   margin-top:26px }
 .contenu.adm-vit .form-pied-aide { font-style:italic; color:var(--vit-doux) }
@@ -2031,8 +2032,89 @@ a.cli-coord-val:hover { text-decoration:underline }
 .contenu.adm-vit .apercu-col .eyebrow { font-size:10px; letter-spacing:.3em;
   color:var(--vit-label) }
 
+/* ─ Fidélité maquettes — 2e passe ─ */
+/* Compteur dans les h2 : reste en bâton même dans un titre serif */
+.adm-vit-nb { font-family:var(--font-body); font-weight:400 }
+/* Liens d'en-tête de page (« Scanner une ardoise ») : capitales sans soulignement */
+.topbar.adm-vit .btn-ligne { text-decoration:none }
+.topbar.adm-vit .btn-ligne:hover { text-decoration:underline; text-underline-offset:4px }
+
+/* Zones photo : pointillés + icône, liens posés dessous */
+.adm-vit-media { border:1px dashed #b9ab8c; border-radius:0; background:var(--vit-media);
+  overflow:hidden }
+.adm-vit-media img { width:100%; aspect-ratio:1/1; object-fit:cover; display:block }
+.adm-vit-photo-vide { display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:8px; width:100%; aspect-ratio:1/1; background:none; border:none;
+  cursor:pointer; color:#8d8064; font-family:var(--font-body) }
+.adm-vit-photo-vide b { font-size:13.5px; font-weight:600; color:#6e6349 }
+.adm-vit-photo-vide span { font-size:11px; text-decoration:underline; text-underline-offset:3px }
+.adm-vit-photo-vide:hover { color:var(--admin-accent) }
+.adm-vit-photo-vide:hover b { color:var(--admin-accent) }
+.adm-vit-photo-vide:disabled { cursor:default; opacity:.6 }
+.adm-vit-media-liens { display:flex; align-items:center; gap:18px; margin-top:12px }
+.adm-vit-media-liens.col { flex-direction:column; align-items:flex-start; gap:8px; margin-top:0 }
+
+/* Ardoise : colonne des champs plus large que celle du prix (maquette ≈ 2:1) */
+.contenu.adm-vit .adm-edito { grid-template-columns:minmax(240px,300px) 1fr; gap:44px }
+.contenu.adm-vit .adm-edito .grid2 { grid-template-columns:1.9fr 1fr; column-gap:40px;
+  row-gap:22px }
+
+/* Avis : deux colonnes comme la maquette */
+.contenu.adm-vit .adm-avis-grille { grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px }
+
+/* Bannière : duo date / image, vignette carrée + liens à droite */
+.adm-vit-promo-duo { grid-template-columns:minmax(0,240px) 1fr; column-gap:40px }
+.adm-vit-media-mini { display:flex; gap:18px; align-items:flex-start }
+.adm-vit-media-mini .adm-vit-photo-vide, .adm-vit-vignette { width:110px; height:110px;
+  aspect-ratio:auto }
+.adm-vit-media-mini .adm-vit-photo-vide { border:1px dashed #b9ab8c; background:var(--vit-media);
+  gap:4px }
+.adm-vit-media-mini .adm-vit-photo-vide b { font-size:12px }
+.adm-vit-media-mini .adm-vit-photo-vide span { font-size:10px }
+.adm-vit-vignette { object-fit:cover; display:block; cursor:pointer;
+  border:1px solid var(--vit-line) }
+
+/* Bannière : aperçu — cadre pointillé grisé quand la popup est inactive */
+.contenu.adm-vit .promo-apercu.adm-vit-apercu-inactif { border:1px dashed #b9ab8c;
+  filter:grayscale(.35); opacity:.8 }
+.contenu.adm-vit .adm-vit-entete-vide { background:var(--vit-media) }
+.adm-vit-apercu-visuel { position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:6px; color:#8d8064 }
+.adm-vit-apercu-visuel b { font-size:12px; font-weight:600 }
+.contenu.adm-vit .promo-badge { background:#fff; color:var(--ink); font-size:11px;
+  padding:5px 10px; border-radius:2px; box-shadow:none }
+
+/* Galerie : tuile d'ajout au registre éditorial */
+.contenu.adm-vit .ga-ajout b { text-transform:uppercase; font-size:11px; font-weight:700;
+  letter-spacing:.16em; text-decoration:underline; text-underline-offset:4px }
+.contenu.adm-vit .ga-ajout span { font-family:var(--font-display); font-style:italic;
+  font-size:12.5px; color:var(--vit-doux) }
+
+/* La carte : recherche à gauche, filtres poussés à droite */
+.contenu.adm-vit .carte-outils { justify-content:space-between; align-items:flex-end;
+  margin-bottom:22px }
+.contenu.adm-vit .carte-outils .carnet-search { max-width:340px; flex:1 }
+.contenu.adm-vit .carte-cats-filtre { margin-left:auto; display:flex; gap:22px }
+/* « + prix » : petite mention bas-de-casse, pas un bouton */
+.contenu.adm-vit .prix-btn, .contenu.adm-vit .prix-btn.vide { text-transform:none;
+  letter-spacing:.02em; font-size:12.5px; font-weight:600; border:none; background:none;
+  color:var(--vit-doux) }
+.contenu.adm-vit .prix-btn:hover { color:var(--admin-accent); background:none }
+/* « + Plat » d'en-tête de catégorie : encre, pas bordeaux */
+.contenu.adm-vit .carte-cat-ajout { color:var(--ink); text-decoration:underline;
+  text-underline-offset:4px }
+.contenu.adm-vit .carte-cat-ajout:hover { color:var(--admin-accent) }
+/* Flèches monter/descendre : absentes de la maquette — gardées mais discrètes */
+.contenu.adm-vit .carte-cat-fleches button { border:none; background:none; color:#c6b898;
+  font-size:11px; padding:2px 4px }
+.contenu.adm-vit .carte-cat-fleches button:hover:not(:disabled) { color:var(--ink) }
+
 /* ─ Mobile ─ */
 @media (max-width: 820px) {
+  .contenu.adm-vit .adm-avis-grille { grid-template-columns:1fr }
+  .adm-vit-promo-duo { grid-template-columns:1fr }
+  .contenu.adm-vit .adm-edito { grid-template-columns:1fr }
+  .contenu.adm-vit .carte-cats-filtre { margin-left:0; flex-wrap:wrap; gap:14px }
   .topbar.adm-vit { padding:18px 16px 14px }
   .topbar.adm-vit h1 { font-size:25px }
   .contenu.adm-vit { padding:20px 16px 60px }

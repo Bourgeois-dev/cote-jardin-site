@@ -70,22 +70,26 @@ export default function TabArdoise() {
             champs — composition éditoriale plutôt que formulaire nu. */}
         <div className="bloc">
           <div className="adm-edito">
-            <div className="adm-edito-media">
-              {image ? (
-                <>
+            <div>
+              {/* Maquette : la zone photo (pointillés) et ses deux liens
+                  Remplacer / Retirer posés dessous — plus d'actions en
+                  surimpression. */}
+              <div className="adm-edito-media adm-vit-media">
+                {image ? (
                   <img src={image} alt="" />
-                  <div className="adm-edito-media-actions">
-                    <button className="btn btn-mini btn-ligne" onClick={() => fileRef.current?.click()} disabled={upLoad}>{upLoad ? "Envoi…" : "Remplacer"}</button>
-                    <button className="btn btn-mini btn-danger" onClick={() => setImage("")}>Retirer</button>
-                  </div>
-                </>
-              ) : (
-                <button type="button" className="adm-edito-media-vide" onClick={() => fileRef.current?.click()} disabled={upLoad}>
-                  <b>{upLoad ? "Envoi…" : "Ajouter une photo du plat"}</b>
-                  <span>Facultative — elle coiffe le bloc « Plat du jour » du site.</span>
-                </button>
-              )}
-              <input ref={fileRef} type="file" accept="image/*" onChange={upload} style={{ display: "none" }} />
+                ) : (
+                  <button type="button" className="adm-vit-photo-vide" onClick={() => fileRef.current?.click()} disabled={upLoad}>
+                    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-4 4 3 4-4 5 5"/></svg>
+                    <b>{upLoad ? "Envoi…" : "Photo du plat"}</b>
+                    <span>cliquez pour choisir un fichier</span>
+                  </button>
+                )}
+                <input ref={fileRef} type="file" accept="image/*" onChange={upload} style={{ display: "none" }} />
+              </div>
+              <div className="adm-vit-media-liens">
+                <button className="btn btn-mini btn-ligne" onClick={() => fileRef.current?.click()} disabled={upLoad}>{upLoad ? "Envoi…" : "Remplacer"}</button>
+                <button className="adm-vit-lien danger" onClick={() => setImage("")} disabled={!image}>Retirer</button>
+              </div>
             </div>
             <div>
               <h2 style={{ marginBottom: 4 }}>Contenu de l'ardoise</h2>

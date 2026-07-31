@@ -76,33 +76,33 @@ export default function TabPromo() {
                 <div className="champ"><label>Texte du bouton</label><input value={f.cta_label} onChange={(e) => setF({ ...f, cta_label: e.target.value })} placeholder="Réserver ma place" /></div>
                 <div className="champ"><label>Lien du bouton</label><input value={f.cta_url} onChange={(e) => setF({ ...f, cta_url: e.target.value })} placeholder="#contact ou tel:+33..." /></div>
               </div>
-              {/* La date tenait la moitié de la carte pour dix caractères, et
-                  l'image se retrouvait coincée dans la cellule voisine sans
-                  vignette : chacune retrouve sa place. */}
-              <div className="champ champ-court">
-                <label>Date de l'événement (optionnel)</label>
-                <input type="date" value={f.event_date} onChange={(e) => setF({ ...f, event_date: e.target.value })} />
-                <span className="aide" style={{ fontSize: 11.5 }}>Sans date, le badge affiche simplement « Événement ».</span>
-              </div>
-
-              <div className="champ">
-                <label>Image</label>
-                <input ref={fileRef} type="file" accept="image/*" onChange={uploadImage} style={{ display: "none" }} />
-                {f.image_url ? (
-                  <div className="media-champ">
-                    <img className="media-vignette" src={f.image_url} alt="" />
-                    <div className="media-actions">
+              {/* Maquette : date et image côte à côte — vignette carrée en
+                  pointillés, liens Remplacer / Retirer à sa droite. */}
+              <div className="grid2 adm-vit-promo-duo">
+                <div className="champ">
+                  <label>Date de l'événement · optionnelle</label>
+                  <input type="date" value={f.event_date} onChange={(e) => setF({ ...f, event_date: e.target.value })} />
+                  <span className="aide" style={{ fontSize: 11.5 }}>Sans date, le badge affiche « Événement ».</span>
+                </div>
+                <div className="champ">
+                  <label>Image</label>
+                  <input ref={fileRef} type="file" accept="image/*" onChange={uploadImage} style={{ display: "none" }} />
+                  <div className="adm-vit-media-mini">
+                    {f.image_url ? (
+                      <img className="adm-vit-vignette" src={f.image_url} alt="" onClick={() => fileRef.current?.click()} />
+                    ) : (
+                      <button type="button" className="adm-vit-photo-vide carre" onClick={() => fileRef.current?.click()} disabled={busy}>
+                        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-4 4 3 4-4 5 5"/></svg>
+                        <b>{busy ? "Envoi…" : "Visuel"}</b>
+                        <span>cliquez pour choisir</span>
+                      </button>
+                    )}
+                    <div className="adm-vit-media-liens col">
                       <button className="btn btn-mini btn-ligne" onClick={() => fileRef.current?.click()} disabled={busy}>{busy ? "Envoi…" : "Remplacer"}</button>
-                      {/* Il n'existait aucun moyen de retirer une image déjà posée. */}
-                      <button className="btn btn-mini btn-danger" onClick={() => setF({ ...f, image_url: "" })}>Retirer</button>
+                      <button className="adm-vit-lien danger" onClick={() => setF({ ...f, image_url: "" })} disabled={!f.image_url}>Retirer</button>
                     </div>
                   </div>
-                ) : (
-                  <button type="button" className="media-vide" onClick={() => fileRef.current?.click()} disabled={busy}>
-                    <b>{busy ? "Envoi…" : "Choisir une image"}</b>
-                    <span>Elle s'affiche en haut de la popup, derrière le badge.</span>
-                  </button>
-                )}
+                </div>
               </div>
 
               <div className="form-pied">
@@ -113,10 +113,11 @@ export default function TabPromo() {
 
             <div className="apercu-col">
               <div className="eyebrow" style={{ marginBottom: 12 }}>Aperçu sur le site</div>
-              <div className="promo-apercu">
-                <div className="promo-entete" style={f.image_url ? { backgroundImage: `url(${f.image_url})` } : undefined}>
+              <div className={`promo-apercu${f.is_active ? "" : " adm-vit-apercu-inactif"}`}>
+                <div className={`promo-entete${f.image_url ? "" : " adm-vit-entete-vide"}`} style={f.image_url ? { backgroundImage: `url(${f.image_url})` } : undefined}>
                   <span className="promo-badge">{formatDate(f.event_date)}</span>
                   <span className="promo-fermer">×</span>
+                  {!f.image_url && <span className="adm-vit-apercu-visuel"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-4 4 3 4-4 5 5"/></svg><b>Visuel de la bannière</b></span>}
                 </div>
                 <div className="promo-corps">
                   {f.title && <h3 className="promo-titre">{f.title}</h3>}
@@ -124,7 +125,7 @@ export default function TabPromo() {
                   {f.cta_label && <span className="btn btn-accent promo-cta">{f.cta_label}</span>}
                 </div>
               </div>
-              <div className="desc" style={{ textAlign: "center", marginTop: 10 }}>Mise à jour en direct</div>
+              <div className="desc" style={{ textAlign: "center", marginTop: 10, fontStyle: "italic" }}>{f.is_active ? "Mise à jour en direct" : "Aperçu grisé — la popup est inactive."}</div>
             </div>
           </div>
         </div>
