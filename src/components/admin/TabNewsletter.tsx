@@ -560,17 +560,20 @@ function ChampsBloc({ val, onChange, onUpload }: {
   );
 }
 
-function NouveauForm({ onSaved, initial, cibleUnique }: {
+function NouveauForm({ onSaved, initial, cibleUnique, step, setStep }: {
   onSaved: () => void;
   initial?: { id?: string; template: string; segment: string; subject: string; content: Record<string, string> };
   /** Module Réservation désactivé : un seul ciblage possible, l'étape 2 est retirée. */
   cibleUnique: boolean;
+  /* L'étape est portée par le parent : le fil « 1 · Contenu / 2 · Destinataires /
+     3 · Envoi » vit dans l'en-tête de page, au-dessus de ce composant. */
+  step: 1 | 2 | 3;
+  setStep: (n: 1 | 2 | 3) => void;
 }) {
   const dirty = useDirty();
   // Éditeur ouvert = travail en cours : protège contre la perte (changement
   // d'onglet, fermeture navigateur). Nettoyé au démontage (sauvegarde ou sortie).
   useEffect(() => { dirty.set(true); return () => dirty.set(false); }, []); // eslint-disable-line
-  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [template] = useState(initial?.template || "blocs");
   // Sans module Réservation, `customers` reste vide : tous les segments sauf
   // « optin » seraient à 0. On force le seul ciblage qui a du sens.
@@ -801,38 +804,27 @@ function NouveauForm({ onSaved, initial, cibleUnique }: {
   }
 
   return (
-    <div className="bloc" style={{ marginBottom: 28 }}>
-      <div className="bloc-tete">
-        <h2>Nouvelle campagne</h2>
-        <div style={{ display: "flex", gap: 6 }}>
-          {/* L'étape 2 (ciblage) disparaît du fil quand elle est sautée : les
-              pastilles sont renumérotées 1-2 pour ne pas afficher un « 3 » orphelin. */}
-          {(cibleUnique ? [1, 3] : [1, 2, 3]).map((n, i) => (
-            <span key={n} style={{ width: 28, height: 28, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700,
-              background: step >= n ? "var(--admin-accent)" : "var(--line)", color: step >= n ? "#fff" : "var(--ink-soft)" }}>{i + 1}</span>
-          ))}
-        </div>
-      </div>
+    <div className="nl-editeur">
 
       {/* Étape 1 : Composition libre par blocs */}
       {step === 1 && (
         <div className="news-editor-grid">
           <div>
-            <p className="desc">Composez votre campagne avec des blocs. Aucun format imposé : ajoutez, réordonnez, supprimez.</p>
-
             {/* Logo (une fois pour toutes les campagnes) */}
-            <div style={{ display: "flex", alignItems: "center", gap: 14, background: "var(--cream)",
-              border: "1px solid var(--line)", borderRadius: 10, padding: "12px 16px", marginBottom: 18 }}>
-              {logoUrl
-                ? <img src={logoUrl} alt="Logo" style={{ height: 36, maxWidth: 120, objectFit: "contain" }} />
-                : <span style={{ fontSize: 13, color: "var(--ink-soft)", fontStyle: "italic" }}>Aucun logo défini</span>
-              }
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>Logo des newsletters</div>
-                <div style={{ fontSize: 12, color: "var(--ink-soft)" }}>Utilisé sur toutes les campagnes — à définir une seule fois.</div>
-              </div>
-              <label className="btn btn-ligne btn-mini" style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: upLoad ? "default" : "pointer", opacity: upLoad ? .6 : 1, whiteSpace: "nowrap" }}>
-                📷 {logoUrl ? "Changer" : "Ajouter"}
+            {/* Le logo est un réglage de la maison, pas de la campagne : il
+                s'annonce en tête, en pastille, et se change d'un lien. */}
+            <div className="nl-logo-ligne">
+              <span className="nl-logo-vignette">
+                {logoUrl
+                  ? <img src={logoUrl} alt="Logo" />
+                  : <span>{(restoName || "?").trim().charAt(0).toUpperCase()}</span>}
+              </span>
+              <span className="nl-logo-txt">
+                <b>Logo des newsletters</b>
+                <span>Utilisé sur toutes les campagnes — à définir une seule fois.</span>
+              </span>
+              <label className="adm-vit-lien accent" style={{ cursor: upLoad ? "default" : "pointer", opacity: upLoad ? .6 : 1, whiteSpace: "nowrap" }}>
+                {upLoad ? "Envoi…" : logoUrl ? "Changer" : "Ajouter"}
                 <input type="file" accept="image/*" onChange={uploadLogo} disabled={upLoad} style={{ display: "none" }} />
               </label>
             </div>
@@ -882,12 +874,13 @@ function NouveauForm({ onSaved, initial, cibleUnique }: {
             )}
 
             {/* ── Éditeur de blocs ── */}
-            <div style={{ marginTop: 22 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
-                <b style={{ fontSize: 14, color: "var(--ink)" }}>Contenu ({blocs.length} bloc{blocs.length > 1 ? "s" : ""})</b>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button className="btn btn-ligne btn-mini" onClick={() => ajouterBloc("pleine_largeur")}>+ Pleine largeur</button>
-                  <button className="btn btn-ligne btn-mini" onClick={() => ajouterBloc("deux_colonnes")}>+ 2 colonnes</button>
+            <div>
+              <div className="nl-contenu-tete">
+                <h2>Contenu</h2>
+                <span className="adm-vit-nb">{blocs.length} bloc{blocs.length > 1 ? "s" : ""}</span>
+                <div className="nl-contenu-actions">
+                  <button className="adm-vit-lien accent" onClick={() => ajouterBloc("pleine_largeur")}>+ Pleine largeur</button>
+                  <button className="adm-vit-lien accent" onClick={() => ajouterBloc("deux_colonnes")}>+ 2 colonnes</button>
                 </div>
               </div>
 
@@ -898,23 +891,23 @@ function NouveauForm({ onSaved, initial, cibleUnique }: {
               )}
 
               {blocs.map((b, i) => (
-                <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 14, marginBottom: 12, background: "#fff" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                    <b style={{ fontSize: 13, color: "var(--ink)" }}>
-                      {b.type === "deux_colonnes" ? "▭▭ Deux colonnes" : "▬ Pleine largeur"}
-                    </b>
-                    <span style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
-                      <button className="btn btn-mini btn-ligne" onClick={() => deplacerBloc(i, -1)} disabled={i === 0} title="Monter">▲</button>
-                      <button className="btn btn-mini btn-ligne" onClick={() => deplacerBloc(i, 1)} disabled={i === blocs.length - 1} title="Descendre">▼</button>
-                      <button className="btn btn-mini btn-ligne" onClick={() => dupliquerBloc(i)} title="Dupliquer ce bloc">⧉</button>
-                      <button className="btn btn-mini btn-danger" onClick={() => supprimerBloc(i)} title="Supprimer">×</button>
+                <div key={i} className="nl-bloc">
+                  <div className="nl-bloc-tete">
+                    <span className="nl-bloc-type">
+                      Bloc — {b.type === "deux_colonnes" ? "deux colonnes" : "pleine largeur"}
+                    </span>
+                    <span className="nl-bloc-actions">
+                      <button className="adm-vit-lien" onClick={() => deplacerBloc(i, -1)} disabled={i === 0} title="Monter" aria-label="Monter le bloc">↑</button>
+                      <button className="adm-vit-lien" onClick={() => deplacerBloc(i, 1)} disabled={i === blocs.length - 1} title="Descendre" aria-label="Descendre le bloc">↓</button>
+                      <button className="adm-vit-lien" onClick={() => dupliquerBloc(i)}>Dupliquer</button>
+                      <button className="adm-vit-lien danger" onClick={() => supprimerBloc(i)}>Retirer</button>
                     </span>
                   </div>
 
                   {b.type === "pleine_largeur" ? (
                     // Même habillage que les colonnes (fond crème, coins arrondis) :
                     // les deux types de blocs se lisent ainsi de la même façon.
-                    <div style={{ background: "var(--cream)", borderRadius: 8, padding: 10 }}>
+                    <div>
                       <ChampsBloc
                         val={b}
                         onChange={(champs) => majBloc(i, champs)}
@@ -922,10 +915,10 @@ function NouveauForm({ onSaved, initial, cibleUnique }: {
                       />
                     </div>
                   ) : (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 40 }}>
                       {[0, 1].map((n) => (
-                        <div key={n} style={{ background: "var(--cream)", borderRadius: 8, padding: 10 }}>
-                          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".08em", color: "var(--ink-soft)", marginBottom: 8 }}>
+                        <div key={n}>
+                          <div className="nl-bloc-type" style={{ marginBottom: 10 }}>
                             Colonne {n + 1}
                           </div>
                           <ChampsBloc
@@ -1147,6 +1140,9 @@ export default function TabNewsletter() {
   const [campagnes, setCampagnes] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<"liste" | "nouveau">("liste");
+  /* L'étape de l'éditeur vit ici et non dans NouveauForm : le fil « 1 · Contenu /
+     2 · Destinataires / 3 · Envoi » s'affiche dans l'en-tête de page. */
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [filtre, setFiltre] = useState<"toutes" | "draft" | "scheduled" | "sent">("toutes");
   const [dateDebut, setDateDebut] = useState("");
   const [dateFin, setDateFin] = useState("");
@@ -1175,11 +1171,13 @@ export default function TabNewsletter() {
 
   function dupliquer(c: Campaign) {
     setPrefill({ template: c.template, segment: c.segment, subject: c.subject, content: { ...c.content } });
+    setStep(1);
     setMode("nouveau");
   }
 
   function reprendre(c: Campaign) {
     setPrefill({ id: c.id, template: c.template, segment: c.segment, subject: c.subject, content: { ...c.content } });
+    setStep(1);
     setMode("nouveau");
   }
 
@@ -1363,34 +1361,58 @@ function dateRef(c: Campaign): string {
   const nbSent      = campagnesGrille.filter((c) => c.status === "sent").length;
 
   return (
-    <div className="contenu">
-      <div className="topbar">
+    <>
+      {/* Deux en-têtes distincts : la liste des campagnes, ou l'éditeur. Dans
+          l'éditeur, le fil des étapes remplace les boutons — c'est le repère
+          dont on a besoin à cet endroit. */}
+      <div className="topbar adm-vit">
         <div>
-          <h1>Newsletter</h1>
-          <p className="sous">Campagnes email — {campagnesGrille.length} au total</p>
+          <span className="adm-vit-eyebrow">Newsletter</span>
+          <h1>{mode === "nouveau" ? "Nouvelle campagne" : "Newsletter"}</h1>
+          <div className="sous">{mode === "nouveau"
+            ? "Composez avec des blocs — aucun format imposé : ajoutez, réordonnez, supprimez."
+            : `Campagnes email — ${campagnesGrille.length} au total`}</div>
         </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {mode === "liste" && (
-            <button className="btn btn-ligne" onClick={nouveauDossier}>📁 + Nouveau dossier</button>
+        <div className="adm-vit-topbar-actions">
+          {mode === "nouveau" ? (
+            <>
+              <div className="nl-fil">
+                {/* L'étape 2 (ciblage) disparaît du fil quand elle est sautée :
+                    les repères sont renumérotés pour ne pas afficher un « 3 »
+                    orphelin. Ils sont cliquables vers l'arrière seulement — on
+                    ne saute pas une étape qu'on n'a pas remplie. */}
+                {(cibleUnique ? ([1, 3] as const) : ([1, 2, 3] as const)).map((n, i) => (
+                  <button key={n} type="button"
+                    className={`nl-fil-etape${step === n ? " actif" : ""}`}
+                    disabled={n > step}
+                    onClick={() => setStep(n)}>
+                    {i + 1} · {n === 1 ? "Contenu" : n === 2 ? "Destinataires" : "Envoi"}
+                  </button>
+                ))}
+              </div>
+              <button className="adm-vit-lien" onClick={async () => {
+                const ok = await confirmDirty({ titre: "Quitter la campagne ?", message: "Les modifications non sauvegardées en brouillon seront perdues.", confirmer: "Quitter", annuler: "Rester", danger: true });
+                if (!ok) return;
+                setPrefill(undefined); setStep(1); setMode("liste");
+              }}>← Retour à la liste</button>
+            </>
+          ) : (
+            <>
+              <button className="adm-vit-lien" onClick={nouveauDossier}>+ Nouveau dossier</button>
+              <button className="btn btn-accent" onClick={() => { setPrefill(undefined); setStep(1); setMode("nouveau"); }}>
+                + Nouvelle campagne
+              </button>
+            </>
           )}
-          <button className="btn btn-accent" onClick={async () => {
-            if (mode === "nouveau") {
-              const ok = await confirmDirty({ titre: "Quitter la campagne ?", message: "Les modifications non sauvegardées en brouillon seront perdues.", confirmer: "Quitter", annuler: "Rester", danger: true });
-              if (!ok) return;
-            }
-            setPrefill(undefined); setMode(mode === "nouveau" ? "liste" : "nouveau");
-          }}>
-            {mode === "nouveau" ? "← Retour à la liste" : "+ Nouvelle campagne"}
-          </button>
         </div>
       </div>
 
-      <div className="contenu" style={{ paddingTop: 20 }}>
+      <div className={`contenu${mode === "nouveau" ? " adm-vit" : ""}`}>
 
         {mode === "nouveau" && (
           <NouveauForm key={prefill?.id || (prefill ? "dup" : "neuf")} initial={prefill}
-            cibleUnique={cibleUnique}
-            onSaved={() => { setPrefill(undefined); setMode("liste"); charger(); }} />
+            cibleUnique={cibleUnique} step={step} setStep={setStep}
+            onSaved={() => { setPrefill(undefined); setStep(1); setMode("liste"); charger(); }} />
         )}
 
         {mode === "liste" && (
@@ -1491,7 +1513,7 @@ function dateRef(c: Campaign): string {
                     <div style={{ fontSize: 34, marginBottom: 10 }}>📮</div>
                     <p style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 6 }}>Aucune campagne pour l'instant</p>
                     <p className="vide" style={{ marginBottom: 16 }}>Annoncez un événement, une nouvelle carte ou une actualité à vos inscrits.</p>
-                    <button className="btn btn-accent" onClick={() => { setPrefill(undefined); setMode("nouveau"); }}>
+                    <button className="btn btn-accent" onClick={() => { setPrefill(undefined); setStep(1); setMode("nouveau"); }}>
                       + Créer ma première campagne
                     </button>
                   </>
@@ -1603,6 +1625,6 @@ function dateRef(c: Campaign): string {
           </>
         )}
       </div>
-    </div>
+    </>
   );
 }

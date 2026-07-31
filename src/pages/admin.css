@@ -2419,6 +2419,90 @@ a.cli-coord-val:hover { text-decoration:underline }
   .adm-acces-ajout .champ { flex:1 1 100% }
 }
 
+/* ══ NEWSLETTER — éditeur de campagne ════════════════════════════════════
+   Le fil des étapes vit dans l'en-tête de page ; l'éditeur perd sa carte
+   blanche et adopte les conventions éditoriales (filets, champs soulignés,
+   libellés en petites capitales). L'aperçu de l'email reste une maquette de
+   message et garde donc son propre registre. */
+
+/* ─ Fil des étapes, dans l'en-tête ─ */
+.nl-fil { display:flex; align-items:center; gap:26px }
+.nl-fil-etape { background:none; border:none; padding:2px 0; cursor:pointer;
+  font-family:var(--font-body); text-transform:uppercase; font-size:10px;
+  font-weight:600; letter-spacing:.14em; color:var(--vit-doux) }
+.nl-fil-etape:hover:not(:disabled) { color:var(--ink) }
+.nl-fil-etape.actif { color:var(--ink); font-weight:700;
+  box-shadow:inset 0 -1px 0 var(--ink) }
+.nl-fil-etape:disabled { cursor:default; color:#cdc2ae }
+
+/* ─ L'éditeur n'est plus une carte ─ */
+.contenu.adm-vit .nl-editeur { background:none; border:none; border-radius:0;
+  padding:0; margin-bottom:0 }
+.contenu.adm-vit .news-editor-grid { grid-template-columns:minmax(0,1fr) 400px; gap:56px }
+
+/* ─ Bandeau du logo ─ */
+.nl-logo-ligne { display:flex; align-items:center; gap:20px; padding:0 0 26px;
+  border-bottom:1px solid var(--vit-line); margin-bottom:28px }
+.nl-logo-vignette { width:52px; height:52px; flex-shrink:0; border-radius:50%;
+  border:1px solid var(--vit-line); background:var(--vit-card); display:flex;
+  align-items:center; justify-content:center; overflow:hidden }
+.nl-logo-vignette img { max-width:100%; max-height:100%; object-fit:contain }
+.nl-logo-vignette span { font-family:var(--font-display); font-size:17px;
+  color:var(--vit-doux) }
+.nl-logo-txt { flex:1; min-width:0 }
+.nl-logo-txt b { display:block; font-size:13px; font-weight:700 }
+.nl-logo-txt span { display:block; font-size:12px; color:var(--vit-doux); margin-top:2px }
+
+/* ─ Barre d'outils au-dessus d'un champ ─ */
+.contenu.adm-vit .nl-outils { gap:12px; margin-bottom:0; align-items:baseline }
+.contenu.adm-vit .nl-outils label { font-size:10px; letter-spacing:.13em;
+  color:var(--vit-label); text-transform:uppercase; font-weight:700 }
+.contenu.adm-vit .nl-compteur { font-size:11px; color:var(--vit-doux) }
+.contenu.adm-vit .nl-lien { background:none; border:none; border-radius:0; padding:0;
+  text-transform:uppercase; font-size:10px; letter-spacing:.13em; font-weight:600;
+  color:var(--admin-accent) }
+.contenu.adm-vit .nl-lien:hover { background:none; border:none; color:var(--admin-accent-dark) }
+.contenu.adm-vit .nl-lien.actif { background:none; border:none; color:var(--ink);
+  box-shadow:inset 0 -1px 0 var(--ink) }
+
+/* ─ Titre de la zone de blocs ─ */
+.nl-contenu-tete { display:flex; align-items:baseline; gap:14px; margin:44px 0 18px;
+  padding-top:34px; border-top:1px solid var(--vit-line) }
+.contenu.adm-vit .nl-contenu-tete h2 { font-family:var(--font-display); font-weight:500;
+  font-size:24.5px }
+.nl-contenu-tete .adm-vit-nb { font-family:var(--font-body); font-size:12.5px }
+.nl-contenu-actions { margin-left:auto; display:flex; gap:22px }
+
+/* ─ Carte de bloc ─ */
+.contenu.adm-vit .nl-bloc { background:var(--vit-card); border:1px solid var(--vit-line);
+  border-radius:0; padding:22px 26px; margin-bottom:22px }
+.nl-bloc-tete { display:flex; align-items:center; gap:20px; padding-bottom:16px;
+  border-bottom:1px solid var(--vit-line); margin-bottom:22px }
+.nl-bloc-type { text-transform:uppercase; font-size:10px; font-weight:600;
+  letter-spacing:.14em; color:var(--vit-label) }
+.nl-bloc-actions { margin-left:auto; display:flex; align-items:center; gap:20px }
+
+/* ─ Mise en forme (alignement, couleurs) ─ */
+.contenu.adm-vit .nl-mef { gap:44px; margin:22px 0 18px }
+.contenu.adm-vit .nl-mef-lab { font-size:10px; letter-spacing:.13em;
+  color:var(--vit-label); text-transform:uppercase; font-weight:700 }
+.contenu.adm-vit .nl-mef .nl-liens { gap:18px }
+.contenu.adm-vit .nl-pastille { width:20px; height:20px; border:1px solid var(--vit-line) }
+
+/* ─ Colonne d'aperçu ─ */
+.nl-apercu-tete { display:flex; align-items:baseline; gap:16px; margin-bottom:14px }
+.nl-apercu-lab { text-transform:uppercase; font-size:10px; font-weight:600;
+  letter-spacing:.14em; color:var(--vit-label) }
+.nl-apercu-bascule { margin-left:auto; display:flex; gap:16px }
+
+@media (max-width: 1100px) {
+  .contenu.adm-vit .news-editor-grid { grid-template-columns:1fr; gap:28px }
+}
+@media (max-width: 820px) {
+  .nl-fil { gap:14px }
+  .nl-contenu-actions { gap:14px }
+}
+
 /* Sur mobile, la règle de base (≤700 px) fait passer le nom sur sa propre ligne
    et remet le prix à gauche. Les sélecteurs .contenu.adm-vit étant plus
    spécifiques, ils l'emportaient et cassaient cette mise en page : on rend la
