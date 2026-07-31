@@ -407,11 +407,16 @@ function ChoixTeinte({ label, valeur, defaut, onChange }: {
     <div className="nl-mef-groupe">
       <span className="nl-mef-lab">{label}</span>
       <div className="nl-liens" style={{ marginTop: 0 }}>
+        {/* Le nom de la teinte quittait beaucoup de place pour une information
+            que la pastille donne déjà. Il reste en infobulle et en libellé
+            accessible : une couleur seule ne s'annonce pas à un lecteur
+            d'écran, et la sélection ne peut pas reposer que sur la teinte. */}
         {TEINTES.map((t) => (
-          <button key={t.cle} type="button"
-            className={`nl-lien${(valeur || defaut) === t.cle ? " actif" : ""}`}
+          <button key={t.cle} type="button" title={t.label} aria-label={t.label}
+            aria-pressed={(valeur || defaut) === t.cle}
+            className={`nl-teinte${(valeur || defaut) === t.cle ? " actif" : ""}`}
             onClick={() => onChange(t.cle)}>
-            <span className="nl-pastille" style={{ background: t.css }} />{t.label}
+            <span className="nl-pastille" style={{ background: t.css }} />
           </button>
         ))}
       </div>
