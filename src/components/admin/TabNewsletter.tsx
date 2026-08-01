@@ -3,6 +3,7 @@ import { supabase, messageUpload } from "../../lib/supabase";
 import { useConfirm } from "./Confirm";
 import { useDirty } from "./Dirty";
 import FicheCampagne, { type EventStats } from "./FicheCampagne";
+import AssistantNewsletter, { type Redaction } from "./AssistantNewsletter";
 
 // Récupère les en-têtes d'appel aux edge functions AVEC le JWT de session admin.
 // send-newsletter vérifie is_admin() sous l'identité de ce token : il FAUT donc
@@ -642,6 +643,46 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep }: {
   const [upErr, setUpErr] = useState("");
   const [upInfo, setUpInfo] = useState("");  // retour positif : image optimisée
   const [manqueEtape1, setManqueEtape1] = useState("");  // ce qui bloque le passage à l'étape 2
+
+  // ── Assistant de campagne ───────────────────────────────────────────────
+  // L'assistant PROPOSE, ce composant DISPOSE : il applique l'objet ou la
+  // rédaction complète dans l'état de l'éditeur, avec confirmation quand du
+  // contenu serait écrasé. Le lien des boutons est le même que celui des
+  // blocs neufs (page réservation du site).
+  const confirmIa = useConfirm();
+  function appliquerObjetIa(s: string) {
+    setSubject(s.slice(0, 150));
+    if (manqueEtape1) setManqueEtape1("");
+  }
+  async function appliquerRedactionIa(r: Redaction) {
+    const aDuContenu = blocs.some((b) =>
+      b.type === "deux_colonnes"
+        ? b.colonnes.some((c) => c.titre || c.texte || c.image)
+        : !!(b.titre || b.texte || b.image));
+    if (aDuContenu || subject.trim()) {
+      const ok = await confirmIa({
+        titre: "Utiliser cette rédaction ?",
+        message: "L'objet, l'aperçu et les blocs actuels seront remplacés par la proposition de l'assistant. Vous pourrez ensuite tout retoucher.",
+        confirmer: "Remplacer",
+      });
+      if (!ok) return;
+    }
+    const base = (import.meta.env.VITE_SITE_URL || "").replace(/\/+$/, "");
+    const cta = base ? `${base}/#reserver` : "";
+    if (r.objet) setSubject(r.objet.slice(0, 150));
+    setContent((c: any) => ({
+      ...c,
+      preheader: (r.preheader || "").slice(0, 150),
+      blocs: r.blocs.map((b) => ({
+        type: "pleine_largeur" as const,
+        ...(b.titre ? { titre: b.titre } : {}),
+        texte: b.texte,
+        ...(cta ? { cta_url: cta } : {}),
+        ...(b.cta_label && cta ? { cta_label: b.cta_label } : {}),
+      })),
+    }));
+    setManqueEtape1("");
+  }
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("09:00");
   const [sendNow, setSendNow] = useState(false);
@@ -834,6 +875,9 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep }: {
                 <input type="file" accept="image/*" onChange={uploadLogo} disabled={upLoad} style={{ display: "none" }} />
               </label>
             </div>
+
+            <AssistantNewsletter subject={subject}
+              onObjet={appliquerObjetIa} onRedaction={appliquerRedactionIa} />
 
             <div className="champ">
               <div className="nl-outils">
