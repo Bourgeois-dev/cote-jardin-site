@@ -224,3 +224,60 @@ Le segment et sa façon de compter les destinataires sont écrits à trois endro
 - [ ] Envoyer un test : vérifier que le compteur de destinataires correspond.
 - [ ] Vérifier que `/annuler` et `/widget-reservation` renvoient bien sur le site
       (route `*` → `<Site />`).
+
+---
+
+## 9. Correctif du 01/08 — `admin.css` (à appliquer par-dessus la première livraison)
+
+### Le symptôme
+
+Sidebar sans fond (texte blanc sur crème, illisible), boutons d'accent invisibles,
+interrupteurs délavés dans l'onglet Horaires.
+
+### La cause
+
+Le script qui a élagué `admin.css` rattachait chaque commentaire au sélecteur qui
+le suit. Or le bandeau récapitulatif en tête de fichier énumère les sections —
+dont `.ps-*` et `.tp-*`. Le bloc `:root` qui suivait immédiatement ce bandeau a
+donc été jugé « mort » et supprimé avec lui.
+
+Résultat : `--admin-accent`, `--admin-ink`, `--admin-accent-light`, `--or`,
+`--ok`, `--attente`, `--annule`, `--a06`/`--a08`/`--a12`/`--a25` — **toutes les
+variables de la charte admin** — n'étaient plus déclarées. Une seule règle
+perdue, mais celle qui gouvernait la couleur de toute l'interface.
+
+### Le correctif
+
+`admin.css` a été refait **depuis l'original**, avec un parseur qui :
+
+1. traite les commentaires comme des jetons autonomes, jamais comme une partie
+   du sélecteur qui suit ;
+2. ne supprime jamais une règle sans classe (`:root`, `*`, `html`, `body`) ;
+3. découpe les sélecteurs sur les virgules et n'élague que les parties mortes,
+   au lieu de supprimer la règle entière ;
+4. supprime une règle composée dès qu'**une** de ses classes a disparu
+   (`.ps-service-bloc.actif` ne peut plus rien matcher), là où la version
+   précédente la gardait parce que `.actif` existe toujours.
+
+Fichier : `src/pages/admin.css` — 2 786 → 2 113 lignes.
+
+### Contrôles ajoutés
+
+- Comparaison règle par règle avec l'original : **0 suppression injustifiée**
+  (chaque règle retirée n'a que des classes disparues).
+- Aucune règle conservée n'a vu son corps modifié.
+- Aucune variable `--admin-*` utilisée sans déclaration ni valeur de repli.
+- Aucune classe encore présente dans le TSX n'a perdu ses règles.
+- Aucune classe `.ps-` / `.tp-` / `.cli-` ne subsiste.
+
+> Les classes `.fait` et `.libre` apparaissent comme « utilisées » si on extrait
+> naïvement les chaînes du TSX : c'est le placeholder « Sans gluten, fait
+> maison… » de l'onglet Ardoise. Leurs seules règles étaient
+> `.etapes i.fait` (widget) et `.ps-table.libre` (plan de service) — leur
+> suppression est correcte.
+
+### Ce qu'il faut faire
+
+Remplacer **uniquement** `src/pages/admin.css`. Aucun autre fichier ne change,
+aucune action base de données. Si la première livraison n'a pas encore été
+poussée, cette version est déjà celle du zip.

@@ -1,4 +1,40 @@
+/* ==========================================================================
+   admin.css — La Table Digitale
+   Architecture modulaire : 1 préfixe = 1 onglet.
+   Un changement dans une section ne peut pas casser une autre.
 
+   01. Variables & reset   :root, *
+   02. Layout              .app .side .main .topbar .contenu
+   03. Composants partagés .bloc .stat .champ .toggle .btn .modal
+   04. Login               .login-*
+   05. Tableau de bord     .semaine-* .src-* .canal-*
+   06. Horaires            .tab-horaires .creneau-edit .ferm-*
+   07. Autres onglets      ardoise galerie carte bannière
+   08. Vitrine             .adm-vit — refonte éditoriale des onglets vitrine
+   09. Newsletter          .nl-*
+   10. Mobile ≤ 820px      regroupé en fin de fichier
+
+   Retiré au repositionnement de l'offre (retrait du module Réservation) :
+   les sections .ps-* (plan de service), .tp-* (plan de salle), .cli-*
+   (CRM clients) et le widget de réservation (.panneau .creno .etapes).
+   ========================================================================== */
+
+
+/* ── 01. VARIABLES & RESET ─────────────────────────────────────────────── */
+:root {
+  --admin-accent:       #7a1f24;
+  --admin-accent-dark:  #5c161a;
+  --admin-accent-light: #b8636a;
+  --admin-ink:          #1d1a16;
+  --or:                 #c8872a;
+  --ok:                 #3e7d5a;
+  --attente:            #c18a2e;
+  --annule:             #a3433a;
+  --a06: rgba(122,31,36,.06);
+  --a08: rgba(122,31,36,.08);
+  --a12: rgba(122,31,36,.12);
+  --a25: rgba(122,31,36,.25);
+}
 *, *::before, *::after { box-sizing: border-box }
 
 
@@ -136,10 +172,10 @@ tr:last-child td { border-bottom:none }
 .champ { margin-bottom:14px }
 .champ label { display:block; font-size:12px; font-weight:700; text-transform:uppercase;
   letter-spacing:.03em; margin-bottom:5px; color:var(--ink) }
-.champ input,.champ select,.champ textarea { width:100%; padding:10px 12px;
+.champ input, .champ select, .champ textarea { width:100%; padding:10px 12px;
   border:1px solid var(--line); border-radius:8px; font-family:var(--font-body);
   font-size:15px; background:#fff; color:var(--ink) }
-.champ input:focus,.champ select:focus,.champ textarea:focus { outline:none; border-color:var(--admin-accent) }
+.champ input:focus, .champ select:focus, .champ textarea:focus { outline:none; border-color:var(--admin-accent) }
 /* Texte d'aide sous un champ. La classe était utilisée dans plusieurs onglets
    sans exister dans la feuille : l'aide s'affichait collée à l'input, à la
    taille du corps de texte. */
@@ -194,20 +230,16 @@ tr:last-child td { border-bottom:none }
 /* Boutons */
 .btn { display:inline-block; border:none; cursor:pointer; text-decoration:none;
   font-family:var(--font-body); font-weight:600; font-size:14px; padding:10px 18px; border-radius:8px; transition:.13s }
-.app .btn-accent,.login-wrap .btn-accent { background:var(--admin-accent); color:#fff }
-.app .btn-accent:hover,.login-wrap .btn-accent:hover { background:var(--admin-accent-dark) }
+.app .btn-accent, .login-wrap .btn-accent { background:var(--admin-accent); color:#fff }
+.app .btn-accent:hover, .login-wrap .btn-accent:hover { background:var(--admin-accent-dark) }
 
 /* Focus-visible : app.css (partagé site+admin) définit un outline vert (--accent,
    charte du site). Dans l'ADMIN, on le repasse en bordeaux (--admin-accent). Couvre
    les 3 scopes admin : .app (connecté), .login-wrap (login) et .modal-in (modales,
    rendues hors .app par le provider). Le site conserve son focus vert. */
-.app :focus-visible,
-.login-wrap :focus-visible,
-.modal-in :focus-visible { outline-color:var(--admin-accent) }
+.app :focus-visible, .login-wrap :focus-visible, .modal-in :focus-visible { outline-color:var(--admin-accent) }
 /* Bordure de focus des champs de la modale (style inline sans classe .champ) */
-.modal-in input:focus,
-.modal-in textarea:focus,
-.modal-in select:focus { outline:none; border-color:var(--admin-accent); box-shadow:0 0 0 2px var(--a12) }
+.modal-in input:focus, .modal-in textarea:focus, .modal-in select:focus { outline:none; border-color:var(--admin-accent); box-shadow:0 0 0 2px var(--a12) }
 .btn-ligne { background:#fff; border:1px solid var(--line); color:var(--ink) }
 .btn-ligne:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
 .btn-mini { font-size:12.5px; padding:5px 10px; border-radius:6px }
@@ -331,9 +363,6 @@ tr:last-child td { border-bottom:none }
 .crea-legende { display:flex; flex-wrap:wrap; gap:24px; margin-top:12px; font-size:13px; padding-top:12px; border-top:1px solid var(--line) }
 
 
-.zone-onglet.fermee { opacity:.55 }
-.zone-onglet.fermee::after { content:" · fermée"; font-size:10px; font-weight:600; color:var(--annule) }
-
 /* ============ Affiche QR à imprimer (onglet Contacts) ============ */
 .qr-editeur { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin:12px 0 18px }
 .qr-champ { display:flex; flex-direction:column; gap:5px }
@@ -420,14 +449,20 @@ tr:last-child td { border-bottom:none }
 .ct-filtre.actif .ct-filtre-nb { background:rgba(255,255,255,.2); color:#fff }
 @media (max-width: 640px) {
   .ct-lien-nom { min-width:0; width:100% }}
+
+
 @keyframes psPulsePlateau {
   0%,100% { stroke-width:3 }
   50%     { stroke-width:4.5 }
 }
+
+/* Contenu texte superposé au plateau */
+
+
 .plan-vide { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); font-size:14px; font-style:italic; text-align:center; padding:20px }
 
 
-/* ── 08. HORAIRES ──────────────────────────────────────────────────────── */
+/* ── 06. HORAIRES ──────────────────────────────────────────────────────── */
 .tab-horaires { width:100%; border-collapse:collapse; font-size:14px }
 .tab-horaires thead th { font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase;
   color:var(--ink-soft); padding:6px 12px 10px; text-align:left; border-bottom:2px solid var(--line) }
@@ -440,16 +475,11 @@ tr:last-child td { border-bottom:none }
 .creneau-edit input[type=time]:focus { outline:none; border-color:var(--admin-accent); box-shadow:0 0 0 2px var(--a12) }
 .creneau-edit span { color:var(--ink-soft); font-size:13px; flex-shrink:0 }
 
-.client-item.actif { border-color:var(--admin-accent); box-shadow:0 0 0 1px var(--admin-accent) }
 
 .carnet-search { flex:none; width:100%; padding:9px 14px; border:1px solid var(--line); border-radius:8px; font-family:var(--font-body); font-size:14px }
 .carnet-search:focus { outline:none; border-color:var(--admin-accent) }
 
-.panneau.ouvert { transform:translateY(0) }
-.panneau .sous { font-size:13px; color:var(--ink-soft); margin-bottom:18px }
-.etapes i.fait { background:var(--accent) }
-.creno.choisi { background:var(--accent); border-color:var(--accent); color:#fff }
-.creno.complet { text-decoration:line-through; color:var(--ink-soft) }
+
 .alerte { background:#fbeee9; border:1px solid #e8c4b8; color:#9e5340; border-radius:6px; padding:12px 14px; font-size:13.5px; margin:12px 0 }
 .recap { background:var(--cream); border-radius:6px; padding:10px 14px; font-weight:600; font-size:14px; margin-bottom:16px }
 .pan-actions { display:flex; gap:10px; margin-top:16px }
@@ -461,7 +491,7 @@ tr:last-child td { border-bottom:none }
   display:flex; align-items:center; justify-content:center; margin:0 auto 14px; font-size:28px; color:#fff }
 
 
-/* ── 11. AUTRES ONGLETS ─────────────────────────────────────────────────── */
+/* ── 07. AUTRES ONGLETS ─────────────────────────────────────────────────── */
 /* Ardoise — même patron que Bannière promo : carte blanche, aperçu à droite */
 /* Champ média (photo du plat, image de la bannière) : même composant dans les
    deux onglets. Vignette + actions quand une image existe, zone d'appel en
@@ -522,8 +552,8 @@ tr:last-child td { border-bottom:none }
 .rs-tester { color:var(--admin-accent); text-decoration:none; font-weight:700 }
 .rs-tester:hover { text-decoration:underline }
 
-/* Réglages « Site & accès » : sections nommées, titre + description au-dessus
-   d'un groupe d'interrupteurs. */
+/* Réglages « Site & accès » : sections nommées, titre + description
+   au-dessus d'un groupe d'interrupteurs. */
 .reglages-section { border-top:1px solid var(--line); margin-top:22px; padding-top:18px }
 .reglages-section:first-of-type { border-top:none; margin-top:0; padding-top:0 }
 .reglages-titre { font-size:12px; font-weight:700; text-transform:uppercase;
@@ -626,7 +656,10 @@ tr:last-child td { border-bottom:none }
 
 /* Bannière promo — garde var(--accent) pour refléter le rendu site */
 .promo-apercu .promo-entete { background:var(--accent) }
-.puce.active { background:var(--admin-accent); border-color:var(--admin-accent); color:#fff }
+
+
+/* ── CLASSES MANQUANTES (ajoutées après refactor) ─────────────────────── */
+
 
 /* Barre de répartition des canaux (en ligne / téléphone) dans TabTableau */
 .canal-barre { height:10px; border-radius:99px; overflow:hidden; display:flex; margin-bottom:10px; background:var(--line) }
@@ -654,9 +687,7 @@ tr:last-child td { border-bottom:none }
 
 /* ── TabSocial — inputs URL réseaux sociaux ────────────────────────────── */
 /* Les inputs dans ligne-toggle n'ont pas de classe .champ — style global */
-.ligne-toggle input[type=text],
-.ligne-toggle input[type=url],
-.ligne-toggle input:not([type=checkbox]) {
+.ligne-toggle input[type=text], .ligne-toggle input[type=url], .ligne-toggle input:not([type=checkbox]) {
   width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:8px;
   font-family:var(--font-body); font-size:14px; background:#fff; color:var(--ink);
   transition:border-color .15s;
@@ -687,10 +718,9 @@ tr:last-child td { border-bottom:none }
 .promo-cta   { display:block; width:100%; text-align:center; font-size:14px; padding:12px }
 /* L'aperçu doit refléter le VRAI popup du site : admin.css redéfinit .app .btn-accent
    en bordeaux (charte admin), on rétablit ici la charte du site. */
-.promo-apercu .btn-accent,
-.app .promo-apercu .btn-accent { background:var(--accent); color:#fff }
-.promo-apercu .btn-accent:hover,
-.app .promo-apercu .btn-accent:hover { background:var(--accent-dark, var(--accent)) }
+.promo-apercu .btn-accent, .app .promo-apercu .btn-accent { background:var(--accent); color:#fff }
+.promo-apercu .btn-accent:hover, .app .promo-apercu .btn-accent:hover { background:var(--accent-dark, var(--accent)) }
+
 
 /* Légende de photo dans la vignette galerie admin */
 .ga-legende {
@@ -699,6 +729,7 @@ tr:last-child td { border-bottom:none }
   background:linear-gradient(to top, rgba(0,0,0,.72), transparent);
   pointer-events:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
+
 
 /* ============ Onglet La carte — groupes, drag & drop, prix inline ============ */
 .carte-outils { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:14px }
@@ -769,12 +800,18 @@ tr:last-child td { border-bottom:none }
   .drag-poignee { order:0 }
   .carte-plat-prix { order:2; width:auto; text-align:left; margin-right:auto }
   .carte-plat-actions { order:3 }}
-.zone-onglet.active { background:var(--admin-accent); border-color:var(--admin-accent); color:#fff }
 
+
+/* Cartes KPI cliquables du tableau de bord (À confirmer / À placer) */
 .stat-clic { cursor:pointer; transition:border-color .15s, box-shadow .15s, transform .15s }
 .stat-clic:hover { border-color:var(--admin-accent); box-shadow:0 4px 14px rgba(122,31,36,.10); transform:translateY(-2px) }
 .stat-clic:focus-visible { outline:2px solid var(--admin-accent); outline-offset:2px }
 
+
+/* Le widget est un élément du SITE : ses couleurs suivent la charte du
+   restaurant (--accent). Les classes du widget (.etapes, .confirm-ok .rond,
+   .btn-accent) sont définies plus haut avec --accent, donc rien à surcharger
+   ici même quand cette page charge admin.css pour la structure du popup. */
 
 /* ── 12. UX 2026-07 : toast, chargement, quickbar mobile, erreurs inline ─── */
 
@@ -903,6 +940,7 @@ tr:last-child td { border-bottom:none }
   .bloc { padding:16px 14px }
   .bloc-tete { flex-wrap:wrap; gap:10px }
   .bloc-tete h2 { font-size:17px }
+  .actions-ligne, .puces, .filtres, .segments { flex-wrap:wrap }
   .carnet-search { width:100%; min-width:0 }
 
   /* Boutons : cibles tactiles confortables */
@@ -1222,7 +1260,7 @@ tr:last-child td { border-bottom:none }
   .adm-edito { grid-template-columns:1fr }}
 
 
-/* ── 12. VITRINE — refonte éditoriale (.adm-vit) ───────────────────────────
+/* ── 08. VITRINE — refonte éditoriale (.adm-vit) ───────────────────────────
    Habillage des six onglets « Vitrine » (Ardoise, Carte, Galerie, Avis,
    Partenaires, Bannière) : registre éditorial proche du site public — fond
    crème sans cartes blanches, filets fins, labels en petites capitales
@@ -1305,12 +1343,10 @@ tr:last-child td { border-bottom:none }
 /* ─ Champs : soulignés, labels petites capitales ─ */
 .contenu.adm-vit .champ label { font-size:10px; letter-spacing:.13em; color:var(--vit-label);
   margin-bottom:2px }
-.contenu.adm-vit .champ input, .contenu.adm-vit .champ select,
-.contenu.adm-vit .champ textarea, .contenu.adm-vit .carnet-search {
+.contenu.adm-vit .champ input, .contenu.adm-vit .champ select, .contenu.adm-vit .champ textarea, .contenu.adm-vit .carnet-search {
   background:none; border:none; border-bottom:1px solid #d5c9b2; border-radius:0;
   padding:9px 0; font-size:15px; color:var(--ink) }
-.contenu.adm-vit .champ input:focus, .contenu.adm-vit .champ select:focus,
-.contenu.adm-vit .champ textarea:focus, .contenu.adm-vit .carnet-search:focus {
+.contenu.adm-vit .champ input:focus, .contenu.adm-vit .champ select:focus, .contenu.adm-vit .champ textarea:focus, .contenu.adm-vit .carnet-search:focus {
   outline:none; border-bottom-color:var(--admin-accent) }
 .contenu.adm-vit .champ .aide { font-style:italic; color:var(--vit-doux) }
 
@@ -2068,8 +2104,7 @@ tr:last-child td { border-bottom:none }
   .contenu.adm-vit .carte-plat-actions { gap:14px }
   /* Sans survol possible, les flèches restent visibles sur mobile. */
   .contenu.adm-vit .carte-cat-fleches button { opacity:1 }
-  .topbar.adm-vit, .contenu.adm-vit,
-  .topbar.adm-vit.large, .contenu.adm-vit.large { padding-inline:16px }
+  .topbar.adm-vit, .contenu.adm-vit, .topbar.adm-vit.large, .contenu.adm-vit.large { padding-inline:16px }
   .topbar.adm-vit::after, .topbar.adm-vit.large::after { left:16px; right:16px }
   .topbar.adm-vit { padding-top:18px; padding-bottom:14px }
   .topbar.adm-vit h1 { font-size:25px }
