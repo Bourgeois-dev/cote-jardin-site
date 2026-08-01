@@ -650,8 +650,13 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep }: {
   // contenu serait écrasé. Le lien des boutons est le même que celui des
   // blocs neufs (page réservation du site).
   const confirmIa = useConfirm();
+  // Visuels suggérés par l'assistant, bloc par bloc. Affichés en rappel sous le
+  // panneau : l'assistant ne peut pas poser d'image lui-même (il n'a pas les
+  // URL de la galerie), c'est au restaurateur de la choisir dans le bloc.
+  const [photosIa, setPhotosIa] = useState<string[]>([]);
   function appliquerObjetIa(s: string) {
     setSubject(s.slice(0, 150));
+    setPhotosIa([]);
     if (manqueEtape1) setManqueEtape1("");
   }
   async function appliquerRedactionIa(r: Redaction) {
@@ -667,6 +672,7 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep }: {
       });
       if (!ok) return;
     }
+    setPhotosIa(r.blocs.map((b) => String(b.photo || "").trim()));
     const base = (import.meta.env.VITE_SITE_URL || "").replace(/\/+$/, "");
     const cta = base ? `${base}/#reserver` : "";
     if (r.objet) setSubject(r.objet.slice(0, 150));
@@ -878,6 +884,16 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep }: {
 
             <AssistantNewsletter subject={subject}
               onObjet={appliquerObjetIa} onRedaction={appliquerRedactionIa} />
+
+            {photosIa.some(Boolean) && (
+              <div className="nl-ia-rappel">
+                <b>Visuels suggérés</b>
+                <ul>
+                  {photosIa.map((p, i) => p ? <li key={i}>Bloc {i + 1} — {p}</li> : null)}
+                </ul>
+                <button type="button" className="adm-vit-lien" onClick={() => setPhotosIa([])}>Masquer</button>
+              </div>
+            )}
 
             <div className="champ">
               <div className="nl-outils">

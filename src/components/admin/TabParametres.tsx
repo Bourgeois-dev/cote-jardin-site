@@ -33,10 +33,20 @@ export default function TabParametres() {
   // disparaissent : il n'y a plus d'onglet Newsletter ni d'onglet Contacts pour
   // exploiter ce que le formulaire récolterait.
   const [newsletterFeature, setNewsletterFeature] = useState(true);
+  // Voix du restaurant : consigne de ton donnée à l'assistant IA (onglets
+  // Newsletter et Bannière promo). C'est de la « forme » — propre à chaque
+  // client — stockée dans site_content, comme les autres réglages de contenu.
+  const [voix, setVoix] = useState("");
+  const [voixEnr, setVoixEnr] = useState("");
+  const [voixBusy, setVoixBusy] = useState(false);
 
   useEffect(() => {
     fetchActive<ReservationSettings>("reservation_settings", "id").then((r) => { setS(r[0] || null); setLoading(false); });
     fetchContent("newsletter_enabled").then((c) => setNewsletterOn(c?.enabled ?? true));
+    fetchContent("assistant_voix").then((c) => {
+      const v = String(c?.texte ?? "");
+      setVoix(v); setVoixEnr(v);
+    });
     supabase.from("feature_flags").select("key,enabled").in("key", ["reservation", "newsletter"])
       .then(({ data }) => {
         (data || []).forEach((f: { key: string; enabled: boolean }) => {
@@ -49,6 +59,16 @@ export default function TabParametres() {
   async function toggleNewsletter(v: boolean) {
     setNewsletterOn(v);
     await supabase.from("site_content").upsert({ section_key: "newsletter_enabled", content: { enabled: v } }, { onConflict: "section_key" });
+  }
+
+  async function enregistrerVoix() {
+    setVoixBusy(true);
+    await supabase.from("site_content").upsert(
+      { section_key: "assistant_voix", content: { texte: voix.trim().slice(0, 600) } },
+      { onConflict: "section_key" });
+    setVoixEnr(voix.trim().slice(0, 600));
+    setVoixBusy(false);
+    toast.ok("Voix enregistrée");
   }
 
   async function save() {
@@ -222,6 +242,33 @@ export default function TabParametres() {
           </div>
           </>
         )}
+      </div>
+
+      {/* ── Voix du restaurant (assistant IA) ─────────────────────────── */}
+      {/* Sans newsletter ni bannière, l'assistant n'a pas d'usage : le bloc
+          n'a pas à occuper la page. La bannière promo est toujours présente,
+          donc le bloc l'est aussi — mais le libellé s'adapte. */}
+      <div className="bloc">
+        <div className="reglages-titre">Voix du restaurant</div>
+        <div className="reglages-desc">
+          Comment l'assistant doit écrire pour vous{newsletterFeature ? " (newsletter et bannière du site)" : " (bannière du site)"}.
+          Décrivez votre façon de parler à vos clients : ce que vous dites, ce que vous ne diriez jamais.
+        </div>
+        <div className="champ">
+          <textarea rows={4} value={voix} maxLength={600}
+            onChange={(e) => setVoix(e.target.value)}
+            placeholder="Ex. On vouvoie, ton simple et chaleureux, jamais de superlatifs. On parle des produits et des producteurs, jamais des prix. On signe « toute l'équipe »." />
+          <span className="aide" style={{ fontSize: 11.5 }}>
+            {voix.length}/600 — laissez vide pour le ton par défaut : chaleureux, sincère, vouvoiement.
+          </span>
+        </div>
+        <div className="form-pied">
+          <span className="form-pied-aide">L'assistant s'appuie déjà sur votre carte, votre ardoise et vos horaires : cette consigne ne concerne que le ton.</span>
+          <button className="btn btn-accent" onClick={enregistrerVoix}
+            disabled={voixBusy || voix.trim().slice(0, 600) === voixEnr}>
+            {voixBusy ? "Enregistrement…" : "Enregistrer la voix"}
+          </button>
+        </div>
       </div>
 
       <div className="bloc">

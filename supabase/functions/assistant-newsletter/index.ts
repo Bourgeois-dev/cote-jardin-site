@@ -41,14 +41,20 @@ function json(body: unknown, status = 200): Response {
    - "rediger" : rédige une campagne complète (objet, aperçu, 1-2 blocs de
                  texte) prête à être injectée dans l'éditeur de blocs — le
                  restaurateur retouche ensuite librement.
+   - "banniere" : rédige la popup d'accueil du site (titre, sous-titre,
+                 libellé de bouton) — même moteur, autre format court.
 
    Le contexte du restaurant vient de DEUX sources :
    - les secrets (nom, tagline, adresse) — la configuration par client ;
    - les données réelles du site, lues en base à chaque appel (carte active,
      ardoise, offre à emporter, actualité affichée, jours de fermeture,
-     fermetures exceptionnelles) — c'est ce qui rend les propositions
-     concrètes : l'assistant peut citer un vrai plat signature ou éviter de
-     proposer un envoi pendant les congés.
+     fermetures exceptionnelles, photos disponibles, campagnes déjà envoyées)
+     — c'est ce qui rend les propositions concrètes : l'assistant peut citer
+     un vrai plat signature, éviter de proposer un envoi pendant les congés ou
+     de resservir un thème traité le mois dernier ;
+   - la voix du restaurant, saisie par le restaurateur dans les paramètres
+     (site_content.assistant_voix) — la « forme » du texte, propre à chaque
+     client, quand tout le reste est du « fond » identique.
    Le même code sert tous les clients, seules les données changent. */
 
 const JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
@@ -59,7 +65,7 @@ const JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "s
 async function contexteDonnees(): Promise<string> {
   const lignes: string[] = [];
   try {
-    const [plats, ardoise, takeawayFlag, emporter, promo, horaires, fermetures] = await Promise.all([
+    const [plats, ardoise, takeawayFlag, emporter, promo, horaires, fermetures, envoyees, photos] = await Promise.all([
       db.from("menu_items").select("category,name").eq("is_active", true).order("category").order("position").limit(60),
       db.from("site_content").select("content").eq("section_key", "ardoise").maybeSingle(),
       db.from("site_content").select("content").eq("section_key", "takeaway_enabled").maybeSingle(),
@@ -67,6 +73,11 @@ async function contexteDonnees(): Promise<string> {
       db.from("promo_banner").select("title,subtitle,message,event_date").eq("is_active", true).limit(1).maybeSingle(),
       db.from("opening_hours").select("day_of_week,is_closed").order("day_of_week"),
       db.from("closure_periods").select("start_date,end_date,reason").gte("end_date", new Date().toISOString().slice(0, 10)).order("start_date").limit(4),
+      // Campagnes déjà parties (hors welcome, qui est transactionnel) : évite
+      // de reproposer un thème traité il y a trois semaines.
+      db.from("newsletter_campaigns").select("subject,sent_at").eq("status", "sent").neq("template", "welcome")
+        .not("sent_at", "is", null).order("sent_at", { ascending: false }).limit(10),
+      db.from("gallery_images").select("alt,caption").eq("is_active", true).order("position").limit(20),
     ]);
 
     // La carte active, groupée par catégorie (12 plats max par catégorie).
@@ -109,44 +120,77 @@ async function contexteDonnees(): Promise<string> {
       lignes.push("Fermetures exceptionnelles à venir : " + fermetures.data.map((f: any) =>
         `du ${f.start_date} au ${f.end_date}${f.reason ? ` (${String(f.reason)})` : ""}`).join(" ; ") + ".");
     }
+
+    // Campagnes déjà envoyées : leurs objets, du plus récent au plus ancien.
+    // Sert exclusivement à ne PAS se répéter (cf. règle du prompt).
+    if (envoyees.data?.length) {
+      lignes.push("Campagnes déjà envoyées (objet — date), de la plus récente à la plus ancienne : " +
+        envoyees.data.map((c: any) => `« ${String(c.subject || "").trim()} » (${String(c.sent_at).slice(0, 10)})`).join(" ; ") + ".");
+    }
+
+    // Sujets photographiés disponibles dans la galerie — l'assistant ne pose
+    // pas d'image lui-même, mais peut dire au restaurateur laquelle illustrer.
+    if (photos.data?.length) {
+      const sujets = [...new Set(photos.data
+        .map((g: any) => String(g.caption || g.alt || "").trim())
+        .filter((v: string) => v.length > 2))].slice(0, 12);
+      if (sujets.length) lignes.push(`Photos disponibles dans la galerie du site : ${sujets.join(" ; ")}.`);
+    }
   } catch (_e) { /* contexte best-effort */ }
-  return lignes.join("\n").slice(0, 2600);
+  return lignes.join("\n").slice(0, 3400);
+}
+
+/** Voix du restaurant — texte libre saisi dans Paramètres, stocké dans
+ *  site_content.assistant_voix. C'est la « forme » de l'assistant : le seul
+ *  réglage propre à chaque client. Plafonné à 600 signes : une consigne de
+ *  ton, pas un second prompt (et pas un vecteur d'injection tentaculaire —
+ *  seul un admin peut l'écrire, mais on borne quand même). */
+async function voixRestaurant(): Promise<string> {
+  try {
+    const { data } = await db.from("site_content").select("content").eq("section_key", "assistant_voix").maybeSingle();
+    return String((data?.content as any)?.texte || "").trim().slice(0, 600);
+  } catch { return ""; }
 }
 
 const CONTEXTE_RESTO = `Le restaurant s'appelle « ${RESTO_NAME} »${TAGLINE ? `, sa signature : « ${TAGLINE} »` : ""}${RESTO_ADDRESS ? `, situé : ${RESTO_ADDRESS}` : ""}.`;
 
-function reglesCommunes(donnees: string): string {
-  return `Tu es le conseiller marketing d'un restaurant français indépendant. Tu aides le restaurateur à écrire sa newsletter.
+function reglesCommunes(donnees: string, voix: string): string {
+  return `Tu es le conseiller marketing d'un restaurant français indépendant. Tu aides le restaurateur à écrire ses textes.
 ${CONTEXTE_RESTO}
 ${donnees ? `
 CE QUE TU SAIS DE VRAI SUR LE RESTAURANT (données du site, à jour aujourd'hui) :
 ${donnees}
+` : ""}${voix ? `
+LA VOIX DE CE RESTAURANT (consigne du restaurateur, elle prime sur le ton par défaut) :
+${voix}
 ` : ""}
 Règles STRICTES :
 - Français impeccable, ton chaleureux et sincère, vouvoiement des clients. Jamais de superlatifs creux ni de jargon marketing (« immanquable », « exceptionnel », « boostez »).
 - Tu peux citer les plats, l'ardoise, l'offre à emporter, l'actualité et les fermetures listés ci-dessus : ce sont des données réelles. Appuie-toi dessus quand c'est pertinent (plat signature, produit de saison, annonce de congés).
 - EN DEHORS de ces données, n'invente JAMAIS de faits précis : pas d'autres plats, pas de prix, pas de dates ou d'horaires non listés. Reste générique là où tu ne sais pas, le restaurateur complétera.
 - Ne suggère jamais un moment d'envoi ou un événement pendant une fermeture exceptionnelle listée, ni une offre sur un jour de fermeture hebdomadaire.
+- Si des campagnes déjà envoyées sont listées, ne propose JAMAIS un thème équivalent à l'une des trois plus récentes, et évite de réutiliser leurs tournures d'objet. Un même marronnier (Saint-Valentin, fête des mères…) peut revenir d'une ANNÉE sur l'autre, jamais à quelques semaines d'intervalle.
 - Le jeton {{prenom}} sera remplacé par le prénom du destinataire : tu peux l'utiliser avec parcimonie (objet ou première ligne).
 - Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ni après, sans balises Markdown.`;
 }
 
-function promptIdees(dateFr: string, notes: string, donnees: string): { system: string; user: string } {
+function promptIdees(dateFr: string, notes: string, donnees: string, voix: string): { system: string; user: string } {
   return {
-    system: `${reglesCommunes(donnees)}
+    system: `${reglesCommunes(donnees, voix)}
 
 Tâche : proposer exactement 4 idées de campagnes email.
 - Au moins 2 idées calées sur le calendrier français À VENIR dans les 8 prochaines semaines par rapport à la date donnée (fêtes : Saint-Valentin, Pâques, fête des mères/pères, beaujolais nouveau, fête de la musique, chandeleur, Épiphanie, fêtes de fin d'année… ; ou saisons et produits de saison). Ne propose jamais un événement déjà passé.
 - Les autres idées : fonds de commerce intemporels (nouvelle carte, coulisses et équipe, plat signature, remerciement des habitués…). Quand la carte réelle est fournie, ancre au moins une idée sur un plat ou un produit qui y figure vraiment.
-Format : {"idees":[{"theme":"…","objet":"…","angle":"…","quand":"…"}]}
-- "theme" : 3-6 mots. "objet" : un objet d'email prêt à l'emploi, 45 signes maximum. "angle" : 1-2 phrases, l'histoire à raconter. "quand" : le bon moment d'envoi (ex. "début février").`,
+Format : {"idees":[{"theme":"…","objet":"…","angle":"…","quand":"…","photo":"…"}]}
+- "theme" : 3-6 mots. "objet" : un objet d'email prêt à l'emploi, 45 signes maximum. "angle" : 1-2 phrases, l'histoire à raconter. "quand" : le bon moment d'envoi (ex. "début février").
+- "photo" : en quelques mots, le visuel à mettre dans la campagne (ex. "une photo du plat en gros plan", "la salle en soirée"). Si des photos de la galerie sont listées et que l'une convient, nomme-la. Sinon décris la photo à prendre. "" si l'image n'apporte rien.`,
     user: `Nous sommes le ${dateFr}.${notes ? `\nEnvie du restaurateur : ${notes}` : ""}\nPropose les 4 idées.`,
   };
 }
 
-function promptObjets(objet: string, theme: string, notes: string, donnees: string): { system: string; user: string } {
+function promptObjets(objet: string, theme: string, notes: string, donnees: string, voix: string): { system: string; user: string } {
   return {
-    system: `${reglesCommunes(donnees)}
+    system: `${reglesCommunes(donnees, voix)}
 
 Tâche : proposer exactement 5 variantes d'objet d'email pour la campagne décrite.
 - 45 signes maximum chacune (au-delà, l'objet est coupé sur téléphone).
@@ -157,19 +201,36 @@ Format : {"objets":["…","…","…","…","…"]}`,
   };
 }
 
-function promptRediger(theme: string, angle: string, notes: string, dateFr: string, donnees: string): { system: string; user: string } {
+function promptRediger(theme: string, angle: string, notes: string, dateFr: string, donnees: string, voix: string): { system: string; user: string } {
   return {
-    system: `${reglesCommunes(donnees)}
+    system: `${reglesCommunes(donnees, voix)}
 
 Tâche : rédiger une campagne email complète pour le thème donné.
-Format : {"objet":"…","preheader":"…","blocs":[{"titre":"…","texte":"…","cta_label":"…"}]}
+Format : {"objet":"…","preheader":"…","blocs":[{"titre":"…","texte":"…","cta_label":"…","photo":"…"}]}
 - "objet" : 45 signes maximum.
 - "preheader" : le résumé affiché après l'objet dans la boîte de réception, 100 signes maximum, qui complète l'objet sans le répéter.
 - "blocs" : 1 ou 2 blocs. Chaque bloc : "titre" court (facultatif : "" si inutile), "texte" de 2 à 3 paragraphes COURTS séparés par une ligne vide (deux sauts de ligne \\n\\n), 400 signes maximum par bloc. Le premier texte peut commencer par « Bonjour {{prenom}}, ».
 - "cta_label" : le libellé du bouton (ex. "Réserver une table", "Découvrir la carte") — uniquement sur le dernier bloc, "" sur les autres. Le lien du bouton est géré par l'éditeur, ne fournis jamais d'URL.
+- "photo" : en quelques mots, le visuel à placer dans ce bloc (nomme une photo de la galerie si l'une convient, sinon décris celle à prendre). "" si le bloc se passe d'image. Tu ne fournis JAMAIS d'URL d'image : le restaurateur choisit le fichier dans l'éditeur.
 - Tu peux utiliser **gras** (double astérisque) avec parcimonie pour un mot ou deux.
 - Écris des phrases qu'un restaurateur assumerait telles quelles, en laissant des tournures génériques là où un détail précis manquerait (jamais de crochets à compléter).`,
     user: `Nous sommes le ${dateFr}.\nThème : ${theme}${angle ? `\nAngle : ${angle}` : ""}${notes ? `\nPrécisions du restaurateur : ${notes}` : ""}\nRédige la campagne.`,
+  };
+}
+
+/* Bannière promo — la popup d'accueil du site. Format très court : le
+   visiteur la lit en deux secondes, avant d'avoir rien demandé. */
+function promptBanniere(sujet: string, dateEvent: string, notes: string, dateFr: string, donnees: string, voix: string): { system: string; user: string } {
+  return {
+    system: `${reglesCommunes(donnees, voix)}
+
+Tâche : rédiger la popup d'accueil du site (elle s'ouvre à l'arrivée du visiteur).
+Format : {"titre":"…","sous_titre":"…","cta_label":"…"}
+- "titre" : 40 signes maximum. L'accroche, lisible d'un coup d'œil.
+- "sous_titre" : 110 signes maximum, une seule phrase qui donne l'information utile (ce que c'est, quand, ce qu'il faut faire).
+- "cta_label" : le libellé du bouton, 25 signes maximum (ex. "Réserver ma place", "Voir la carte"). Le lien est géré par l'interface, ne fournis jamais d'URL.
+- Une popup s'impose au visiteur : sois bref, concret et courtois. Aucun {{prenom}} ici — le visiteur du site est anonyme.`,
+    user: `Nous sommes le ${dateFr}.\nSujet de la bannière : ${sujet}${dateEvent ? `\nDate de l'événement : ${dateEvent}` : ""}${notes ? `\nPrécisions : ${notes}` : ""}\nRédige la popup.`,
   };
 }
 
@@ -238,17 +299,18 @@ Deno.serve(async (req: Request) => {
     const action = String(body?.action || "");
     const notes = s(body?.notes, 500);
     const dateFr = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-    // Données réelles du site — collectées une fois par appel, après le guard.
-    const donnees = await contexteDonnees();
+    // Données réelles du site + voix — collectées une fois par appel, après le guard.
+    const [donnees, voix] = await Promise.all([contexteDonnees(), voixRestaurant()]);
 
     if (action === "idees") {
-      const p = promptIdees(dateFr, notes, donnees);
+      const p = promptIdees(dateFr, notes, donnees, voix);
       const r = await appelerModele(p.system, p.user, 900);
       const idees = (Array.isArray(r?.idees) ? r.idees : []).slice(0, 4).map((i: any) => ({
         theme: s(i?.theme, 80),
         objet: s(i?.objet, 90),
         angle: s(i?.angle, 300),
         quand: s(i?.quand, 60),
+        photo: s(i?.photo, 120),
       })).filter((i: any) => i.theme && i.objet);
       if (idees.length === 0) return json({ error: "vide", message: "Aucune idée exploitable — réessayez." }, 502);
       return json({ idees });
@@ -260,7 +322,7 @@ Deno.serve(async (req: Request) => {
       if (!objet && !theme && !notes) {
         return json({ error: "input", message: "Donnez un objet, un thème ou quelques mots de contexte." }, 400);
       }
-      const p = promptObjets(objet, theme, notes, donnees);
+      const p = promptObjets(objet, theme, notes, donnees, voix);
       const r = await appelerModele(p.system, p.user, 500);
       const objets = (Array.isArray(r?.objets) ? r.objets : []).slice(0, 5)
         .map((o: any) => s(o, 90)).filter(Boolean);
@@ -272,12 +334,13 @@ Deno.serve(async (req: Request) => {
       const theme = s(body?.theme, 120);
       const angle = s(body?.angle, 300);
       if (!theme) return json({ error: "input", message: "Thème manquant." }, 400);
-      const p = promptRediger(theme, angle, notes, dateFr, donnees);
+      const p = promptRediger(theme, angle, notes, dateFr, donnees, voix);
       const r = await appelerModele(p.system, p.user, 1300);
       const blocs = (Array.isArray(r?.blocs) ? r.blocs : []).slice(0, 2).map((b: any) => ({
         titre: s(b?.titre, 120),
         texte: s(b?.texte, 900),
         cta_label: s(b?.cta_label, 40),
+        photo: s(b?.photo, 120),
       })).filter((b: any) => b.texte);
       if (blocs.length === 0) return json({ error: "vide", message: "Rédaction inexploitable — réessayez." }, 502);
       return json({
@@ -285,6 +348,20 @@ Deno.serve(async (req: Request) => {
         preheader: s(r?.preheader, 150),
         blocs,
       });
+    }
+
+    if (action === "banniere") {
+      const sujet = s(body?.sujet, 200);
+      const dateEvent = s(body?.date_event, 40);
+      if (!sujet && !notes) {
+        return json({ error: "input", message: "Dites en quelques mots ce que la bannière doit annoncer." }, 400);
+      }
+      const p = promptBanniere(sujet || notes, dateEvent, notes, dateFr, donnees, voix);
+      const r = await appelerModele(p.system, p.user, 400);
+      const titre = s(r?.titre, 80);
+      const sousTitre = s(r?.sous_titre, 200);
+      if (!titre && !sousTitre) return json({ error: "vide", message: "Rédaction inexploitable — réessayez." }, 502);
+      return json({ titre, sous_titre: sousTitre, cta_label: s(r?.cta_label, 40) });
     }
 
     return json({ error: "input", message: "Action inconnue." }, 400);

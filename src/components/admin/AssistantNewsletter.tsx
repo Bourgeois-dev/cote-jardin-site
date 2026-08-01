@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { appeler } from "./assistantApi";
 
 /**
  * Assistant de campagne — panneau replié en tête de l'étape « Contenu » de
@@ -24,34 +24,13 @@ import { supabase } from "../../lib/supabase";
 export interface Redaction {
   objet: string;
   preheader: string;
-  blocs: { titre: string; texte: string; cta_label?: string }[];
+  /** `photo` est une SUGGESTION de visuel, en toutes lettres : l'assistant ne
+   *  pose jamais d'image lui-même (il n'en a pas les URL). Le restaurateur
+   *  choisit le fichier dans l'éditeur ; le texte l'aide à savoir quoi mettre. */
+  blocs: { titre: string; texte: string; cta_label?: string; photo?: string }[];
 }
 
-interface Idee { theme: string; objet: string; angle: string; quand: string }
-
-// Miroir local de l'aide de TabNewsletter : les edge functions gardées par
-// is_admin() exigent le JWT de SESSION (la clé anon n'est pas un admin).
-async function authHeaders(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
-  return {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${token}`,
-    "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
-  };
-}
-
-async function appeler(action: string, payload: Record<string, unknown>): Promise<any> {
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assistant-newsletter`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: await authHeaders(),
-    body: JSON.stringify({ action, ...payload }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.error) throw new Error(data.message || `Erreur ${res.status}`);
-  return data;
-}
+interface Idee { theme: string; objet: string; angle: string; quand: string; photo?: string }
 
 export default function AssistantNewsletter({ subject, onObjet, onRedaction }: {
   /** Objet en cours dans l'éditeur — sert de base aux variantes. */
@@ -141,6 +120,7 @@ export default function AssistantNewsletter({ subject, onObjet, onRedaction }: {
               <b>{idee.theme}</b>
               <div className="nl-ia-objet">Objet proposé : « {idee.objet} »</div>
               <div className="nl-ia-angle">{idee.angle}</div>
+              {idee.photo && <div className="nl-ia-photo">📷 Visuel suggéré : {idee.photo}</div>}
               <div className="nl-ia-actions">
                 <button type="button" className="btn btn-mini btn-accent" onClick={() => rediger(i)} disabled={!!busy}>
                   {busy === `rediger:${i}` ? "Rédaction…" : "Rédiger cette campagne"}
@@ -153,7 +133,7 @@ export default function AssistantNewsletter({ subject, onObjet, onRedaction }: {
           ))}
 
           <div className="nl-ia-sous">
-            L'assistant ne connaît ni votre carte ni vos dates : relisez et complétez avant d'envoyer.
+            L'assistant s'appuie sur votre carte, votre ardoise et vos campagnes passées — mais il peut se tromper : relisez avant d'envoyer. Les visuels restent à ajouter par vous dans les blocs.
           </div>
         </div>
       )}

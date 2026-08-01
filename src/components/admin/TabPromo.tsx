@@ -3,6 +3,8 @@ import { supabase } from "../../lib/supabase";
 import { useTable } from "../../hooks/useTable";
 import type { PromoBanner } from "../../lib/types";
 import { useToast } from "./Toast";
+import { useConfirm } from "./Confirm";
+import AssistantBanniere, { type PropositionBanniere } from "./AssistantBanniere";
 
 function formatDate(d: string): string {
   if (!d) return "Événement";
@@ -12,6 +14,7 @@ function formatDate(d: string): string {
 
 export default function TabPromo() {
   const toast = useToast();
+  const confirm = useConfirm();
   const { rows, loading, insert, update } = useTable<PromoBanner>("promo_banner", "id");
   const promo = rows[0];
   const [f, setF] = useState({ title: "", subtitle: "", cta_label: "", cta_url: "", event_date: "", image_url: "", is_active: false });
@@ -38,6 +41,27 @@ export default function TabPromo() {
     }
     setBusy(false);
     if (fileRef.current) fileRef.current.value = "";
+  }
+
+  // Applique une proposition de l'assistant. Confirmation si du texte existe
+  // déjà : on ne remplace jamais le travail du restaurateur sans le lui dire.
+  // L'image et le lien du bouton ne sont pas touchés — l'assistant ne fait que
+  // du texte, et le lien est un choix technique (ancre, tel:…).
+  async function appliquerIa(p: PropositionBanniere) {
+    if (f.title.trim() || f.subtitle.trim()) {
+      const ok = await confirm({
+        titre: "Utiliser ce texte ?",
+        message: "Le titre et le sous-titre actuels seront remplacés par la proposition de l'assistant. L'image et le lien du bouton sont conservés.",
+        confirmer: "Remplacer",
+      });
+      if (!ok) return;
+    }
+    setF((prev) => ({
+      ...prev,
+      title: p.titre || prev.title,
+      subtitle: p.sous_titre || prev.subtitle,
+      cta_label: p.cta_label || prev.cta_label,
+    }));
   }
 
   async function save() {
@@ -68,6 +92,8 @@ export default function TabPromo() {
         <div className="bloc">
           <div className="promo-admin-grid">
             <div>
+              <AssistantBanniere dateEvent={f.event_date} onProposition={appliquerIa} />
+
               <h2 style={{ marginBottom: 4 }}>Contenu de la bannière</h2>
               <div className="desc" style={{ marginBottom: 16 }}>Ces informations s'affichent dans la popup.</div>
               <div className="champ"><label>Titre</label><input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="Soirée Beaujolais Nouveau" /></div>
