@@ -281,3 +281,61 @@ Fichier : `src/pages/admin.css` — 2 786 → 2 113 lignes.
 Remplacer **uniquement** `src/pages/admin.css`. Aucun autre fichier ne change,
 aucune action base de données. Si la première livraison n'a pas encore été
 poussée, cette version est déjà celle du zip.
+
+---
+
+## 10. Correctif du 01/08 — onglet Horaires en habillage éditorial
+
+### Le constat
+
+Après le déploiement, l'onglet Horaires ressortait visuellement du lot : tableau
+encadré, heures dans des champs beiges, alors que le reste de l'admin est passé
+au registre éditorial (filets fins, titres en Fraunces, champs soulignés).
+
+### La cause — antérieure à cette refonte
+
+`admin.css` contient depuis un moment une section complète
+« ══ HORAIRES ══ » entièrement scopée `.contenu.adm-vit`, avec trois classes
+dédiées : `.hr-ferme`, `.hr-mention`, `.hr-vide`. **Ces règles n'ont jamais été
+appliquées** : `TabHoraires.tsx` était resté sur `className="contenu"` et
+n'utilisait aucune de ces trois classes. Du CSS écrit, livré, et dormant.
+
+Douze onglets sur quatorze utilisent `.adm-vit`. Horaires était le seul à avoir
+une section éditoriale dédiée sans jamais l'activer. Le décalage existait déjà,
+mais il ne sautait aux yeux qu'une fois « Réservations & site » devenu
+« Site & accès » — donc éditorial — juste à côté dans la navigation.
+
+> À vérifier avec `git status` : le dépôt contient des modifications non
+> commitées, dont ces +1 278 lignes de `admin.css`. Le CSS de la refonte
+> éditoriale a été poussé sans son pendant TSX.
+
+### Le correctif
+
+`src/components/admin/TabHoraires.tsx` :
+
+- `topbar` et `contenu` reçoivent `adm-vit`, avec l'eyebrow « Pilotage ».
+- La ligne d'un jour fermé porte `hr-ferme` : elle s'éteint sans disparaître.
+- Un jour fermé affiche « Fermé » (`hr-mention`) au lieu d'un tiret muet.
+- Un créneau laissé vide sur un jour ouvert affiche « pas de service »
+  (`hr-vide`) : deux champs vides ne disent rien d'eux-mêmes, on prenait le
+  risque de les croire mal remplis.
+- Les deux colonnes Midi et Soir passent par un sous-composant `Service` —
+  elles étaient dupliquées à l'identique, avec le risque habituel de ne corriger
+  qu'un côté.
+- « Supprimer » d'une fermeture devient un `adm-vit-lien danger`, comme partout
+  ailleurs dans l'habillage éditorial.
+
+Aucune règle CSS n'est ajoutée : tout existait déjà et attendait son markup.
+
+### Ce qu'il faut faire
+
+Remplacer `src/components/admin/TabHoraires.tsx`. Aucune action base de données.
+
+### Reste à trancher (hors périmètre de ce correctif)
+
+Trois onglets n'utilisent pas `adm-vit` : **Tableau de bord**, **À emporter** et
+**Fonctionnalités**. Contrairement à Horaires, aucune section éditoriale dédiée
+ne les attend dans le CSS — seules les règles génériques (`.bloc`, `.champ`,
+`.toggle`) changeraient d'aspect. Les basculer est un choix de design, pas une
+correction : à décider séparément. « À emporter » est le plus discutable, c'est
+un onglet Vitrine entouré d'onglets éditoriaux.
