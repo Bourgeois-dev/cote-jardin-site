@@ -56,46 +56,54 @@ export default function TabHoraires() {
 
   return (
     <>
-      <div className="topbar"><div><h1>Horaires</h1><div className="sous">
-        {reservationOn ? "Ouvertures et fermetures exceptionnelles" : "Horaires d'ouverture affichés sur le site"}
+      {/* L'intertitre « Horaires d'ouverture » répétait le titre de page : la
+          consigne remonte en sous-titre et le tableau démarre directement. */}
+      <div className="topbar adm-vit"><div><span className="adm-vit-eyebrow">Service</span><h1>Horaires</h1><div className="sous">
+        Les horaires d'ouverture affichés sur le site. Un créneau vide = pas de service à ce moment-là.
       </div></div></div>
-      <div className="contenu">
+      <div className="contenu adm-vit">
         {oh.loading && oh.rows.length === 0 && <Chargement />}
         <div className="bloc">
-          <div className="bloc-tete"><div><h2>Horaires d'ouverture</h2><div className="desc">Laissez un créneau vide si le restaurant n'ouvre pas à ce moment (ex. pas de service le midi).</div></div></div>
           {err && <div className="err-inline">{err}</div>}
           <table className="tab-horaires tbl-cartes"><thead><tr>
             <th>Jour</th><th>Ouvert</th><th>Midi</th><th>Soir</th>
           </tr></thead><tbody>
             {jours.map((h) => (
-              <tr key={h.id}>
-                <td data-label="Jour" style={{ width: 100 }}><b>{JOURS[h.day_of_week]}</b></td>
-                <td data-label="Ouvert" style={{ width: 70 }}>
+              <tr key={h.id} className={h.is_closed ? "hr-ferme" : ""}>
+                <td data-label="Jour" style={{ width: 130 }}><b>{JOURS[h.day_of_week]}</b></td>
+                <td data-label="Ouvert" style={{ width: 80 }}>
                   <label className="toggle"><input type="checkbox" checked={!h.is_closed} onChange={(e) => toggleJour(h, e.target.checked)} /><span className="piste" /></label>
                 </td>
-                <td data-label="Midi">
-                  {h.is_closed ? <span className="sub-desc">—</span> : (
-                    <div className="creneau-edit">
-                      <input type="time" defaultValue={h.lunch_open || ""} onBlur={(e) => setHeure(h, "lunch_open", e.target.value)} />
-                      <span>→</span>
-                      <input type="time" defaultValue={h.lunch_close || ""} onBlur={(e) => setHeure(h, "lunch_close", e.target.value)} />
-                    </div>
-                  )}
-                </td>
-                <td data-label="Soir">
-                  {h.is_closed ? <span className="sub-desc">—</span> : (
-                    <div className="creneau-edit">
-                      <input type="time" defaultValue={h.dinner_open || ""} onBlur={(e) => setHeure(h, "dinner_open", e.target.value)} />
-                      <span>→</span>
-                      <input type="time" defaultValue={h.dinner_close || ""} onBlur={(e) => setHeure(h, "dinner_close", e.target.value)} />
-                    </div>
-                  )}
-                </td>
+                {/* Jour fermé : une seule mention en travers des deux colonnes,
+                    plutôt que deux tirets qui laissent croire à des champs vides. */}
+                {h.is_closed ? (
+                  <td data-label="Service" colSpan={2}><span className="hr-mention">Fermé toute la journée</span></td>
+                ) : (
+                  <>
+                    <td data-label="Midi">
+                      <div className="creneau-edit">
+                        <input type="time" defaultValue={h.lunch_open || ""} onBlur={(e) => setHeure(h, "lunch_open", e.target.value)} aria-label={`${JOURS[h.day_of_week]} — ouverture du midi`} />
+                        <span>→</span>
+                        <input type="time" defaultValue={h.lunch_close || ""} onBlur={(e) => setHeure(h, "lunch_close", e.target.value)} aria-label={`${JOURS[h.day_of_week]} — fermeture du midi`} />
+                        {!h.lunch_open && !h.lunch_close && <span className="hr-vide">pas de service</span>}
+                      </div>
+                    </td>
+                    <td data-label="Soir">
+                      <div className="creneau-edit">
+                        <input type="time" defaultValue={h.dinner_open || ""} onBlur={(e) => setHeure(h, "dinner_open", e.target.value)} aria-label={`${JOURS[h.day_of_week]} — ouverture du soir`} />
+                        <span>→</span>
+                        <input type="time" defaultValue={h.dinner_close || ""} onBlur={(e) => setHeure(h, "dinner_close", e.target.value)} aria-label={`${JOURS[h.day_of_week]} — fermeture du soir`} />
+                        {!h.dinner_open && !h.dinner_close && <span className="hr-vide">pas de service</span>}
+                      </div>
+                    </td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody></table>
-          <div className="hint">Les heures s'enregistrent automatiquement quand vous quittez le champ. Un créneau vide = pas de service à ce moment-là.</div>
+          <div className="hint">Les heures s'enregistrent automatiquement quand vous quittez le champ.</div>
         </div>
+
 
         {/* Section réservée au module Réservation : closure_periods n'est
             exploitée que par le widget et par check_availability(). */}
