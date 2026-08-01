@@ -1185,7 +1185,21 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep }: {
 // Aperçu fidèle de l'email de bienvenue (transactionnel, codé dans l'edge function
 // send-newsletter, template "welcome"). Reflète sa structure : bandeau accent,
 // salutation, texte d'accueil, bouton, signature. Seul c.message est variable.
-function ApercuWelcome({ restoName, logoUrl }: { restoName: string; logoUrl: string }) {
+/* Texte par défaut de l'email de bienvenue. MIROIR OBLIGATOIRE de
+   WELCOME_DEFAUT dans supabase/functions/send-newsletter/index.ts : si les
+   deux divergent, l'aperçu ment sur ce qui part réellement. */
+export function welcomeDefaut(restoName: string) {
+  const nom = restoName || "votre restaurant";
+  return {
+    eyebrow: "Bienvenue",
+    titre: `Bienvenue chez ${nom} !`,
+    texte: "Merci de votre inscription. Vous faites maintenant partie de nos proches et serez les premiers informés de nos actualités, nouveaux menus et événements.",
+    cta_label: "Découvrir le restaurant",
+    cta_url: import.meta.env.VITE_SITE_URL || "",
+  };
+}
+
+function ApercuWelcome({ restoName, logoUrl, w }: { restoName: string; logoUrl: string; w: ReturnType<typeof welcomeDefaut> }) {
   const accent = "var(--accent, #5a7d4f)";
   const INK = "#4A4A45";
   const nom = restoName || "votre restaurant";
@@ -1200,20 +1214,23 @@ function ApercuWelcome({ restoName, logoUrl }: { restoName: string; logoUrl: str
         </div>
         {/* Bandeau accent */}
         <div style={{ background: accent, color: "#fff", textAlign: "center", padding: "26px 30px" }}>
-          <div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", opacity: .8, marginBottom: 8 }}>Bienvenue</div>
-          <div style={{ fontFamily: "var(--font-display, Georgia, serif)", fontSize: 24, lineHeight: 1.2 }}>Bienvenue chez {nom} !</div>
+          {w.eyebrow && <div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", opacity: .8, marginBottom: 8 }}>{w.eyebrow}</div>}
+          <div style={{ fontFamily: "var(--font-display, Georgia, serif)", fontSize: 24, lineHeight: 1.2 }}>{w.titre}</div>
         </div>
         {/* Corps */}
         <div style={{ padding: "26px 30px 6px" }}>
           <p style={{ fontFamily: "var(--font-display, Georgia, serif)", fontSize: 18, color: "#3A4A2C", margin: "0 0 16px" }}>Bonjour [Prénom],</p>
-          <p style={{ fontSize: 14, lineHeight: 1.7, color: INK, margin: 0 }}>
-            Merci de votre inscription. Vous faites maintenant partie de nos proches et serez les premiers informés de nos actualités, nouveaux menus et événements.
-          </p>
+          {/* Même règle de paragraphes que l'envoi : ligne vide = paragraphe. */}
+          {String(w.texte || "").replace(/\r\n?/g, "\n").split(/\n\s*\n/).filter((x) => x.trim()).map((x, i) => (
+            <p key={i} style={{ fontSize: 14, lineHeight: 1.7, color: INK, margin: "0 0 12px" }}>{x.trim()}</p>
+          ))}
         </div>
         {/* Bouton */}
-        <div style={{ textAlign: "center", padding: "20px 30px 6px" }}>
-          <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 14, fontWeight: 700, padding: "12px 34px", borderRadius: 28 }}>Découvrir le restaurant</span>
-        </div>
+        {w.cta_label && (
+          <div style={{ textAlign: "center", padding: "20px 30px 6px" }}>
+            <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 14, fontWeight: 700, padding: "12px 34px", borderRadius: 28 }}>{w.cta_label}</span>
+          </div>
+        )}
         {/* Signature */}
         <div style={{ padding: "16px 30px 32px" }}>
           <p style={{ fontSize: 14, color: INK, margin: "0 0 4px" }}>À très bientôt,</p>
@@ -1221,7 +1238,7 @@ function ApercuWelcome({ restoName, logoUrl }: { restoName: string; logoUrl: str
         </div>
       </div>
       <div style={{ fontSize: 11.5, color: "var(--ink-soft)", textAlign: "center", marginTop: 12, fontStyle: "italic" }}>
-        [Prénom] est remplacé par le prénom de l'inscrit s'il est connu. Ce message n'est pas modifiable ici.
+        [Prénom] est remplacé par le prénom de l'inscrit s'il est connu.
       </div>
     </div>
   );
@@ -1241,7 +1258,14 @@ export default function TabNewsletter() {
   const [filtreDossier, setFiltreDossier] = useState<string>("tous"); // "tous" | "__sans__" | nom de dossier
   const [menuOuvert, setMenuOuvert] = useState<string | null>(null);   // id de campagne dont le menu ⋯ est ouvert
   const [registreDossiers, setRegistreDossiers] = useState<string[]>([]); // dossiers déclarés (table), incl. vides
-  const [welcomeOuvert, setWelcomeOuvert] = useState(false); // accordéon d'aperçu de l'email de bienvenue
+  const [welcomeOuvert, setWelcomeOuvert] = useState(false); // accordéon d'édition de l'email de bienvenue
+  /* Texte de l'email de bienvenue. Stocké dans site_content (« welcome_email »)
+     et NON sur une ligne de campagne welcome : il en existe plusieurs en base,
+     et le scheduler en choisit une sans tri — l'édition ne serait pas fiable. */
+  const [welcome, setWelcome] = useState(() => welcomeDefaut(import.meta.env.VITE_RESTO_NAME || ""));
+  const [welcomeSauve, setWelcomeSauve] = useState(false);
+  const [welcomeBusy, setWelcomeBusy] = useState(false);
+  const [welcomeErr, setWelcomeErr] = useState("");
   const restoName = import.meta.env.VITE_RESTO_NAME || "";
   const [logoUrl, setLogoUrl] = useState(""); // logo newsletter, pour l'aperçu du Welcome
   // Offre « Essentiel + Newsletter » : module Réservation désactivé. Sans
@@ -1440,6 +1464,39 @@ function dateRef(c: Campaign): string {
   const campagnesGrille = campagnes.filter((c) => c.template !== "welcome");
   // Stats agrégées du Welcome : chaque inscription crée une ligne welcome → le nombre
   // de lignes (et la somme des sent_count) donne le nombre d'envois.
+  /* Lecture au montage : les champs absents retombent sur le texte par défaut,
+     donc un site qui n'a jamais ouvert cet écran envoie le message historique. */
+  useEffect(() => {
+    let vivant = true;
+    supabase.from("site_content").select("content").eq("section_key", "welcome_email").maybeSingle()
+      .then(({ data }) => {
+        if (!vivant) return;
+        const c = (data?.content || {}) as Record<string, string>;
+        const d = welcomeDefaut(import.meta.env.VITE_RESTO_NAME || "");
+        setWelcome({
+          eyebrow: c.eyebrow ?? d.eyebrow,
+          titre: String(c.titre ?? "").trim() || d.titre,
+          texte: String(c.texte ?? "").trim() || d.texte,
+          cta_label: c.cta_label ?? d.cta_label,
+          cta_url: String(c.cta_url ?? "").trim() || d.cta_url,
+        });
+      });
+    return () => { vivant = false; };
+  }, []);
+
+  async function enregistrerWelcome() {
+    setWelcomeBusy(true);
+    const { error } = await supabase.from("site_content")
+      .upsert({ section_key: "welcome_email", content: welcome }, { onConflict: "section_key" });
+    setWelcomeBusy(false);
+    /* Message en ligne : c'est la convention de cet onglet (err-inline),
+       il n'y a pas de toasts ici. */
+    if (error) { setWelcomeErr("Enregistrement impossible : " + error.message); return; }
+    setWelcomeErr("");
+    setWelcomeSauve(true);
+    setTimeout(() => setWelcomeSauve(false), 3000);
+  }
+
   const welcomeLignes = campagnes.filter((c) => c.template === "welcome");
   const welcomeEnvois = welcomeLignes.reduce((n, c) => n + (c.sent_count || 0), 0) || welcomeLignes.length;
   const welcomeDernier = welcomeLignes.map((c) => c.sent_at).filter(Boolean).sort().slice(-1)[0] || null;
@@ -1576,12 +1633,47 @@ function dateRef(c: Campaign): string {
                     {welcomeDernier && `, dernier le ${fmtDatetime(welcomeDernier)}`}
                   </span>
                   <button className="adm-vit-lien accent" onClick={() => setWelcomeOuvert((v) => !v)}>
-                    {welcomeOuvert ? "Masquer l'aperçu" : "Voir l'aperçu"}
+                    {welcomeOuvert ? "Masquer" : "Modifier le message"}
                   </button>
                 </div>
                 {welcomeOuvert && (
-                  <div className="nl-trigger-apercu">
-                    <ApercuWelcome restoName={restoName} logoUrl={logoUrl} />
+                  <div className="nl-trigger-apercu wl-edit">
+                    <div>
+                      <div className="champ"><label>Bandeau · au-dessus du titre</label>
+                        <input value={welcome.eyebrow} maxLength={40}
+                          onChange={(e) => setWelcome({ ...welcome, eyebrow: e.target.value })}
+                          placeholder="Vide : aucun bandeau" /></div>
+                      <div className="champ"><label>Titre</label>
+                        <input value={welcome.titre} maxLength={90}
+                          onChange={(e) => setWelcome({ ...welcome, titre: e.target.value })} /></div>
+                      <div className="champ"><label>Message</label>
+                        <textarea rows={6} value={welcome.texte} maxLength={900}
+                          onChange={(e) => setWelcome({ ...welcome, texte: e.target.value })} />
+                        <span className="aide">Une ligne vide sépare deux paragraphes. Le prénom est ajouté automatiquement au-dessus.</span></div>
+                      <div className="grid2">
+                        <div className="champ"><label>Bouton · libellé</label>
+                          <input value={welcome.cta_label} maxLength={40}
+                            onChange={(e) => setWelcome({ ...welcome, cta_label: e.target.value })}
+                            placeholder="Vide : aucun bouton" /></div>
+                        <div className="champ"><label>Bouton · lien</label>
+                          <input value={welcome.cta_url} maxLength={300}
+                            onChange={(e) => setWelcome({ ...welcome, cta_url: e.target.value })} /></div>
+                      </div>
+                      {welcomeErr && <div className="err-inline" style={{ marginTop: 12 }}>{welcomeErr}</div>}
+                      <div className="form-pied">
+                        <span className="form-pied-aide">
+                          {welcomeSauve ? "Enregistré — les prochaines inscriptions recevront ce message."
+                                        : "S'applique aux prochaines inscriptions ; les envois passés ne changent pas."}
+                        </span>
+                        <button className="btn btn-accent" onClick={enregistrerWelcome} disabled={welcomeBusy}>
+                          {welcomeBusy ? "Enregistrement…" : "Enregistrer"}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="ia-lab" style={{ marginBottom: 10 }}>Aperçu de l'email</span>
+                      <ApercuWelcome restoName={restoName} logoUrl={logoUrl} w={welcome} />
+                    </div>
                   </div>
                 )}
               </div>

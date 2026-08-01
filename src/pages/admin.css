@@ -2519,6 +2519,10 @@ a.cli-coord-val:hover { text-decoration:underline }
   .ia-actions { flex-direction:column; align-items:stretch; gap:12px }
 }
 
+/* ── Email de bienvenue : éditeur et aperçu en vis-à-vis ───────────────── */
+.wl-edit { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:44px; align-items:start }
+@media (max-width: 1000px) { .wl-edit { grid-template-columns:1fr; gap:28px } }
+
 /* ══ HORAIRES ════════════════════════════════════════════════════════════
    Le tableau perd ses cadres : des lignes séparées par des filets, des heures
    soulignées plutôt qu'encadrées. */
