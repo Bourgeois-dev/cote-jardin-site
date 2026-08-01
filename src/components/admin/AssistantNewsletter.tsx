@@ -76,9 +76,9 @@ export default function AssistantNewsletter({ subject, onObjet, onRedaction }: {
   return (
     <div className="nl-ia">
       <div className="nl-ia-tete">
-        <span className="nl-ia-titre">✨ Assistant de campagne</span>
+        <span className="nl-ia-titre">Assistant de campagne</span>
         <span className="nl-ia-sous">Idées, objets et rédaction — vous gardez la main sur tout.</span>
-        <button type="button" className="nl-lien" style={{ marginLeft: "auto" }}
+        <button type="button" className="adm-vit-lien" style={{ marginLeft: "auto" }}
           aria-expanded={ouvert} onClick={() => setOuvert((v) => !v)}>
           {ouvert ? "Masquer" : "Ouvrir"}
         </button>
@@ -86,19 +86,31 @@ export default function AssistantNewsletter({ subject, onObjet, onRedaction }: {
 
       {ouvert && (
         <div className="nl-ia-corps">
-          <div className="nl-ia-ligne">
-            <input value={notes} maxLength={200} disabled={!!busy}
+          {/* Même traitement que l'assistant de bannière : le champ occupe la
+              pleine largeur, souligné, et les deux actions sont posées dessous.
+              C'est une phrase qu'on dicte, pas un réglage coincé entre deux
+              boutons. */}
+          <div className="ia-saisie">
+            <label className="ia-lab" htmlFor="ia-notes">Une envie, un plat, un événement · facultatif</label>
+            <input id="ia-notes" className="ia-champ" value={notes} maxLength={200} disabled={!!busy}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Facultatif — une envie, un plat, un événement maison…"
+              placeholder="Ex. la truffe arrive, soirée jazz le 14, menu de Saint-Valentin…"
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); proposerIdees(); } }} />
-            <button type="button" className="btn btn-mini btn-accent" onClick={proposerIdees} disabled={!!busy}>
-              {busy === "idees" ? "Recherche…" : "Proposer des idées"}
-            </button>
-            <button type="button" className="btn btn-mini btn-ligne" onClick={variantesObjet}
-              disabled={!!busy || (!subject.trim() && !notes.trim())}
-              title={subject.trim() || notes.trim() ? "Reformuler l'objet en cours" : "Saisissez d'abord un objet ou quelques mots de contexte"}>
-              {busy === "objets" ? "Recherche…" : "Variantes d'objet"}
-            </button>
+            <div className="ia-saisie-pied">
+              <span className="ia-compteur">{notes.length}/200</span>
+              <span className="ia-actions">
+                {/* « Variantes d'objet » reformule un objet existant : elle reste
+                    inactive tant qu'il n'y a ni objet ni contexte à reformuler. */}
+                <button type="button" className="adm-vit-lien" onClick={variantesObjet}
+                  disabled={!!busy || (!subject.trim() && !notes.trim())}
+                  title={subject.trim() || notes.trim() ? "Reformuler l'objet en cours" : "Saisissez d'abord un objet ou quelques mots de contexte"}>
+                  {busy === "objets" ? "Recherche…" : "Variantes d'objet"}
+                </button>
+                <button type="button" className="btn btn-accent" onClick={proposerIdees} disabled={!!busy}>
+                  {busy === "idees" ? "Recherche…" : "Proposer des idées"}
+                </button>
+              </span>
+            </div>
           </div>
 
           {erreur && <div className="nl-ia-err">{erreur}</div>}

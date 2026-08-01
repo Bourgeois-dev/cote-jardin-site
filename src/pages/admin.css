@@ -2487,6 +2487,10 @@ a.cli-coord-val:hover { text-decoration:underline }
 .contenu.adm-vit .ia-champ:disabled { opacity:.55 }
 .ia-saisie-pied { display:flex; align-items:center; justify-content:space-between;
   gap:16px; margin-top:14px }
+/* Deux actions dans le pied (assistant de campagne) : la secondaire à gauche
+   du bouton, alignées sur la même ligne de base. */
+.ia-actions { display:flex; align-items:center; gap:22px }
+.contenu.adm-vit .ia-actions .adm-vit-lien:disabled { opacity:.4 }
 .ia-compteur { font-size:11px; color:var(--vit-doux); font-variant-numeric:tabular-nums }
 
 /* Propositions côte à côte : on compare, on ne relance pas en boucle. */
@@ -2510,8 +2514,9 @@ a.cli-coord-val:hover { text-decoration:underline }
 
 @media (max-width: 820px) {
   .contenu.adm-vit .nl-ia { padding:16px 16px }
-  .ia-saisie-pied { flex-direction:column; align-items:stretch; gap:10px }
+  .ia-saisie-pied { flex-direction:column; align-items:stretch; gap:12px }
   .ia-saisie-pied .btn-accent { width:100% }
+  .ia-actions { flex-direction:column; align-items:stretch; gap:12px }
 }
 
 /* ══ HORAIRES ════════════════════════════════════════════════════════════
