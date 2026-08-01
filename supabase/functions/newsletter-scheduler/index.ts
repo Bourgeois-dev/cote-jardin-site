@@ -3,7 +3,12 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SUPABASE_URL     = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY")!;
-const INTERNAL_SECRET  = Deno.env.get("INTERNAL_FUNCTION_SECRET") || "";
+// Secret d'appel interne vers send-newsletter. Repli sur la clé service role :
+// toujours présente, jamais exposée hors du projet — les appels internes
+// fonctionnent donc même sans le secret INTERNAL_FUNCTION_SECRET posé.
+// MIROIR OBLIGATOIRE avec le garde d'accès de send-newsletter/index.ts :
+// les deux fonctions doivent calculer la même valeur.
+const INTERNAL_SECRET  = Deno.env.get("INTERNAL_FUNCTION_SECRET") || Deno.env.get("SERVICE_ROLE_KEY")!;
 const SELF_URL         = Deno.env.get("SUPABASE_URL")!.replace("/rest/v1", "");
 
 const cors = {

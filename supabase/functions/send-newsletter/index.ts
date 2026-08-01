@@ -14,6 +14,13 @@ const HERO_IMAGE_URL   = Deno.env.get("HERO_IMAGE_URL") || "";
 const TAGLINE          = Deno.env.get("TAGLINE") || "";
 const SUPABASE_URL     = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY")!;
+const ANON_KEY         = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("ANON_KEY") || "";
+// Secret d'appel interne (newsletter-scheduler -> ici). Repli sur la clé
+// service role : toujours présente, jamais exposée hors du projet — le garde
+// fonctionne donc même sans le secret INTERNAL_FUNCTION_SECRET posé.
+// MIROIR OBLIGATOIRE avec newsletter-scheduler/index.ts : les deux fonctions
+// doivent calculer la même valeur.
+const INTERNAL_SECRET  = Deno.env.get("INTERNAL_FUNCTION_SECRET") || SERVICE_ROLE_KEY;
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +29,18 @@ const cors = {
 };
 
 const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+// Comparaison à temps constant du secret interne — même précaution que la
+// vérification svix de resend-webhook : pas de fuite par mesure du temps.
+function memeSecret(recu: string, attendu: string): boolean {
+  if (!recu || !attendu) return false;
+  const a = new TextEncoder().encode(recu);
+  const b = new TextEncoder().encode(attendu);
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
 
 type Destinataire = { email: string; name: string; prenom: string; token: string };
 
@@ -541,6 +560,29 @@ async function sendBatch(emails: any[]): Promise<{ ok: boolean; errors: string[]
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
+    // ── Garde d'accès ────────────────────────────────────────────────────────
+    // Cette fonction envoie des emails à toute la liste : elle ne doit JAMAIS
+    // être un relay ouvert. Deux appelants légitimes, deux preuves :
+    //   1. newsletter-scheduler (campagnes planifiées, emails de bienvenue) —
+    //      en-tête X-Internal-Secret, comparé à temps constant ;
+    //   2. l'admin connecté (envoi immédiat, envoi de test) — JWT de session,
+    //      vérifié par is_admin() sous l'identité de l'appelant.
+    // Tout autre appel est rejeté sans détail.
+    const interne = memeSecret(req.headers.get("X-Internal-Secret") || "", INTERNAL_SECRET);
+    if (!interne) {
+      const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+      if (!token) {
+        return new Response(JSON.stringify({ error: "Authentification requise." }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+      const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const { data: isAdmin, error: adminErr } = await userClient.rpc("is_admin");
+      if (adminErr || isAdmin !== true) {
+        return new Response(JSON.stringify({ error: "Accès réservé à l'administration." }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+    }
+
     const body = await req.json();
     const { campaign_id, override_email, override_name } = body;
     if (!campaign_id) return new Response(JSON.stringify({ error: "campaign_id requis" }), { status: 400, headers: cors });
