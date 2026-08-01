@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { supabase, messageUpload } from "../../lib/supabase";
 import { useConfirm } from "./Confirm";
 import { useDirty } from "./Dirty";
+import FicheCampagne, { type EventStats } from "./FicheCampagne";
 
 // Récupère les en-têtes d'appel aux edge functions AVEC le JWT de session admin.
 // send-newsletter vérifie is_admin() sous l'identité de ce token : il FAUT donc
@@ -1186,10 +1187,15 @@ export default function TabNewsletter() {
     setMode("nouveau");
   }
 
-  // Clics par campagne (personnes distinctes, via newsletter_events). Vide tant
-  // que le webhook Resend n'est pas en place ou pour les campagnes antérieures :
-  // on n'affiche alors rien plutôt qu'un zéro trompeur.
-  const [clics, setClics] = useState<Record<string, number>>({});
+  // Événements par campagne (clics, bounces, plaintes, désabonnements — via
+  // newsletter_events). Vide tant que le webhook Resend n'est pas en place ou
+  // pour les campagnes antérieures : on n'affiche alors rien plutôt qu'un zéro
+  // trompeur.
+  const [stats, setStats] = useState<Record<string, EventStats>>({});
+  // Campagne dont la fiche statistiques est ouverte, et date du premier
+  // événement enregistré (logique de couverture — voir FicheCampagne).
+  const [fiche, setFiche] = useState<Campaign | null>(null);
+  const [premierEvt, setPremierEvt] = useState<string | null>(null);
 
   async function charger() {
     setLoading(true);
@@ -1200,13 +1206,25 @@ export default function TabNewsletter() {
     ]);
     setCampagnes(camps || []);
     setRegistreDossiers((fold || []).map((f: { name: string }) => f.name));
-    const parCamp: Record<string, number> = {};
-    (ev || []).forEach((e: { campaign_id: string; clicks: number }) => { parCamp[e.campaign_id] = Number(e.clicks); });
-    setClics(parCamp);
+    const parCamp: Record<string, EventStats> = {};
+    (ev || []).forEach((e: { campaign_id: string; clicks: number; bounces: number; complaints?: number; unsubscribes?: number }) => {
+      parCamp[e.campaign_id] = {
+        clicks: Number(e.clicks), bounces: Number(e.bounces),
+        complaints: Number(e.complaints ?? 0), unsubscribes: Number(e.unsubscribes ?? 0),
+      };
+    });
+    setStats(parCamp);
     setLoading(false);
   }
 
   useEffect(() => { charger(); }, []);
+
+  // Premier événement enregistré — sert à distinguer « aucune donnée » (campagne
+  // antérieure au webhook) de « zéro » (campagne suivie, personne n'a cliqué).
+  useEffect(() => {
+    supabase.from("newsletter_events").select("created_at").order("created_at").limit(1)
+      .then(({ data }) => { if (data && data[0]) setPremierEvt(data[0].created_at); });
+  }, []);
 
   // Ferme le menu ⋯ au clic extérieur ou touche Échap.
   useEffect(() => {
@@ -1560,7 +1578,7 @@ function dateRef(c: Campaign): string {
                                 {c.folder && ` · ${c.folder}`}
                                 {/* Clics : personnes distinctes ayant cliqué au moins un lien
                                     (webhook Resend). Absent = pas de donnée, pas un zéro. */}
-                                {c.status === "sent" && clics[c.id] != null && ` · ${clics[c.id]} clic${clics[c.id] > 1 ? "s" : ""}`}
+                                {c.status === "sent" && stats[c.id] != null && ` · ${stats[c.id].clicks} clic${stats[c.id].clicks > 1 ? "s" : ""}`}
                               </span>
                               {c.status === "sent" && c.sent_count != null && cibles != null && c.sent_count < cibles && (
                                 <span className="nl-l-alerte">{c.sent_count} / {cibles} envoyés</span>
@@ -1572,6 +1590,9 @@ function dateRef(c: Campaign): string {
                             <span className="nl-l-date">{dateLbl}</span>
 
                             <span className="nl-l-actions">
+                              {c.status === "sent" && (
+                                <button className="btn btn-mini btn-ligne" onClick={() => setFiche(c)}>Statistiques</button>
+                              )}
                               {c.status === "draft" && (
                                 <button className="btn btn-mini btn-ligne" onClick={() => reprendre(c)}>Reprendre</button>
                               )}
@@ -1617,6 +1638,11 @@ function dateRef(c: Campaign): string {
               </>
             )}
           </>
+        )}
+
+        {fiche && (
+          <FicheCampagne campagne={fiche} stats={stats[fiche.id]} premierEvt={premierEvt}
+            onClose={() => setFiche(null)} />
         )}
       </div>
     </>

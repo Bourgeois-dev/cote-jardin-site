@@ -132,10 +132,15 @@ async function getRecipients(segment: string): Promise<Destinataire[]> {
   return [];
 }
 
-// Footer avec uniquement le lien de désinscription (pas de lien miroir)
-function footer(unsubscribeToken: string): string {
+// Footer avec uniquement le lien de désinscription (pas de lien miroir).
+// `campaignId` (absent en mode test et pour les emails hors campagne) est
+// ajouté au lien : newsletter-unsubscribe s'en sert pour attribuer le
+// désabonnement à la campagne dans newsletter_events — c'est ce qui alimente
+// la colonne « Désabos » des statistiques.
+function footer(unsubscribeToken: string, campaignId = ""): string {
+  const camp = campaignId ? `&c=${esc(campaignId)}` : "";
   const unsubUrl = unsubscribeToken
-    ? `${SITE_URL}/desinscription?token=${esc(unsubscribeToken)}`
+    ? `${SITE_URL}/desinscription?token=${esc(unsubscribeToken)}${camp}`
     : `${esc(SITE_URL)}/desinscription`;
   return `<tr><td class="px" style="padding:24px 44px 28px 44px;background-color:#F4F2EB;border-top:1px solid #E4E2D8;font-family:Arial,Helvetica,sans-serif;">
   <p style="margin:0 0 8px 0;font-size:13px;color:#7A7A70;text-align:center;"><strong style="color:${ACCENT_DARK};">${esc(RESTO_NAME)}</strong>${TAGLINE?` &mdash; ${esc(TAGLINE)}`:""}</p>
@@ -367,7 +372,7 @@ function blocDeuxColonnes(b: any): string {
 }
 
 // Assemble une campagne "blocs" complète
-function renderBlocs(c: any, name: string, logoUrl: string, token: string): string {
+function renderBlocs(c: any, name: string, logoUrl: string, token: string, campaignId = ""): string {
   const blocs: any[] = Array.isArray(c.blocs) ? c.blocs : [];
 
   const corps = blocs.map((b) => b?.type === "deux_colonnes" ? blocDeuxColonnes(b) : blocPleineLargeur(b)).join("");
@@ -378,11 +383,12 @@ function renderBlocs(c: any, name: string, logoUrl: string, token: string): stri
     contenu: corps,
     logoUrl,
     token,
+    campaignId,
   });
 }
 
 // Enveloppe : logo, contenu, footer. Structure du template maison.
-function layoutBlocs({ preheader, title, contenu, logoUrl, token }: { preheader: string; title: string; contenu: string; logoUrl: string; token: string }): string {
+function layoutBlocs({ preheader, title, contenu, logoUrl, token, campaignId = "" }: { preheader: string; title: string; contenu: string; logoUrl: string; token: string; campaignId?: string }): string {
   // Le logo renvoie toujours vers le site du restaurateur.
   const logo = logoUrl ? `<table border="0" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;"><tbody><tr>
     <td align="center" style="font-size:0; padding:0;">
@@ -421,7 +427,7 @@ function layoutBlocs({ preheader, title, contenu, logoUrl, token }: { preheader:
     <td align="center" style="font-size:0; padding:10px 0;">
       ${logo}
       ${contenu}
-      ${footerBlocs(token)}
+      ${footerBlocs(token, campaignId)}
     </td>
   </tr></tbody></table>
 </td>
@@ -430,12 +436,16 @@ function layoutBlocs({ preheader, title, contenu, logoUrl, token }: { preheader:
 </body></html>`;
 }
 
-// Footer — structure du template maison + mentions légales obligatoires
-function footerBlocs(token: string): string {
+// Footer — structure du template maison + mentions légales obligatoires.
+// `campaignId` (absent en mode test) est ajouté au lien de désinscription :
+// newsletter-unsubscribe attribue alors le désabonnement à la campagne dans
+// newsletter_events — c'est ce qui alimente la colonne « Désabos » des stats.
+function footerBlocs(token: string, campaignId = ""): string {
   // La page /desinscription du site fait le POST vers l'edge function.
   // NE PAS pointer l'edge directement : elle attend un POST JSON, pas un GET.
+  const camp = campaignId ? `&c=${esc(campaignId)}` : "";
   const unsubUrl = token
-    ? `${SITE_URL}/desinscription?token=${esc(token)}`
+    ? `${SITE_URL}/desinscription?token=${esc(token)}${camp}`
     : `${esc(SITE_URL)}/desinscription`;
   return `<table border="0" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; margin-top:20px;"><tbody>
     <tr><td align="center" style="font-size:0; padding:0 30px;">
@@ -457,11 +467,11 @@ function footerBlocs(token: string): string {
 }
 
 
-function renderTemplate(template: string, c: any, name: string, logoUrl: string, token: string): string {
+function renderTemplate(template: string, c: any, name: string, logoUrl: string, token: string, campaignId = ""): string {
   // Campagnes libres (nouveau système de blocs)
-  if (template === "blocs") return renderBlocs(c, name, logoUrl, token);
+  if (template === "blocs") return renderBlocs(c, name, logoUrl, token, campaignId);
 
-  const ft = footer(token);
+  const ft = footer(token, campaignId);
   const prenom = name.split(" ")[0] || "";
 
   if (template === "welcome") {
@@ -623,20 +633,15 @@ Deno.serve(async (req: Request) => {
         // sert pour remplir newsletter_events. Pas de tag en mode test — un
         // clic sur un e-mail de test ne doit pas compter dans les stats.
         ...(estTest ? {} : { tags: [{ name: "campaign_id", value: campaign_id }] }),
-        // Attribution des événements webhook (clics, bounces) à la campagne :
-        // Resend renvoie ces tags dans chaque événement, resend-webhook s'en
-        // sert pour remplir newsletter_events. Pas de tag en mode test — un
-        // clic sur un e-mail de test ne doit pas compter dans les stats.
-        ...(estTest ? {} : { tags: [{ name: "campaign_id", value: campaign_id }] }),
         subject: remplacerPrenom(camp.subject || "", r.prenom, repliPrenom),
-        html: renderTemplate(camp.template, personnaliser(camp.content, r.prenom, repliPrenom), r.name, logoUrl, r.token),
+        html: renderTemplate(camp.template, personnaliser(camp.content, r.prenom, repliPrenom), r.name, logoUrl, r.token, estTest ? "" : campaign_id),
         // Bouton « Se désabonner » natif de Gmail/Yahoo (exigé depuis 2024 pour
         // les expéditeurs en masse). Le POST one-click (RFC 8058) arrive sur
         // newsletter-unsubscribe avec le token en query string. Sans ce bouton,
         // l'utilisateur pressé clique « Signaler comme spam » à la place — et un
         // signalement pèse bien plus lourd qu'une désinscription.
         ...(r.token ? { headers: {
-          "List-Unsubscribe": `<${SUPABASE_URL}/functions/v1/newsletter-unsubscribe?token=${r.token}>`,
+          "List-Unsubscribe": `<${SUPABASE_URL}/functions/v1/newsletter-unsubscribe?token=${r.token}${estTest ? "" : `&c=${campaign_id}`}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         } } : {}),
       }));

@@ -31,12 +31,19 @@ const SITE_URL = (Deno.env.get("SITE_URL") || "").replace(/\/+$/, "");
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    const urlToken = new URL(req.url).searchParams.get("token") || "";
+    const params = new URL(req.url).searchParams;
+    const urlToken = params.get("token") || "";
+    // Identifiant de campagne, posé par send-newsletter dans le lien du footer
+    // et l'en-tête List-Unsubscribe. Sert uniquement aux statistiques : un
+    // paramètre absent ou invalide n'empêche JAMAIS la désinscription.
+    let campaignId = params.get("c") || "";
 
     if (req.method === "GET") {
-      const cible = SITE_URL
-        ? `${SITE_URL}/desinscription${urlToken ? `?token=${encodeURIComponent(urlToken)}` : ""}`
+      // Le paramètre de campagne suit vers la page du site, qui le renverra en POST.
+      const q = urlToken
+        ? `?token=${encodeURIComponent(urlToken)}${campaignId ? `&c=${encodeURIComponent(campaignId)}` : ""}`
         : "";
+      const cible = SITE_URL ? `${SITE_URL}/desinscription${q}` : "";
       return cible
         ? new Response(null, { status: 302, headers: { ...cors, Location: cible } })
         : new Response(JSON.stringify({ error: "méthode non autorisée" }), { status: 405, headers: json });
@@ -47,7 +54,11 @@ Deno.serve(async (req: Request) => {
       // Corps JSON ({ token }) ou formulaire one-click — dans ce dernier cas le
       // corps ne contient pas le token, seulement List-Unsubscribe=One-Click.
       const body = await req.text();
-      try { token = JSON.parse(body)?.token || ""; } catch { /* formulaire */ }
+      try {
+        const parsed = JSON.parse(body);
+        token = parsed?.token || "";
+        if (!campaignId) campaignId = parsed?.campaign || "";
+      } catch { /* formulaire one-click */ }
     }
     if (!token || !UUID_RE.test(token)) {
       return new Response(JSON.stringify({ error: "token invalide" }), { status: 400, headers: json });
@@ -73,6 +84,19 @@ Deno.serve(async (req: Request) => {
       .eq("unsubscribe_token", token);
 
     if (error) throw error;
+
+    // Attribution du désabonnement à la campagne d'origine, pour les
+    // statistiques (colonne « Désabos »). Meilleur effort : une campagne
+    // supprimée depuis (FK) ou un identifiant invalide sont ignorés en
+    // silence — la désinscription, elle, est déjà faite.
+    if (campaignId && UUID_RE.test(campaignId)) {
+      const email = String(lead.email || "").toLowerCase().trim();
+      if (email) {
+        await db.from("newsletter_events")
+          .upsert({ campaign_id: campaignId, email, type: "unsubscribed" },
+                  { onConflict: "campaign_id,email,type", ignoreDuplicates: true });
+      }
+    }
     return new Response(JSON.stringify({ ok: true }), { headers: json });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: json });

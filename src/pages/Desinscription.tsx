@@ -9,6 +9,10 @@ export default function Desinscription() {
 
   useEffect(() => {
     const token = searchParams.get("token");
+    // Identifiant de campagne (paramètre « c » du lien du footer) — renvoyé au
+    // serveur pour attribuer le désabonnement à la campagne dans les
+    // statistiques. Facultatif : son absence ne change rien pour le visiteur.
+    const campaign = searchParams.get("c") || "";
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
     if (!token || !UUID_RE.test(token)) {
@@ -23,7 +27,7 @@ export default function Desinscription() {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ token, ...(campaign && UUID_RE.test(campaign) ? { campaign } : {}) }),
     })
       .then((r) => r.json())
       .then((d) => {

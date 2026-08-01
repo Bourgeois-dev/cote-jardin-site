@@ -101,6 +101,11 @@
 
 /* ── 03. COMPOSANTS PARTAGÉS ───────────────────────────────────────────── */
 /* Blocs cartes */
+/* Ligne de tableau cliquable (fiche statistiques d'une campagne) */
+.tbl-clic { cursor:pointer }
+.tbl-clic:hover td { background:var(--a06, rgba(0,0,0,.03)) }
+.tbl-clic:focus-visible { outline:2px solid var(--admin-accent); outline-offset:-2px }
+
 .cartes-stat { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:26px }
 .cartes-stat-kpi { grid-template-columns:repeat(6,1fr) }
 @media(max-width:1300px) { .cartes-stat-kpi { grid-template-columns:repeat(3,1fr) } }

@@ -1469,7 +1469,7 @@ create table if not exists public.newsletter_events (
   id          uuid primary key default gen_random_uuid(),
   campaign_id uuid not null references public.newsletter_campaigns(id) on delete cascade,
   email       text not null,
-  type        text not null check (type in ('clicked','bounced','complained')),
+  type        text not null check (type in ('clicked','bounced','complained','unsubscribed')),
   url         text,
   created_at  timestamptz not null default now(),
   constraint uq_nl_event unique (campaign_id, email, type)
@@ -1483,14 +1483,16 @@ create policy "admin read events" on public.newsletter_events
 -- Clics et bounces par campagne (délivrés = sent_count - bounces, côté client).
 drop function if exists public.newsletter_click_counts();
 create or replace function public.newsletter_event_counts()
-returns table (campaign_id uuid, clicks bigint, bounces bigint)
+returns table (campaign_id uuid, clicks bigint, bounces bigint, complaints bigint, unsubscribes bigint)
 language sql
 security definer
 set search_path to 'public'
 as $$
   select e.campaign_id,
          count(*) filter (where e.type = 'clicked')::bigint,
-         count(*) filter (where e.type = 'bounced')::bigint
+         count(*) filter (where e.type = 'bounced')::bigint,
+         count(*) filter (where e.type = 'complained')::bigint,
+         count(*) filter (where e.type = 'unsubscribed')::bigint
   from public.newsletter_events e
   where public.is_admin()
   group by e.campaign_id

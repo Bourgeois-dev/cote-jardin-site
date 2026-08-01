@@ -3,6 +3,7 @@ import { useTable } from "../../hooks/useTable";
 import { supabase } from "../../lib/supabase";
 import type { Lead } from "../../lib/types";
 import Chargement from "./Chargement";
+import FicheCampagne, { type EventStats } from "./FicheCampagne";
 
 /**
  * Suivi de la newsletter, servi dans DEUX contextes :
@@ -71,9 +72,11 @@ export function BlocsNewsletter({ onNavigate, mode = "seul" }: {
 } = {}) {
   const { rows: leads, loading } = useTable<Lead>("leads", "created_at", true);
   const { rows: campagnes } = useTable<Campagne>("newsletter_campaigns", "created_at", true);
-  // Clics et bounces par campagne (webhook Resend).
-  const [clics, setClics] = useState<Record<string, number>>({});
-  const [bounces, setBounces] = useState<Record<string, number>>({});
+  // Événements par campagne (webhook Resend + désinscriptions attribuées) :
+  // clics, bounces, plaintes, désabonnements.
+  const [stats, setStats] = useState<Record<string, EventStats>>({});
+  // Campagne dont la fiche statistiques est ouverte.
+  const [fiche, setFiche] = useState<Campagne | null>(null);
   // Date du tout premier événement enregistré : les campagnes envoyées AVANT
   // n'ont pas de données de délivrabilité — on affiche « — » plutôt qu'un
   // 100 % que rien n'étaye. (Une campagne récente sans le moindre événement
@@ -81,13 +84,14 @@ export function BlocsNewsletter({ onNavigate, mode = "seul" }: {
   const [premierEvt, setPremierEvt] = useState<string | null>(null);
   useEffect(() => {
     supabase.rpc("newsletter_event_counts").then(({ data }) => {
-      const mc: Record<string, number> = {};
-      const mb: Record<string, number> = {};
-      (data || []).forEach((e: { campaign_id: string; clicks: number; bounces: number }) => {
-        mc[e.campaign_id] = Number(e.clicks);
-        mb[e.campaign_id] = Number(e.bounces);
+      const m: Record<string, EventStats> = {};
+      (data || []).forEach((e: { campaign_id: string; clicks: number; bounces: number; complaints?: number; unsubscribes?: number }) => {
+        m[e.campaign_id] = {
+          clicks: Number(e.clicks), bounces: Number(e.bounces),
+          complaints: Number(e.complaints ?? 0), unsubscribes: Number(e.unsubscribes ?? 0),
+        };
       });
-      setClics(mc); setBounces(mb);
+      setStats(m);
     });
     supabase.from("newsletter_events").select("created_at").order("created_at").limit(1)
       .then(({ data }) => { if (data && data[0]) setPremierEvt(data[0].created_at); });
@@ -148,6 +152,19 @@ export function BlocsNewsletter({ onNavigate, mode = "seul" }: {
   const prochaine = programmees[0];
   const brouillons = campagnes.filter((c) => c.status === "draft").length;
   const recentes = envoyees.slice(0, 5);
+
+  // ── Performance moyenne des envois ────────────────────────────────────────
+  // Uniquement sur les campagnes COUVERTES par le webhook (mêmes règles que le
+  // tableau) : agréger des campagnes sans données tirerait les taux vers zéro.
+  const couverte = (c: Campagne) =>
+    !!stats[c.id] || (!!premierEvt && !!c.sent_at && c.sent_at >= premierEvt);
+  const couvertes = envoyees.filter((c) => couverte(c) && (c.sent_count ?? 0) > 0);
+  const perfEnvoyes = couvertes.reduce((s, c) => s + (c.sent_count ?? 0), 0);
+  const perfBounces = couvertes.reduce((s, c) => s + (stats[c.id]?.bounces ?? 0), 0);
+  const perfClics   = couvertes.reduce((s, c) => s + (stats[c.id]?.clicks ?? 0), 0);
+  const perfDesabos = couvertes.reduce((s, c) => s + (stats[c.id]?.unsubscribes ?? 0), 0);
+  const perfDelivres = Math.max(0, perfEnvoyes - perfBounces);
+  const tauxPct = (n: number) => perfEnvoyes > 0 ? `${Math.round((n / perfEnvoyes) * 1000) / 10}%` : "—";
 
   const versNewsletter = () => onNavigate?.("newsletter");
   /** Carte cliquable : même comportement au clavier qu'à la souris. */
@@ -314,12 +331,45 @@ export function BlocsNewsletter({ onNavigate, mode = "seul" }: {
           </div>
         </div>
 
+        {/* Performance des envois — moyennes sur les campagnes suivies par le
+            webhook. Absent tant qu'aucune campagne n'est couverte : pas de
+            cartes remplies de tirets pour meubler. */}
+        {couvertes.length > 0 && (
+          <div className="bloc">
+            <div className="bloc-tete">
+              <div>
+                <h2>Performance des envois</h2>
+                <div className="desc">
+                  Moyennes sur {couvertes.length === 1 ? "la campagne suivie" : `les ${couvertes.length} campagnes suivies`} ({perfEnvoyes} emails envoyés). Cliquez sur une campagne ci-dessous pour le détail.
+                </div>
+              </div>
+            </div>
+            <div className="cartes-stat">
+              <div className="stat">
+                <div className="lib">Délivrabilité</div>
+                <div className="val">{tauxPct(perfDelivres)}</div>
+                <div className="det">{perfDelivres} emails acceptés · {perfBounces} bounce{perfBounces > 1 ? "s" : ""}</div>
+              </div>
+              <div className="stat">
+                <div className="lib">Taux de clic</div>
+                <div className="val" style={{ color: perfClics > 0 ? "var(--ok)" : "var(--ink)" }}>{tauxPct(perfClics)}</div>
+                <div className="det">{perfClics} personne{perfClics > 1 ? "s ont" : " a"} cliqué au moins un lien</div>
+              </div>
+              <div className="stat">
+                <div className="lib">Désabonnements</div>
+                <div className="val" style={{ color: perfDesabos > 0 ? "var(--attente)" : "var(--ink)" }}>{tauxPct(perfDesabos)}</div>
+                <div className="det">{perfDesabos} via les liens des campagnes</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Dernières campagnes */}
         <div className="bloc">
           <div className="bloc-tete">
             <div>
               <h2>Dernières campagnes</h2>
-              <div className="desc">Les cinq derniers envois.</div>
+              <div className="desc">Les cinq derniers envois — cliquez sur une campagne pour sa fiche complète.</div>
             </div>
           </div>
           {recentes.length === 0 ? (
@@ -327,15 +377,19 @@ export function BlocsNewsletter({ onNavigate, mode = "seul" }: {
           ) : (
             <table className="tbl-cartes">
                 <thead>
-                  <tr><th>Objet</th><th>Envoyée le</th><th>Destinataires</th><th>Délivrés</th><th>Clics</th></tr>
+                  <tr><th>Objet</th><th>Envoyée le</th><th>Destinataires</th><th>Délivrés</th><th>Clics</th><th>Désabos</th></tr>
                 </thead>
                 <tbody>
                   {recentes.map((c) => {
                     const cibles = c.recipients_count ?? 0;
                     const envoyes = c.sent_count ?? 0;
                     const partiel = cibles > 0 && envoyes < cibles;
+                    const st = stats[c.id];
                     return (
-                      <tr key={c.id}>
+                      <tr key={c.id} className="tbl-clic" role="button" tabIndex={0}
+                        title={`Statistiques de « ${c.subject} »`}
+                        onClick={() => setFiche(c)}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setFiche(c); } }}>
                         <td data-label="Objet">{c.subject}</td>
                         <td data-label="Envoyée le">{fmtDate(c.sent_at)}</td>
                         <td data-label="Destinataires">
@@ -356,16 +410,20 @@ export function BlocsNewsletter({ onNavigate, mode = "seul" }: {
                             // campagne post-webhook, le premier événement est un
                             // clic sur CETTE campagne — donc toujours après son
                             // envoi, et elle serait restée à « — » à tort.
-                            const aDesEvenements = clics[c.id] != null || bounces[c.id] != null;
-                            const couvert = aDesEvenements || (premierEvt && c.sent_at && c.sent_at >= premierEvt);
+                            const couvert = couverte(c);
                             if (!couvert || envoyes === 0) return <span className="sub-desc">—</span>;
-                            const del = Math.max(0, envoyes - (bounces[c.id] ?? 0));
+                            const del = Math.max(0, envoyes - (st?.bounces ?? 0));
                             return <>{del}<span className="sub-desc"> · {Math.round((del / envoyes) * 100)}%</span></>;
                           })()}
                         </td>
                         <td data-label="Clics">
-                          {clics[c.id] != null
-                            ? <>{clics[c.id]}{envoyes > 0 && <span className="sub-desc"> · {Math.round((clics[c.id] / envoyes) * 100)}%</span>}</>
+                          {couverte(c)
+                            ? <>{st?.clicks ?? 0}{envoyes > 0 && <span className="sub-desc"> · {Math.round(((st?.clicks ?? 0) / envoyes) * 100)}%</span>}</>
+                            : <span className="sub-desc">—</span>}
+                        </td>
+                        <td data-label="Désabos">
+                          {couverte(c)
+                            ? <>{st?.unsubscribes ?? 0}{envoyes > 0 && <span className="sub-desc"> · {Math.round(((st?.unsubscribes ?? 0) / envoyes) * 100)}%</span>}</>
                             : <span className="sub-desc">—</span>}
                         </td>
                       </tr>
@@ -375,6 +433,11 @@ export function BlocsNewsletter({ onNavigate, mode = "seul" }: {
             </table>
           )}
         </div>
+
+        {fiche && (
+          <FicheCampagne campagne={fiche} stats={stats[fiche.id]} premierEvt={premierEvt}
+            onClose={() => setFiche(null)} />
+        )}
     </>
   );
 }
