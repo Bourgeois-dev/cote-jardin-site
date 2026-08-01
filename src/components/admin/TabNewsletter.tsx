@@ -567,15 +567,22 @@ function ChampsBloc({ val, onChange, onUpload }: {
   );
 }
 
-function NouveauForm({ onSaved, initial, cibleUnique, step, setStep }: {
+function NouveauForm({ onSaved, initial, cibleUnique, step, setStep, welcome }: {
   onSaved: () => void;
-  initial?: { id?: string; template: string; segment: string; subject: string; content: Record<string, string> };
+  /* `content` porte aussi les blocs (tableau) : `any` plutôt que
+     Record<string,string>, qui décrivait mal la réalité même avant. */
+  initial?: { id?: string; template: string; segment: string; subject: string; content: any };
   /** Module Réservation désactivé : un seul ciblage possible, l'étape 2 est retirée. */
   cibleUnique: boolean;
   /* L'étape est portée par le parent : le fil « 1 · Contenu / 2 · Destinataires /
      3 · Envoi » vit dans l'en-tête de page, au-dessus de ce composant. */
   step: 1 | 2 | 3;
   setStep: (n: 1 | 2 | 3) => void;
+  /* Mode « email de bienvenue » : le MÊME éditeur, avec deux différences —
+     il n'y a ni destinataires (c'est déclenché par l'inscription) ni envoi
+     (il part tout seul). L'étape 1 se termine donc par « Enregistrer », et le
+     texte est écrit dans site_content plutôt que dans une campagne. */
+  welcome?: boolean;
 }) {
   const dirty = useDirty();
   // Éditeur ouvert = travail en cours : protège contre la perte (changement
@@ -781,6 +788,21 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep }: {
 
   // Validation de l'étape 1 : voir le message explicite au clic sur « Suivant ».
   const canSend  = sendNow || !!scheduledDate;
+
+  /* Welcome : pas de campagne créée, pas de planification — un seul
+     enregistrement dans site_content, relu à chaque inscription. */
+  async function enregistrerWelcome() {
+    if (!subject.trim()) { setManqueEtape1("Indiquez l'objet de l'email avant d'enregistrer."); return; }
+    if (!blocs.length)   { setManqueEtape1("Ajoutez au moins un bloc de contenu avant d'enregistrer."); return; }
+    setManqueEtape1(""); setBusy(true); setErreur("");
+    const { error } = await supabase.from("site_content").upsert(
+      { section_key: "welcome_email", content: { ...content, subject, blocs } },
+      { onConflict: "section_key" });
+    setBusy(false);
+    if (error) { setErreur("Enregistrement impossible : " + error.message); return; }
+    dirty.set(false);
+    onSaved();
+  }
 
   async function sauvegarder(lancer: boolean) {
     if (!template || !subject) return;
@@ -1036,15 +1058,27 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep }: {
             {manqueEtape1 && (
               <div className="err-inline" style={{ marginTop: 16 }}>{manqueEtape1}</div>
             )}
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button className="btn btn-accent" onClick={() => {
-                if (!subject.trim()) { setManqueEtape1("Indiquez l'objet de l'email avant de continuer."); return; }
-                if (!blocs.length)   { setManqueEtape1("Ajoutez au moins un bloc de contenu avant de continuer."); return; }
-                setManqueEtape1("");
-                setStep(cibleUnique ? 3 : 2);
-              }}>
-                Suivant →
-              </button>
+            {erreur && <div className="err-inline" style={{ marginTop: 16 }}>{erreur}</div>}
+            <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 20 }}>
+              {welcome ? (
+                <>
+                  <button className="btn btn-accent" onClick={enregistrerWelcome} disabled={busy}>
+                    {busy ? "Enregistrement…" : "Enregistrer"}
+                  </button>
+                  <span className="form-pied-aide">
+                    S'applique aux prochaines inscriptions ; les envois passés ne changent pas.
+                  </span>
+                </>
+              ) : (
+                <button className="btn btn-accent" onClick={() => {
+                  if (!subject.trim()) { setManqueEtape1("Indiquez l'objet de l'email avant de continuer."); return; }
+                  if (!blocs.length)   { setManqueEtape1("Ajoutez au moins un bloc de contenu avant de continuer."); return; }
+                  setManqueEtape1("");
+                  setStep(cibleUnique ? 3 : 2);
+                }}>
+                  Suivant →
+                </button>
+              )}
             </div>
           </div>
 
@@ -1185,70 +1219,35 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep }: {
 // Aperçu fidèle de l'email de bienvenue (transactionnel, codé dans l'edge function
 // send-newsletter, template "welcome"). Reflète sa structure : bandeau accent,
 // salutation, texte d'accueil, bouton, signature. Seul c.message est variable.
-/* Texte par défaut de l'email de bienvenue. MIROIR OBLIGATOIRE de
-   WELCOME_DEFAUT dans supabase/functions/send-newsletter/index.ts : si les
-   deux divergent, l'aperçu ment sur ce qui part réellement. */
+/* Email de bienvenue par défaut, au MÊME format qu'une campagne libre (objet,
+   preheader, blocs) : c'est ce qui permet de l'éditer avec l'éditeur habituel.
+   MIROIR OBLIGATOIRE de welcomeDefaut() dans
+   supabase/functions/send-newsletter/index.ts — si les deux divergent, l'aperçu
+   ment sur ce qui part réellement. */
 export function welcomeDefaut(restoName: string) {
   const nom = restoName || "votre restaurant";
+  const base = (import.meta.env.VITE_SITE_URL || "").replace(/\/+$/, "");
   return {
-    eyebrow: "Bienvenue",
-    titre: `Bienvenue chez ${nom} !`,
-    texte: "Merci de votre inscription. Vous faites maintenant partie de nos proches et serez les premiers informés de nos actualités, nouveaux menus et événements.",
-    cta_label: "Découvrir le restaurant",
-    cta_url: import.meta.env.VITE_SITE_URL || "",
+    subject: `Bienvenue chez ${nom} !`,
+    content: {
+      preheader: `Bienvenue chez ${nom} — vous faites désormais partie de nos proches.`,
+      blocs: [{
+        type: "pleine_largeur" as const,
+        titre: `Bienvenue chez ${nom} !`,
+        texte: "Bonjour {{prenom}},\n\nMerci de votre inscription. Vous faites maintenant partie de nos proches et serez les premiers informés de nos actualités, nouveaux menus et événements.",
+        cta_label: "Découvrir le restaurant",
+        cta_url: base,
+      }],
+    },
   };
 }
 
-function ApercuWelcome({ restoName, logoUrl, w }: { restoName: string; logoUrl: string; w: ReturnType<typeof welcomeDefaut> }) {
-  const accent = "var(--accent, #5a7d4f)";
-  const INK = "#4A4A45";
-  const nom = restoName || "votre restaurant";
-  return (
-    <div className="welcome-apercu">
-      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(80,100,60,.12)", maxWidth: 500, margin: "0 auto" }}>
-        {/* Logo */}
-        <div style={{ textAlign: "center", padding: "20px 30px 6px" }}>
-          {logoUrl
-            ? <img src={logoUrl} alt={nom} style={{ height: 40, maxWidth: 180, objectFit: "contain", margin: "0 auto", display: "block" }} />
-            : <span style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink)" }}>{nom}</span>}
-        </div>
-        {/* Bandeau accent */}
-        <div style={{ background: accent, color: "#fff", textAlign: "center", padding: "26px 30px" }}>
-          {w.eyebrow && <div style={{ fontSize: 11, letterSpacing: ".18em", textTransform: "uppercase", opacity: .8, marginBottom: 8 }}>{w.eyebrow}</div>}
-          <div style={{ fontFamily: "var(--font-display, Georgia, serif)", fontSize: 24, lineHeight: 1.2 }}>{w.titre}</div>
-        </div>
-        {/* Corps */}
-        <div style={{ padding: "26px 30px 6px" }}>
-          <p style={{ fontFamily: "var(--font-display, Georgia, serif)", fontSize: 18, color: "#3A4A2C", margin: "0 0 16px" }}>Bonjour [Prénom],</p>
-          {/* Même règle de paragraphes que l'envoi : ligne vide = paragraphe. */}
-          {String(w.texte || "").replace(/\r\n?/g, "\n").split(/\n\s*\n/).filter((x) => x.trim()).map((x, i) => (
-            <p key={i} style={{ fontSize: 14, lineHeight: 1.7, color: INK, margin: "0 0 12px" }}>{x.trim()}</p>
-          ))}
-        </div>
-        {/* Bouton */}
-        {w.cta_label && (
-          <div style={{ textAlign: "center", padding: "20px 30px 6px" }}>
-            <span style={{ display: "inline-block", background: accent, color: "#fff", fontSize: 14, fontWeight: 700, padding: "12px 34px", borderRadius: 28 }}>{w.cta_label}</span>
-          </div>
-        )}
-        {/* Signature */}
-        <div style={{ padding: "16px 30px 32px" }}>
-          <p style={{ fontSize: 14, color: INK, margin: "0 0 4px" }}>À très bientôt,</p>
-          <p style={{ fontFamily: "var(--font-display, Georgia, serif)", fontSize: 16, fontStyle: "italic", color: "#3A4A2C", margin: 0 }}>{nom}</p>
-        </div>
-      </div>
-      <div style={{ fontSize: 11.5, color: "var(--ink-soft)", textAlign: "center", marginTop: 12, fontStyle: "italic" }}>
-        [Prénom] est remplacé par le prénom de l'inscrit s'il est connu.
-      </div>
-    </div>
-  );
-}
 
 export default function TabNewsletter() {
   const confirmDirty = useConfirm();
   const [campagnes, setCampagnes] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState<"liste" | "nouveau">("liste");
+  const [mode, setMode] = useState<"liste" | "nouveau" | "welcome">("liste");
   /* L'étape de l'éditeur vit ici et non dans NouveauForm : le fil « 1 · Contenu /
      2 · Destinataires / 3 · Envoi » s'affiche dans l'en-tête de page. */
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -1258,14 +1257,11 @@ export default function TabNewsletter() {
   const [filtreDossier, setFiltreDossier] = useState<string>("tous"); // "tous" | "__sans__" | nom de dossier
   const [menuOuvert, setMenuOuvert] = useState<string | null>(null);   // id de campagne dont le menu ⋯ est ouvert
   const [registreDossiers, setRegistreDossiers] = useState<string[]>([]); // dossiers déclarés (table), incl. vides
-  const [welcomeOuvert, setWelcomeOuvert] = useState(false); // accordéon d'édition de l'email de bienvenue
-  /* Texte de l'email de bienvenue. Stocké dans site_content (« welcome_email »)
-     et NON sur une ligne de campagne welcome : il en existe plusieurs en base,
-     et le scheduler en choisit une sans tri — l'édition ne serait pas fiable. */
-  const [welcome, setWelcome] = useState(() => welcomeDefaut(import.meta.env.VITE_RESTO_NAME || ""));
-  const [welcomeSauve, setWelcomeSauve] = useState(false);
-  const [welcomeBusy, setWelcomeBusy] = useState(false);
-  const [welcomeErr, setWelcomeErr] = useState("");
+  /* Contenu de l'email de bienvenue, au même format qu'une campagne. Stocké
+     dans site_content (« welcome_email ») et NON sur une ligne de campagne
+     welcome : il en existe plusieurs en base et le scheduler en choisit une
+     sans tri — l'édition ne serait pas fiable. */
+  const [welcomeInit, setWelcomeInit] = useState<{ subject: string; content: any } | null>(null);
   const restoName = import.meta.env.VITE_RESTO_NAME || "";
   const [logoUrl, setLogoUrl] = useState(""); // logo newsletter, pour l'aperçu du Welcome
   // Offre « Essentiel + Newsletter » : module Réservation désactivé. Sans
@@ -1464,37 +1460,18 @@ function dateRef(c: Campaign): string {
   const campagnesGrille = campagnes.filter((c) => c.template !== "welcome");
   // Stats agrégées du Welcome : chaque inscription crée une ligne welcome → le nombre
   // de lignes (et la somme des sent_count) donne le nombre d'envois.
-  /* Lecture au montage : les champs absents retombent sur le texte par défaut,
-     donc un site qui n'a jamais ouvert cet écran envoie le message historique. */
-  useEffect(() => {
-    let vivant = true;
-    supabase.from("site_content").select("content").eq("section_key", "welcome_email").maybeSingle()
-      .then(({ data }) => {
-        if (!vivant) return;
-        const c = (data?.content || {}) as Record<string, string>;
-        const d = welcomeDefaut(import.meta.env.VITE_RESTO_NAME || "");
-        setWelcome({
-          eyebrow: c.eyebrow ?? d.eyebrow,
-          titre: String(c.titre ?? "").trim() || d.titre,
-          texte: String(c.texte ?? "").trim() || d.texte,
-          cta_label: c.cta_label ?? d.cta_label,
-          cta_url: String(c.cta_url ?? "").trim() || d.cta_url,
-        });
-      });
-    return () => { vivant = false; };
-  }, []);
-
-  async function enregistrerWelcome() {
-    setWelcomeBusy(true);
-    const { error } = await supabase.from("site_content")
-      .upsert({ section_key: "welcome_email", content: welcome }, { onConflict: "section_key" });
-    setWelcomeBusy(false);
-    /* Message en ligne : c'est la convention de cet onglet (err-inline),
-       il n'y a pas de toasts ici. */
-    if (error) { setWelcomeErr("Enregistrement impossible : " + error.message); return; }
-    setWelcomeErr("");
-    setWelcomeSauve(true);
-    setTimeout(() => setWelcomeSauve(false), 3000);
+  /* Lecture au montage. Rien d'enregistré = on ouvre l'éditeur pré-rempli avec
+     le message historique, pour que le restaurateur parte du texte qu'il envoie
+     déjà plutôt que d'une page blanche. */
+  async function chargerWelcome() {
+    const { data } = await supabase.from("site_content").select("content")
+      .eq("section_key", "welcome_email").maybeSingle();
+    const c = (data?.content || {}) as any;
+    const d = welcomeDefaut(restoName);
+    const utile = Array.isArray(c?.blocs) && c.blocs.length > 0;
+    setWelcomeInit(utile
+      ? { subject: String(c.subject || d.subject), content: c }
+      : { subject: d.subject, content: d.content });
   }
 
   const welcomeLignes = campagnes.filter((c) => c.template === "welcome");
@@ -1531,16 +1508,24 @@ function dateRef(c: Campaign): string {
       {/* Deux en-têtes distincts : la liste des campagnes, ou l'éditeur. Dans
           l'éditeur, le fil des étapes remplace les boutons — c'est le repère
           dont on a besoin à cet endroit. */}
-      <div className={`topbar adm-vit${mode === "nouveau" ? " large" : ""}`}>
+      <div className={`topbar adm-vit${mode !== "liste" ? " large" : ""}`}>
         <div>
           <span className="adm-vit-eyebrow">Newsletter</span>
-          <h1>{mode === "nouveau" ? "Nouvelle campagne" : "Campagnes"}</h1>
-          <div className="sous">{mode === "nouveau"
-            ? "Composez avec des blocs — aucun format imposé : ajoutez, réordonnez, supprimez."
-            : `Campagnes email — ${campagnesGrille.length} au total`}</div>
+          <h1>{mode === "welcome" ? "Email de bienvenue" : mode === "nouveau" ? "Nouvelle campagne" : "Campagnes"}</h1>
+          <div className="sous">{mode === "welcome"
+            ? "Envoyé automatiquement à chaque nouvelle inscription."
+            : mode === "nouveau"
+              ? "Composez avec des blocs — aucun format imposé : ajoutez, réordonnez, supprimez."
+              : `Campagnes email — ${campagnesGrille.length} au total`}</div>
         </div>
         <div className="adm-vit-topbar-actions">
-          {mode === "nouveau" ? (
+          {mode === "welcome" ? (
+            <button className="adm-vit-lien" onClick={async () => {
+              const ok = await confirmDirty({ titre: "Quitter l'email de bienvenue ?", message: "Les modifications non enregistrées seront perdues.", confirmer: "Quitter", annuler: "Rester", danger: true });
+              if (!ok) return;
+              setWelcomeInit(null); setMode("liste");
+            }}>← Retour à la liste</button>
+          ) : mode === "nouveau" ? (
             <>
               <div className="nl-fil">
                 {/* L'étape 2 (ciblage) disparaît du fil quand elle est sautée :
@@ -1573,7 +1558,17 @@ function dateRef(c: Campaign): string {
         </div>
       </div>
 
-      <div className={`contenu adm-vit${mode === "nouveau" ? " large" : ""}`}>
+      <div className={`contenu adm-vit${mode !== "liste" ? " large" : ""}`}>
+
+        {/* Même éditeur que pour une campagne : mêmes blocs, même aperçu.
+            Seul le pied de l'étape 1 change (« Enregistrer » au lieu de
+            « Suivant »), et il n'y a ni étape 2 ni étape 3. */}
+        {mode === "welcome" && welcomeInit && (
+          <NouveauForm key="welcome" welcome
+            initial={{ template: "blocs", segment: "optin", subject: welcomeInit.subject, content: welcomeInit.content }}
+            cibleUnique={cibleUnique} step={1} setStep={() => { /* pas d'étapes ici */ }}
+            onSaved={() => { setWelcomeInit(null); setMode("liste"); charger(); }} />
+        )}
 
         {mode === "nouveau" && (
           <NouveauForm key={prefill?.id || (prefill ? "dup" : "neuf")} initial={prefill}
@@ -1632,50 +1627,12 @@ function dateRef(c: Campaign): string {
                     envoyé à chaque nouvelle inscription — {welcomeEnvois} envoi{welcomeEnvois > 1 ? "s" : ""}
                     {welcomeDernier && `, dernier le ${fmtDatetime(welcomeDernier)}`}
                   </span>
-                  <button className="adm-vit-lien accent" onClick={() => setWelcomeOuvert((v) => !v)}>
-                    {welcomeOuvert ? "Masquer" : "Modifier le message"}
-                  </button>
+                  <button className="adm-vit-lien accent" onClick={async () => {
+                    await chargerWelcome();
+                    setStep(1);
+                    setMode("welcome");
+                  }}>Modifier le message</button>
                 </div>
-                {welcomeOuvert && (
-                  <div className="nl-trigger-apercu wl-edit">
-                    <div>
-                      <div className="champ"><label>Bandeau · au-dessus du titre</label>
-                        <input value={welcome.eyebrow} maxLength={40}
-                          onChange={(e) => setWelcome({ ...welcome, eyebrow: e.target.value })}
-                          placeholder="Vide : aucun bandeau" /></div>
-                      <div className="champ"><label>Titre</label>
-                        <input value={welcome.titre} maxLength={90}
-                          onChange={(e) => setWelcome({ ...welcome, titre: e.target.value })} /></div>
-                      <div className="champ"><label>Message</label>
-                        <textarea rows={6} value={welcome.texte} maxLength={900}
-                          onChange={(e) => setWelcome({ ...welcome, texte: e.target.value })} />
-                        <span className="aide">Une ligne vide sépare deux paragraphes. Le prénom est ajouté automatiquement au-dessus.</span></div>
-                      <div className="grid2">
-                        <div className="champ"><label>Bouton · libellé</label>
-                          <input value={welcome.cta_label} maxLength={40}
-                            onChange={(e) => setWelcome({ ...welcome, cta_label: e.target.value })}
-                            placeholder="Vide : aucun bouton" /></div>
-                        <div className="champ"><label>Bouton · lien</label>
-                          <input value={welcome.cta_url} maxLength={300}
-                            onChange={(e) => setWelcome({ ...welcome, cta_url: e.target.value })} /></div>
-                      </div>
-                      {welcomeErr && <div className="err-inline" style={{ marginTop: 12 }}>{welcomeErr}</div>}
-                      <div className="form-pied">
-                        <span className="form-pied-aide">
-                          {welcomeSauve ? "Enregistré — les prochaines inscriptions recevront ce message."
-                                        : "S'applique aux prochaines inscriptions ; les envois passés ne changent pas."}
-                        </span>
-                        <button className="btn btn-accent" onClick={enregistrerWelcome} disabled={welcomeBusy}>
-                          {welcomeBusy ? "Enregistrement…" : "Enregistrer"}
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <span className="ia-lab" style={{ marginBottom: 10 }}>Aperçu de l'email</span>
-                      <ApercuWelcome restoName={restoName} logoUrl={logoUrl} w={welcome} />
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 

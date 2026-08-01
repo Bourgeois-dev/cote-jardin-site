@@ -65,27 +65,36 @@ async function getLogoUrl(): Promise<string> {
    Les valeurs par défaut reprennent mot pour mot le texte historique : un
    site qui n'a jamais ouvert cet écran envoie exactement le même email
    qu'avant. MIROIR OBLIGATOIRE avec ApercuWelcome (TabNewsletter.tsx). */
-const WELCOME_DEFAUT = {
-  eyebrow: "Bienvenue",
-  titre: `Bienvenue chez ${RESTO_NAME} !`,
-  texte: "Merci de votre inscription. Vous faites maintenant partie de nos proches et serez les premiers informés de nos actualités, nouveaux menus et événements.",
-  cta_label: "Découvrir le restaurant",
-  cta_url: SITE_URL,
-};
+/* Le welcome par défaut, exprimé dans le MÊME format que les campagnes libres
+   (objet, preheader, blocs) : c'est ce qui permet de l'éditer avec l'éditeur de
+   blocs habituel et de le rendre avec le même moteur.
+   MIROIR OBLIGATOIRE avec welcomeDefaut() dans TabNewsletter.tsx. */
+function welcomeDefaut() {
+  return {
+    subject: `Bienvenue chez ${RESTO_NAME} !`,
+    content: {
+      preheader: `Bienvenue chez ${RESTO_NAME} — vous faites désormais partie de nos proches.`,
+      blocs: [{
+        type: "pleine_largeur",
+        titre: `Bienvenue chez ${RESTO_NAME} !`,
+        texte: "Bonjour {{prenom}},\n\nMerci de votre inscription. Vous faites maintenant partie de nos proches et serez les premiers informés de nos actualités, nouveaux menus et événements.",
+        cta_label: "Découvrir le restaurant",
+        cta_url: SITE_URL,
+      }],
+    },
+  };
+}
 
-async function getWelcome(): Promise<Record<string, string>> {
+/** Welcome enregistré depuis l'administration (site_content « welcome_email »).
+ *  Renvoie null si rien n'a jamais été enregistré : l'envoi retombe alors sur
+ *  le gabarit historique, à l'identique. */
+async function getWelcome(): Promise<{ subject: string; content: any } | null> {
   try {
     const { data } = await db.from("site_content").select("content").eq("section_key", "welcome_email").maybeSingle();
-    const c = (data?.content || {}) as Record<string, string>;
-    const v = (k: keyof typeof WELCOME_DEFAUT) => String(c[k] ?? "").trim() || WELCOME_DEFAUT[k];
-    return {
-      eyebrow: v("eyebrow"), titre: v("titre"), texte: v("texte"),
-      // Un libellé vidé volontairement retire le bouton : on ne force pas un
-      // appel à l'action à un restaurateur qui n'en veut pas.
-      cta_label: String(c.cta_label ?? WELCOME_DEFAUT.cta_label).trim(),
-      cta_url: String(c.cta_url ?? "").trim() || WELCOME_DEFAUT.cta_url,
-    };
-  } catch { return { ...WELCOME_DEFAUT }; }
+    const c = (data?.content || {}) as any;
+    if (!Array.isArray(c?.blocs) || c.blocs.length === 0) return null;
+    return { subject: String(c.subject || welcomeDefaut().subject), content: c };
+  } catch { return null; }
 }
 
 // `prenom` est porté séparément de `name` : un lead sans prénom mais avec un
@@ -516,24 +525,20 @@ function footerBlocs(token: string, campaignId = ""): string {
 }
 
 
-function renderTemplate(template: string, c: any, name: string, logoUrl: string, token: string, campaignId = "", welcome?: Record<string, string>): string {
+function renderTemplate(template: string, c: any, name: string, logoUrl: string, token: string, campaignId = ""): string {
   // Campagnes libres (nouveau système de blocs)
   if (template === "blocs") return renderBlocs(c, name, logoUrl, token, campaignId);
 
   const ft = footer(token, campaignId);
   const prenom = name.split(" ")[0] || "";
 
+  /* Gabarit welcome historique. Il ne sert plus que de repli : dès qu'un
+     welcome a été enregistré depuis l'administration, l'envoi passe par
+     renderBlocs (voir plus bas), comme une campagne libre. */
   if (template === "welcome") {
-    const w = welcome || WELCOME_DEFAUT;
-    // Même règle de paragraphes que partout : ligne vide = nouveau paragraphe.
-    const paras = String(w.texte || "")
-      .replace(/\r\n?/g, "\n").split(/\n\s*\n/).filter((x: string) => x.trim())
-      .map((x: string) => `<p style="margin:0 0 18px 0;font-size:16px;line-height:26px;color:#4A4A45;">${esc(x.trim()).replace(/\n/g, "<br/>")}</p>`)
-      .join("");
-    const hb = `<tr><td align="center" style="padding:30px 44px 32px 44px;background-color:${ACCENT_COLOR};"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">${w.eyebrow?`<tr><td align="center" style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.75);padding-bottom:10px;">${esc(w.eyebrow)}</td></tr>`:""}<tr><td align="center" class="h1" style="font-family:Georgia,serif;font-size:30px;line-height:38px;color:#FFFFFF;font-weight:normal;">${esc(w.titre)}</td></tr><tr><td align="center" style="padding-top:16px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="font-size:0;border-top:1px solid rgba(255,255,255,.45);width:48px;">&nbsp;</td></tr></table></td></tr></table></td></tr>`;
-    // `c.message` : champ des anciennes campagnes welcome, conservé en appoint.
-    const b = `${heroImage("Photo")}<tr><td class="px" style="padding:36px 44px 6px 44px;background-color:#FFFFFF;font-family:Arial,sans-serif;">${prenom?`<p style="margin:0 0 20px 0;font-family:Georgia,serif;font-size:20px;color:#3A4A2C;">Bonjour ${esc(prenom)},</p>`:""}${paras}${c.message?`<p style="margin:0 0 8px 0;font-size:16px;line-height:26px;color:#4A4A45;">${esc(c.message)}</p>`:""}</td></tr>${w.cta_label?ctaBtn(w.cta_label,w.cta_url||SITE_URL):""}${signoff()}`;
-    return layout({ preheader: `${w.titre} — vous faites désormais partie de nos proches.`, title: w.titre, headerBand: hb, body: b, footerHtml: ft, logoUrl, showLogo: true });
+    const hb = `<tr><td align="center" style="padding:30px 44px 32px 44px;background-color:${ACCENT_COLOR};"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td align="center" style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.75);padding-bottom:10px;">Bienvenue</td></tr><tr><td align="center" class="h1" style="font-family:Georgia,serif;font-size:30px;line-height:38px;color:#FFFFFF;font-weight:normal;">Bienvenue chez ${esc(RESTO_NAME)}&nbsp;!</td></tr><tr><td align="center" style="padding-top:16px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="font-size:0;border-top:1px solid rgba(255,255,255,.45);width:48px;">&nbsp;</td></tr></table></td></tr></table></td></tr>`;
+    const b = `${heroImage("Photo")}<tr><td class="px" style="padding:36px 44px 6px 44px;background-color:#FFFFFF;font-family:Arial,sans-serif;">${prenom?`<p style="margin:0 0 20px 0;font-family:Georgia,serif;font-size:20px;color:#3A4A2C;">Bonjour ${esc(prenom)},</p>`:""}<p style="margin:0 0 18px 0;font-size:16px;line-height:26px;color:#4A4A45;">Merci de votre inscription. Vous faites maintenant partie de nos proches et serez les premiers informés de nos actualités, nouveaux menus et événements.</p>${c.message?`<p style="margin:0 0 8px 0;font-size:16px;line-height:26px;color:#4A4A45;">${esc(c.message)}</p>`:""}</td></tr>${ctaBtn("Découvrir le restaurant",SITE_URL)}${signoff()}`;
+    return layout({ preheader: `Bienvenue chez ${RESTO_NAME} — vous faites désormais partie de nos proches.`, title: `Bienvenue chez ${RESTO_NAME}`, headerBand: hb, body: b, footerHtml: ft, logoUrl, showLogo: true });
   }
   if (template === "evenementiel") {
     const hb = `<tr><td align="center" style="padding:30px 44px 32px 44px;background-color:${ACCENT_COLOR};"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">${c.eyebrow?`<tr><td align="center" style="font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.75);padding-bottom:10px;">${esc(c.eyebrow)}</td></tr>`:""}<tr><td align="center" class="h1" style="font-family:Georgia,serif;font-size:30px;line-height:38px;color:#FFFFFF;font-weight:normal;">${esc(c.titre||"Un événement")}</td></tr></table></td></tr>`;
@@ -658,8 +663,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const logoUrl = await getLogoUrl();
-    // Chargé une fois par envoi, uniquement quand c'est un welcome.
-    const welcomeTxt = camp.template === "welcome" ? await getWelcome() : undefined;
+    /* Welcome : s'il a été composé dans l'administration, on l'envoie comme une
+       campagne libre — même format de blocs, même moteur de rendu, donc même
+       résultat que l'aperçu de l'éditeur. Sinon, gabarit historique inchangé. */
+    const welcomeEdit = camp.template === "welcome" ? await getWelcome() : null;
+    const tpl = welcomeEdit ? "blocs" : camp.template;
+    const contenuBase = welcomeEdit ? welcomeEdit.content : camp.content;
+    const objetBase = welcomeEdit ? welcomeEdit.subject : camp.subject;
 
     let recipients: Destinataire[];
     if (estTest) {
@@ -714,8 +724,8 @@ Deno.serve(async (req: Request) => {
         // sert pour remplir newsletter_events. Pas de tag en mode test — un
         // clic sur un e-mail de test ne doit pas compter dans les stats.
         ...(estTest ? {} : { tags: [{ name: "campaign_id", value: campaign_id }] }),
-        subject: remplacerPrenom(camp.subject || "", r.prenom, repliPrenom),
-        html: renderTemplate(camp.template, personnaliser(camp.content, r.prenom, repliPrenom), r.name, logoUrl, r.token, estTest ? "" : campaign_id, welcomeTxt),
+        subject: remplacerPrenom(objetBase || "", r.prenom, repliPrenom),
+        html: renderTemplate(tpl, personnaliser(contenuBase, r.prenom, repliPrenom), r.name, logoUrl, r.token, estTest ? "" : campaign_id),
         // Bouton « Se désabonner » natif de Gmail/Yahoo (exigé depuis 2024 pour
         // les expéditeurs en masse). Le POST one-click (RFC 8058) arrive sur
         // newsletter-unsubscribe avec le token en query string. Sans ce bouton,
