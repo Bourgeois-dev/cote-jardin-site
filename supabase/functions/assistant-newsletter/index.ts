@@ -10,8 +10,14 @@ const ASSISTANT_MODEL = Deno.env.get("ASSISTANT_MODEL") || "claude-haiku-4-5";
 const RESTO_NAME    = Deno.env.get("RESTO_NAME") || "Le restaurant";
 const TAGLINE       = Deno.env.get("TAGLINE") || "";
 const RESTO_ADDRESS = Deno.env.get("RESTO_ADDRESS") || "";
-const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
-const ANON_KEY      = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("ANON_KEY") || "";
+const SUPABASE_URL     = Deno.env.get("SUPABASE_URL")!;
+const ANON_KEY         = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("ANON_KEY") || "";
+const SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_KEY")!;
+
+// Client service role : lit les données réelles du site (carte, ardoise,
+// horaires…) pour donner du contexte à l'assistant. Lecture seule, uniquement
+// APRÈS la vérification admin — un anonyme ne déclenche aucune requête.
+const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -36,36 +42,111 @@ function json(body: unknown, status = 200): Response {
                  texte) prête à être injectée dans l'éditeur de blocs — le
                  restaurateur retouche ensuite librement.
 
-   Le contexte du restaurant vient des secrets (nom, tagline, adresse) : le
-   même code sert tous les clients, seule la configuration change. */
+   Le contexte du restaurant vient de DEUX sources :
+   - les secrets (nom, tagline, adresse) — la configuration par client ;
+   - les données réelles du site, lues en base à chaque appel (carte active,
+     ardoise, offre à emporter, actualité affichée, jours de fermeture,
+     fermetures exceptionnelles) — c'est ce qui rend les propositions
+     concrètes : l'assistant peut citer un vrai plat signature ou éviter de
+     proposer un envoi pendant les congés.
+   Le même code sert tous les clients, seules les données changent. */
+
+const JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+
+/** Contexte réel du restaurant, lu en base. Meilleur effort : si une lecture
+ *  échoue, l'assistant reste simplement plus générique — jamais d'erreur.
+ *  Plafonné (~2600 signes) pour borner le prompt quel que soit le client. */
+async function contexteDonnees(): Promise<string> {
+  const lignes: string[] = [];
+  try {
+    const [plats, ardoise, takeawayFlag, emporter, promo, horaires, fermetures] = await Promise.all([
+      db.from("menu_items").select("category,name").eq("is_active", true).order("category").order("position").limit(60),
+      db.from("site_content").select("content").eq("section_key", "ardoise").maybeSingle(),
+      db.from("site_content").select("content").eq("section_key", "takeaway_enabled").maybeSingle(),
+      db.from("takeaway_items").select("name").eq("is_active", true).order("position").limit(8),
+      db.from("promo_banner").select("title,subtitle,message,event_date").eq("is_active", true).limit(1).maybeSingle(),
+      db.from("opening_hours").select("day_of_week,is_closed").order("day_of_week"),
+      db.from("closure_periods").select("start_date,end_date,reason").gte("end_date", new Date().toISOString().slice(0, 10)).order("start_date").limit(4),
+    ]);
+
+    // La carte active, groupée par catégorie (12 plats max par catégorie).
+    if (plats.data?.length) {
+      const parCat = new Map<string, string[]>();
+      for (const p of plats.data) {
+        const cat = String(p.category || "Autres").trim() || "Autres";
+        if (!parCat.has(cat)) parCat.set(cat, []);
+        const liste = parCat.get(cat)!;
+        if (liste.length < 12) liste.push(String(p.name || "").trim());
+      }
+      const carte = [...parCat.entries()].map(([c, ns]) => `- ${c} : ${ns.join(" ; ")}`).join("\n");
+      lignes.push(`La carte actuelle (sans les prix) :\n${carte}`);
+    }
+
+    // L'ardoise du moment (prix volontairement omis : il peut changer avant l'envoi).
+    const ard = ardoise.data?.content as any;
+    if (ard?.plat) lignes.push(`L'ardoise du moment : ${String(ard.plat)}${ard.note ? ` (${String(ard.note)})` : ""}.`);
+
+    // Offre à emporter, si le module est actif.
+    if ((takeawayFlag.data?.content as any)?.enabled === true && emporter.data?.length) {
+      lignes.push(`Offre à emporter : ${emporter.data.map((x: any) => String(x.name || "").trim()).filter(Boolean).join(" ; ")}.`);
+    }
+
+    // Actualité / événement déjà affiché sur le site (bandeau promo).
+    const pr = promo.data as any;
+    if (pr) {
+      const bouts = [pr.title, pr.subtitle, pr.message].map((v: any) => String(v || "").trim()).filter(Boolean).join(" — ");
+      if (bouts) lignes.push(`Actualité affichée sur le site : ${bouts}${pr.event_date ? ` (date : ${pr.event_date})` : ""}.`);
+    }
+
+    // Jours de fermeture hebdomadaire — évite de proposer un « brunch du
+    // dimanche » à un restaurant fermé le dimanche.
+    const fermes = (horaires.data || []).filter((h: any) => h.is_closed).map((h: any) => JOURS[h.day_of_week] || "").filter(Boolean);
+    if (fermes.length) lignes.push(`Jours de fermeture hebdomadaire : ${fermes.join(", ")}.`);
+
+    // Fermetures exceptionnelles à venir (congés…) — matière à campagne
+    // d'annonce, et périodes à éviter pour un envoi.
+    if (fermetures.data?.length) {
+      lignes.push("Fermetures exceptionnelles à venir : " + fermetures.data.map((f: any) =>
+        `du ${f.start_date} au ${f.end_date}${f.reason ? ` (${String(f.reason)})` : ""}`).join(" ; ") + ".");
+    }
+  } catch (_e) { /* contexte best-effort */ }
+  return lignes.join("\n").slice(0, 2600);
+}
 
 const CONTEXTE_RESTO = `Le restaurant s'appelle « ${RESTO_NAME} »${TAGLINE ? `, sa signature : « ${TAGLINE} »` : ""}${RESTO_ADDRESS ? `, situé : ${RESTO_ADDRESS}` : ""}.`;
 
-const REGLES_COMMUNES = `Tu es le conseiller marketing d'un restaurant français indépendant. Tu aides le restaurateur à écrire sa newsletter.
+function reglesCommunes(donnees: string): string {
+  return `Tu es le conseiller marketing d'un restaurant français indépendant. Tu aides le restaurateur à écrire sa newsletter.
 ${CONTEXTE_RESTO}
-
+${donnees ? `
+CE QUE TU SAIS DE VRAI SUR LE RESTAURANT (données du site, à jour aujourd'hui) :
+${donnees}
+` : ""}
 Règles STRICTES :
 - Français impeccable, ton chaleureux et sincère, vouvoiement des clients. Jamais de superlatifs creux ni de jargon marketing (« immanquable », « exceptionnel », « boostez »).
-- N'invente JAMAIS de faits précis sur le restaurant : pas de plats inventés, pas de prix, pas de dates d'événements maison, pas d'horaires. Reste générique là où tu ne sais pas, le restaurateur complétera.
+- Tu peux citer les plats, l'ardoise, l'offre à emporter, l'actualité et les fermetures listés ci-dessus : ce sont des données réelles. Appuie-toi dessus quand c'est pertinent (plat signature, produit de saison, annonce de congés).
+- EN DEHORS de ces données, n'invente JAMAIS de faits précis : pas d'autres plats, pas de prix, pas de dates ou d'horaires non listés. Reste générique là où tu ne sais pas, le restaurateur complétera.
+- Ne suggère jamais un moment d'envoi ou un événement pendant une fermeture exceptionnelle listée, ni une offre sur un jour de fermeture hebdomadaire.
 - Le jeton {{prenom}} sera remplacé par le prénom du destinataire : tu peux l'utiliser avec parcimonie (objet ou première ligne).
 - Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ni après, sans balises Markdown.`;
+}
 
-function promptIdees(dateFr: string, notes: string): { system: string; user: string } {
+function promptIdees(dateFr: string, notes: string, donnees: string): { system: string; user: string } {
   return {
-    system: `${REGLES_COMMUNES}
+    system: `${reglesCommunes(donnees)}
 
 Tâche : proposer exactement 4 idées de campagnes email.
 - Au moins 2 idées calées sur le calendrier français À VENIR dans les 8 prochaines semaines par rapport à la date donnée (fêtes : Saint-Valentin, Pâques, fête des mères/pères, beaujolais nouveau, fête de la musique, chandeleur, Épiphanie, fêtes de fin d'année… ; ou saisons et produits de saison). Ne propose jamais un événement déjà passé.
-- Les autres idées : fonds de commerce intemporels (nouvelle carte, coulisses et équipe, plat signature, remerciement des habitués…).
+- Les autres idées : fonds de commerce intemporels (nouvelle carte, coulisses et équipe, plat signature, remerciement des habitués…). Quand la carte réelle est fournie, ancre au moins une idée sur un plat ou un produit qui y figure vraiment.
 Format : {"idees":[{"theme":"…","objet":"…","angle":"…","quand":"…"}]}
 - "theme" : 3-6 mots. "objet" : un objet d'email prêt à l'emploi, 45 signes maximum. "angle" : 1-2 phrases, l'histoire à raconter. "quand" : le bon moment d'envoi (ex. "début février").`,
     user: `Nous sommes le ${dateFr}.${notes ? `\nEnvie du restaurateur : ${notes}` : ""}\nPropose les 4 idées.`,
   };
 }
 
-function promptObjets(objet: string, theme: string, notes: string): { system: string; user: string } {
+function promptObjets(objet: string, theme: string, notes: string, donnees: string): { system: string; user: string } {
   return {
-    system: `${REGLES_COMMUNES}
+    system: `${reglesCommunes(donnees)}
 
 Tâche : proposer exactement 5 variantes d'objet d'email pour la campagne décrite.
 - 45 signes maximum chacune (au-delà, l'objet est coupé sur téléphone).
@@ -76,9 +157,9 @@ Format : {"objets":["…","…","…","…","…"]}`,
   };
 }
 
-function promptRediger(theme: string, angle: string, notes: string, dateFr: string): { system: string; user: string } {
+function promptRediger(theme: string, angle: string, notes: string, dateFr: string, donnees: string): { system: string; user: string } {
   return {
-    system: `${REGLES_COMMUNES}
+    system: `${reglesCommunes(donnees)}
 
 Tâche : rédiger une campagne email complète pour le thème donné.
 Format : {"objet":"…","preheader":"…","blocs":[{"titre":"…","texte":"…","cta_label":"…"}]}
@@ -157,9 +238,11 @@ Deno.serve(async (req: Request) => {
     const action = String(body?.action || "");
     const notes = s(body?.notes, 500);
     const dateFr = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    // Données réelles du site — collectées une fois par appel, après le guard.
+    const donnees = await contexteDonnees();
 
     if (action === "idees") {
-      const p = promptIdees(dateFr, notes);
+      const p = promptIdees(dateFr, notes, donnees);
       const r = await appelerModele(p.system, p.user, 900);
       const idees = (Array.isArray(r?.idees) ? r.idees : []).slice(0, 4).map((i: any) => ({
         theme: s(i?.theme, 80),
@@ -177,7 +260,7 @@ Deno.serve(async (req: Request) => {
       if (!objet && !theme && !notes) {
         return json({ error: "input", message: "Donnez un objet, un thème ou quelques mots de contexte." }, 400);
       }
-      const p = promptObjets(objet, theme, notes);
+      const p = promptObjets(objet, theme, notes, donnees);
       const r = await appelerModele(p.system, p.user, 500);
       const objets = (Array.isArray(r?.objets) ? r.objets : []).slice(0, 5)
         .map((o: any) => s(o, 90)).filter(Boolean);
@@ -189,8 +272,8 @@ Deno.serve(async (req: Request) => {
       const theme = s(body?.theme, 120);
       const angle = s(body?.angle, 300);
       if (!theme) return json({ error: "input", message: "Thème manquant." }, 400);
-      const p = promptRediger(theme, angle, notes, dateFr);
-      const r = await appelerModele(p.system, p.user, 1200);
+      const p = promptRediger(theme, angle, notes, dateFr, donnees);
+      const r = await appelerModele(p.system, p.user, 1300);
       const blocs = (Array.isArray(r?.blocs) ? r.blocs : []).slice(0, 2).map((b: any) => ({
         titre: s(b?.titre, 120),
         texte: s(b?.texte, 900),
