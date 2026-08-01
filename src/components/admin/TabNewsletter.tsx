@@ -672,20 +672,46 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep }: {
       });
       if (!ok) return;
     }
-    setPhotosIa(r.blocs.map((b) => String(b.photo || "").trim()));
+    /* Suggestions de visuels : un bloc à deux colonnes en porte une par
+       colonne, elles sont réunies sur la ligne du bloc. */
+    setPhotosIa(r.blocs.map((b) =>
+      "colonnes" in b && Array.isArray(b.colonnes)
+        ? b.colonnes.map((c) => String(c.photo || "").trim()).filter(Boolean).join(" · ")
+        : String((b as { photo?: string }).photo || "").trim()));
     const base = (import.meta.env.VITE_SITE_URL || "").replace(/\/+$/, "");
     const cta = base ? `${base}/#reserver` : "";
     if (r.objet) setSubject(r.objet.slice(0, 150));
     setContent((c: any) => ({
       ...c,
       preheader: (r.preheader || "").slice(0, 150),
-      blocs: r.blocs.map((b) => ({
-        type: "pleine_largeur" as const,
-        ...(b.titre ? { titre: b.titre } : {}),
-        texte: b.texte,
-        ...(cta ? { cta_url: cta } : {}),
-        ...(b.cta_label && cta ? { cta_label: b.cta_label } : {}),
-      })),
+      /* Le type vient de l'assistant : il choisit la pleine largeur par défaut
+         et les deux colonnes quand il met deux choses en regard. Il était
+         auparavant écrasé ici, ce qui rendait le format à deux colonnes
+         inaccessible à l'assistant. */
+      blocs: r.blocs.map((b) => {
+        if ("colonnes" in b && Array.isArray(b.colonnes) && b.colonnes.length >= 2) {
+          return {
+            type: "deux_colonnes" as const,
+            colonnes: [0, 1].map((i) => {
+              const col = b.colonnes[i] || { texte: "" };
+              return {
+                ...(col.titre ? { titre: col.titre } : {}),
+                texte: col.texte || "",
+                ...(cta ? { cta_url: cta } : {}),
+                ...(col.cta_label && cta ? { cta_label: col.cta_label } : {}),
+              };
+            }) as [Colonne, Colonne],
+          };
+        }
+        const bl = b as { titre?: string; texte: string; cta_label?: string };
+        return {
+          type: "pleine_largeur" as const,
+          ...(bl.titre ? { titre: bl.titre } : {}),
+          texte: bl.texte,
+          ...(cta ? { cta_url: cta } : {}),
+          ...(bl.cta_label && cta ? { cta_label: bl.cta_label } : {}),
+        };
+      }),
     }));
     setManqueEtape1("");
   }

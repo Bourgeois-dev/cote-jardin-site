@@ -206,10 +206,13 @@ function promptRediger(theme: string, angle: string, notes: string, dateFr: stri
     system: `${reglesCommunes(donnees, voix)}
 
 Tâche : rédiger une campagne email complète pour le thème donné.
-Format : {"objet":"…","preheader":"…","blocs":[{"titre":"…","texte":"…","cta_label":"…","photo":"…"}]}
+Format : {"objet":"…","preheader":"…","blocs":[{"type":"pleine_largeur","titre":"…","texte":"…","cta_label":"…","photo":"…"}]}
 - "objet" : 45 signes maximum.
 - "preheader" : le résumé affiché après l'objet dans la boîte de réception, 100 signes maximum, qui complète l'objet sans le répéter.
 - "blocs" : 1 ou 2 blocs. Chaque bloc : "titre" court (facultatif : "" si inutile), "texte" de 2 à 3 paragraphes COURTS séparés par une ligne vide (deux sauts de ligne \\n\\n), 400 signes maximum par bloc. Le premier texte peut commencer par « Bonjour {{prenom}}, ».
+- "type" : "pleine_largeur" par défaut. C'est le format normal, celui d'un fil qu'on lit de haut en bas.
+- Emploie "deux_colonnes" UNIQUEMENT quand le bloc met en regard DEUX choses de même nature, qu'on gagne à comparer d'un coup d'œil : deux formules, deux menus, deux soirées, deux dates. Jamais pour aérer une mise en page ni pour couper un texte suivi — deux colonnes se lisent mal sur téléphone, où beaucoup de messageries les empilent. Dans le doute, reste en pleine largeur.
+- Un bloc "deux_colonnes" remplace "titre"/"texte" par : "colonnes":[{"titre":"…","texte":"…","cta_label":"…","photo":"…"},{…}] — exactement DEUX entrées, chacune avec un texte COURT (200 signes maximum, la colonne est étroite).
 - "cta_label" : le libellé du bouton (ex. "Réserver une table", "Découvrir la carte") — uniquement sur le dernier bloc, "" sur les autres. Le lien du bouton est géré par l'éditeur, ne fournis jamais d'URL.
 - "photo" : en quelques mots, le visuel à placer dans ce bloc (nomme une photo de la galerie si l'une convient, sinon décris celle à prendre). "" si le bloc se passe d'image. Tu ne fournis JAMAIS d'URL d'image : le restaurateur choisit le fichier dans l'éditeur.
 - Tu peux utiliser **gras** (double astérisque) avec parcimonie pour un mot ou deux.
@@ -336,12 +339,29 @@ Deno.serve(async (req: Request) => {
       if (!theme) return json({ error: "input", message: "Thème manquant." }, 400);
       const p = promptRediger(theme, angle, notes, dateFr, donnees, voix);
       const r = await appelerModele(p.system, p.user, 1300);
-      const blocs = (Array.isArray(r?.blocs) ? r.blocs : []).slice(0, 2).map((b: any) => ({
-        titre: s(b?.titre, 120),
-        texte: s(b?.texte, 900),
-        cta_label: s(b?.cta_label, 40),
-        photo: s(b?.photo, 120),
-      })).filter((b: any) => b.texte);
+      /* Deux formes de bloc, bornées séparément. Un « deux_colonnes » n'est
+         retenu que s'il porte bien DEUX colonnes ayant chacune du texte :
+         une colonne vide donnerait un email bancal. À défaut, on le laisse
+         retomber en pleine largeur plutôt que de rejeter la rédaction. */
+      const blocs = (Array.isArray(r?.blocs) ? r.blocs : []).slice(0, 2).map((b: any) => {
+        const cols = Array.isArray(b?.colonnes) ? b.colonnes : [];
+        if (b?.type === "deux_colonnes" && cols.length >= 2) {
+          const c = cols.slice(0, 2).map((x: any) => ({
+            titre: s(x?.titre, 120),
+            texte: s(x?.texte, 400),
+            cta_label: s(x?.cta_label, 40),
+            photo: s(x?.photo, 120),
+          }));
+          if (c[0].texte && c[1].texte) return { type: "deux_colonnes", colonnes: c };
+        }
+        return {
+          type: "pleine_largeur",
+          titre: s(b?.titre, 120),
+          texte: s(b?.texte, 900),
+          cta_label: s(b?.cta_label, 40),
+          photo: s(b?.photo, 120),
+        };
+      }).filter((b: any) => b.type === "deux_colonnes" || b.texte);
       if (blocs.length === 0) return json({ error: "vide", message: "Rédaction inexploitable — réessayez." }, 502);
       return json({
         objet: s(r?.objet, 90),

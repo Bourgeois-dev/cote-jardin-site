@@ -27,7 +27,16 @@ export interface Redaction {
   /** `photo` est une SUGGESTION de visuel, en toutes lettres : l'assistant ne
    *  pose jamais d'image lui-même (il n'en a pas les URL). Le restaurateur
    *  choisit le fichier dans l'éditeur ; le texte l'aide à savoir quoi mettre. */
-  blocs: { titre: string; texte: string; cta_label?: string; photo?: string }[];
+  /** Deux formes possibles, comme dans l'éditeur : un bloc pleine largeur, ou
+   *  un bloc à deux colonnes quand l'assistant met deux choses en regard
+   *  (deux formules, deux soirées). Le type est décidé par l'assistant, plus
+   *  forcé par l'interface. */
+  blocs: ({
+    type?: "pleine_largeur"; titre?: string; texte: string; cta_label?: string; photo?: string;
+  } | {
+    type: "deux_colonnes";
+    colonnes: { titre?: string; texte: string; cta_label?: string; photo?: string }[];
+  })[];
 }
 
 interface Idee { theme: string; objet: string; angle: string; quand: string; photo?: string }
