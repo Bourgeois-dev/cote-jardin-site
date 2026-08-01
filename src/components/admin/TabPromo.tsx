@@ -1,10 +1,25 @@
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { supabase, fetchActive, fetchContent } from "../../lib/supabase";
 import { useTable } from "../../hooks/useTable";
 import type { PromoBanner } from "../../lib/types";
 import { useToast } from "./Toast";
 import { useConfirm } from "./Confirm";
 import AssistantBanniere, { type PropositionBanniere } from "./AssistantBanniere";
+
+/* Destinations proposées pour le bouton. Ce sont les ancres réelles du site
+   public (voir Site.tsx). Plusieurs sections sont conditionnelles : proposer
+   un lien vers une section masquée enverrait le visiteur dans le vide, donc
+   la liste est filtrée sur l'état réel du site avant affichage. */
+const DESTINATIONS: { url: string; label: string; besoin?: string }[] = [
+  { url: "#contact", label: "Nous contacter" },
+  { url: "#carte", label: "La carte" },
+  { url: "#jour", label: "Le plat du jour", besoin: "ardoise" },
+  { url: "#galerie", label: "La galerie", besoin: "galerie" },
+  { url: "#emporter", label: "À emporter", besoin: "emporter" },
+  { url: "#producteurs", label: "Nos producteurs", besoin: "partners" },
+  { url: "#avis", label: "Les avis", besoin: "reviews" },
+  { url: "#histoire", label: "Notre histoire" },
+];
 
 function formatDate(d: string): string {
   if (!d) return "Événement";
@@ -20,6 +35,42 @@ export default function TabPromo() {
   const [f, setF] = useState({ title: "", subtitle: "", cta_label: "", cta_url: "", event_date: "", image_url: "", is_active: false });
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  /* Sections réellement visibles sur le site : sert à filtrer les
+     destinations proposées. */
+  const [dispo, setDispo] = useState<Record<string, boolean>>({});
+
+  /* Mêmes sources que Site.tsx : les drapeaux de section vivent dans
+     `site_content` (et non dans `feature_flags`, qui ne gouverne que les
+     modules Réservation / Newsletter / CRM). Miroir des conditions de
+     rendu de Site.tsx — si elles changent là-bas, elles changent ici. */
+  useEffect(() => {
+    let vivant = true;
+    (async () => {
+      const [ard, gal, part, avis, empo, pf, rf, tf] = await Promise.all([
+        fetchContent("ardoise"),
+        fetchActive<{ id: string }>("gallery_images"),
+        fetchActive<{ id: string }>("partners"),
+        fetchActive<{ id: string }>("reviews"),
+        fetchActive<{ id: string }>("takeaway_items"),
+        fetchContent("partners_enabled"),
+        fetchContent("reviews_enabled"),
+        fetchContent("takeaway_enabled"),
+      ]);
+      if (!vivant) return;
+      setDispo({
+        ardoise: ard?.enabled !== false && !!ard?.plat,
+        galerie: gal.length > 0,
+        emporter: !!tf?.enabled && empo.length > 0,
+        partners: (pf?.enabled ?? true) && part.length > 0,
+        reviews: (rf?.enabled ?? true) && avis.length > 0,
+      });
+    })().catch(() => { /* en cas d'échec, seules les destinations toujours présentes restent */ });
+    return () => { vivant = false; };
+  }, []);
+
+  /* Une destination sans `besoin` est toujours là ; les autres n'apparaissent
+     que si la section correspondante est effectivement affichée. */
+  const destinations = DESTINATIONS.filter((d) => !d.besoin || dispo[d.besoin]);
 
   useEffect(() => {
     if (promo) setF({
@@ -100,7 +151,20 @@ export default function TabPromo() {
               <div className="champ"><label>Sous-titre</label><textarea rows={2} value={f.subtitle} onChange={(e) => setF({ ...f, subtitle: e.target.value })} placeholder="Dégustation & planche — places limitées" /></div>
               <div className="grid2">
                 <div className="champ"><label>Texte du bouton</label><input value={f.cta_label} onChange={(e) => setF({ ...f, cta_label: e.target.value })} placeholder="Réserver ma place" /></div>
-                <div className="champ"><label>Lien du bouton</label><input value={f.cta_url} onChange={(e) => setF({ ...f, cta_url: e.target.value })} placeholder="#contact ou tel:+33..." /></div>
+                <div className="champ">
+                  <label>Lien du bouton</label>
+                  <input value={f.cta_url} onChange={(e) => setF({ ...f, cta_url: e.target.value })} placeholder="#contact ou tel:+33..." />
+                  {/* Les ancres du site en un clic : personne ne retient
+                      « #producteurs ». Le champ reste libre — un numéro de
+                      téléphone ou une URL externe passent toujours. */}
+                  <div className="pr-dest">
+                    {destinations.map((d) => (
+                      <button type="button" key={d.url}
+                        className={`pr-dest-l${f.cta_url === d.url ? " actif" : ""}`}
+                        onClick={() => setF({ ...f, cta_url: d.url })}>{d.label}</button>
+                    ))}
+                  </div>
+                </div>
               </div>
               {/* Maquette : date et image côte à côte — vignette carrée en
                   pointillés, liens Remplacer / Retirer à sa droite. */}

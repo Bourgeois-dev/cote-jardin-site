@@ -28,26 +28,42 @@ export default function AssistantBanniere({ dateEvent, onProposition }: {
   const [sujet, setSujet] = useState("");
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState("");
-  const [propo, setPropo] = useState<PropositionBanniere | null>(null);
+  const [propos, setPropos] = useState<PropositionBanniere[]>([]);
 
-  async function rediger() {
+  /* Trois propositions plutôt qu'une : comparer deux formulations est plus
+     utile que relancer jusqu'à tomber sur la bonne. Trois appels en parallèle
+     sur la même edge function — elle ne sait produire qu'une réponse à la fois.
+     Une seule réussite suffit à afficher quelque chose ; on n'échoue que si
+     les trois tombent. */
+  async function proposer() {
     if (busy || !sujet.trim()) return;
-    setBusy(true); setErreur(""); setPropo(null);
-    try {
-      const r = await appeler("banniere", { sujet: sujet.trim(), date_event: dateEvent || "" });
-      setPropo({ titre: r.titre || "", sous_titre: r.sous_titre || "", cta_label: r.cta_label || "" });
-    } catch (e) {
-      setErreur(e instanceof Error ? e.message : "L'assistant n'a pas pu répondre — réessayez.");
+    setBusy(true); setErreur(""); setPropos([]);
+    const args = { sujet: sujet.trim(), date_event: dateEvent || "" };
+    const res = await Promise.allSettled([
+      appeler("banniere", args), appeler("banniere", args), appeler("banniere", args),
+    ]);
+    const ok = res
+      .filter((r): r is PromiseFulfilledResult<any> => r.status === "fulfilled")
+      .map((r) => ({ titre: r.value.titre || "", sous_titre: r.value.sous_titre || "", cta_label: r.value.cta_label || "" }))
+      /* Deux appels identiques rendent parfois le même texte : on ne montre
+         pas deux fois la même idée. */
+      .filter((p, i, a) => a.findIndex((q) => q.titre === p.titre && q.sous_titre === p.sous_titre) === i);
+
+    if (ok.length === 0) {
+      const premier = res.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
+      const m = premier?.reason;
+      setErreur(m instanceof Error ? m.message : "L'assistant n'a pas pu répondre — réessayez.");
     }
+    setPropos(ok);
     setBusy(false);
   }
 
   return (
     <div className="nl-ia">
       <div className="nl-ia-tete">
-        <span className="nl-ia-titre">✨ Assistant de bannière</span>
-        <span className="nl-ia-sous">Dites ce que vous annoncez, l'assistant rédige la popup.</span>
-        <button type="button" className="nl-lien" style={{ marginLeft: "auto" }}
+        <span className="nl-ia-titre">Assistant de bannière</span>
+        <span className="nl-ia-sous">Dites ce que vous annoncez, l'assistant propose des formulations.</span>
+        <button type="button" className="adm-vit-lien" style={{ marginLeft: "auto" }}
           aria-expanded={ouvert} onClick={() => setOuvert((v) => !v)}>
           {ouvert ? "Masquer" : "Ouvrir"}
         </button>
@@ -55,32 +71,43 @@ export default function AssistantBanniere({ dateEvent, onProposition }: {
 
       {ouvert && (
         <div className="nl-ia-corps">
-          <div className="nl-ia-ligne">
-            <input value={sujet} maxLength={200} disabled={busy}
+          {/* Champ souligné plein cadre : c'est une phrase qu'on dicte, pas un
+              réglage. Le bouton est posé dessous, aligné à droite. */}
+          <div className="ia-saisie">
+            <label className="ia-lab" htmlFor="ia-sujet">Ce que vous voulez annoncer</label>
+            <input id="ia-sujet" className="ia-champ" value={sujet} maxLength={200} disabled={busy}
               onChange={(e) => setSujet(e.target.value)}
               placeholder="Ex. soirée beaujolais le 20, menu de Noël, fermeture annuelle en août…"
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); rediger(); } }} />
-            <button type="button" className="btn btn-mini btn-accent" onClick={rediger} disabled={busy || !sujet.trim()}>
-              {busy ? "Rédaction…" : "Rédiger la bannière"}
-            </button>
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); proposer(); } }} />
+            <div className="ia-saisie-pied">
+              <span className="ia-compteur">{sujet.length}/200</span>
+              <button type="button" className="btn btn-accent" onClick={proposer} disabled={busy || !sujet.trim()}>
+                {busy ? "Recherche…" : "Proposer des idées"}
+              </button>
+            </div>
           </div>
 
           {erreur && <div className="nl-ia-err">{erreur}</div>}
 
-          {propo && (
-            <div className="nl-ia-carte">
-              <b>{propo.titre || "(sans titre)"}</b>
-              <div className="nl-ia-angle" style={{ marginTop: 4 }}>{propo.sous_titre}</div>
-              {propo.cta_label && <div className="nl-ia-objet">Bouton : « {propo.cta_label} »</div>}
-              <div className="nl-ia-actions">
-                <button type="button" className="btn btn-mini btn-accent" onClick={() => onProposition(propo)}>
-                  Utiliser ce texte
-                </button>
-                <button type="button" className="btn btn-mini btn-ligne" onClick={rediger} disabled={busy}>
-                  Une autre proposition
-                </button>
+          {propos.length > 0 && (
+            <>
+              <div className="ia-propos">
+                {propos.map((p, i) => (
+                  <div className="ia-propo" key={i}>
+                    <b>{p.titre || "(sans titre)"}</b>
+                    <span className="ia-propo-sous">{p.sous_titre}</span>
+                    {p.cta_label && <span className="ia-propo-cta">Bouton : « {p.cta_label} »</span>}
+                    <button type="button" className="adm-vit-lien accent" onClick={() => onProposition(p)}>
+                      Utiliser ce texte
+                    </button>
+                  </div>
+                ))}
               </div>
-            </div>
+              <button type="button" className="adm-vit-lien" onClick={proposer} disabled={busy}
+                style={{ marginTop: 14 }}>
+                D'autres idées
+              </button>
+            </>
           )}
 
           <div className="nl-ia-sous">
