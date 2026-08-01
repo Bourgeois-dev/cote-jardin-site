@@ -5,9 +5,8 @@ import Chargement from "./Chargement";
 import QrAffiche from "./QrAffiche";
 
 // Libellé lisible d'une source brute :
-// "newsletter" → Site · "reservation" → Réservation · "newsletter:instagram" → Instagram
+// "newsletter" → Site · "newsletter:instagram" → Instagram
 function libelleSource(src: string): string {
-  if (src === "reservation") return "Réservation";
   if (src === "newsletter" || !src) return "Site";
   const utm = src.startsWith("newsletter:") ? src.slice("newsletter:".length) : src;
   return utm.charAt(0).toUpperCase() + utm.slice(1);

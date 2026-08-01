@@ -1,9 +1,9 @@
 // Signalement d'incident vers le journal du studio (La Table Digitale).
 //
-// POURQUOI : quand une opération critique échoue côté visiteur (réservation,
-// inscription newsletter...), l'erreur est aujourd'hui avalée silencieusement.
-// Le restaurateur perd des réservations sans le savoir, et le studio l'apprend
-// des semaines plus tard — ou jamais. Ce module remonte l'incident.
+// POURQUOI : quand une opération critique échoue côté visiteur (inscription
+// newsletter, désinscription...), l'erreur est aujourd'hui avalée
+// silencieusement. Le restaurateur perd des inscrits sans le savoir, et le
+// studio l'apprend des semaines plus tard — ou jamais. Ce module le remonte.
 //
 // CONFIDENTIALITÉ : on n'envoie QUE le message technique. Aucun nom, email,
 // téléphone ni créneau. La fonction serveur nettoie en plus le message
@@ -23,9 +23,7 @@ const STUDIO_KEY =
 // Identifiant du client, injecté au build (VITE_CLIENT_SLUG dans .env).
 const CLIENT = (import.meta.env.VITE_CLIENT_SLUG || "").trim();
 
-type Contexte =
-  | "reservation" | "newsletter" | "waitlist"
-  | "annulation" | "desinscription" | "autre";
+type Contexte = "newsletter" | "desinscription" | "autre";
 
 // Évite d'inonder le journal si une erreur se répète dans la même session
 // (ex. visiteur qui réessaie 10 fois). Le serveur regroupe déjà par signature,

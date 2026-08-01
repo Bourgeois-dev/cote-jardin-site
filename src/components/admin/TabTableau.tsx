@@ -1,394 +1,272 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTable } from "../../hooks/useTable";
 import { supabase } from "../../lib/supabase";
-import type { Reservation, RestaurantTable, OpeningHour, ReservationSettings } from "../../lib/types";
+import type { Lead } from "../../lib/types";
 import Chargement from "./Chargement";
-import { BlocsNewsletter } from "./TabTableauNewsletter";
+import FicheCampagne, { type EventStats } from "./FicheCampagne";
 
-const JOURS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+/**
+ * TabTableau — tableau de bord de l'offre « Essentiel + Newsletter ».
+ *
+ * C'est le seul tableau de bord de l'administration : l'état de la liste de
+ * contacts et le suivi des campagnes. Tout est calculé à partir de deux
+ * sources : `leads` et `newsletter_campaigns`.
+ *
+ * L'onglet est masqué quand le module Newsletter est coupé (offre Essentiel
+ * seule) : il n'aurait alors rien à montrer. Voir FEATURE_MAP dans AdminApp.
+ */
+
 const MOIS = ["jan", "fév", "mar", "avr", "mai", "juin", "juil", "août", "sep", "oct", "nov", "déc"];
 
-// Un créneau réservé appartient au midi s'il commence avant 16h, sinon au soir
-function estMidi(time: string): boolean {
-  const h = parseInt(String(time || "0").split(":")[0]) || 0;
-  return h < 16;
+interface Campagne {
+  id: string;
+  subject: string;
+  status: string;
+  sent_at: string | null;
+  scheduled_at: string | null;
+  recipients_count: number | null;
+  sent_count: number | null;
 }
 
-// Date au format AAAA-MM-JJ en heure LOCALE. Surtout pas toISOString(), qui
-// renvoie la date UTC : entre minuit et 2 h (heure française), « aujourd'hui »
-// serait encore « hier » — toutes les bornes de période glisseraient d'un jour.
-// Les dates en base (colonne `date` des réservations) sont des dates locales.
-function ymdLocal(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+/** Clé AAAA-MM en heure locale — surtout pas toISOString(), qui renvoie l'UTC. */
+function moisLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, date?: string, service?: "midi" | "soir") => void } = {}) {
-  // Fenêtre glissante J-90/+horizon — évite de charger tout l'historique
-  const dateMinTdb = (() => { const d = new Date(); d.setDate(d.getDate() - 90); return ymdLocal(d); })();
-  const { rows: resa, loading } = useTable<Reservation>("reservations", "date", true, { column: "date", op: "gte", value: dateMinTdb });
-  const { rows: tables } = useTable<RestaurantTable>("restaurant_tables", "label");
-  const { rows: hours } = useTable<OpeningHour>("opening_hours", "day_of_week");
-  const { rows: settingsRows } = useTable<ReservationSettings>("reservation_settings", "id");
-  const horizon = Math.max(1, settingsRows[0]?.booking_horizon_days || 7);
-  // Pagination de la disponibilité, 7 jours (une semaine) à la fois.
-  const nbSemaines = Math.ceil(horizon / 7);
-  const [semaine, setSemaine] = useState(0);
-  // Module Newsletter : sans lui, plus rien ne récolte de contacts.
-  const [newsletterOn, setNewsletterOn] = useState(true);
+function fmtDate(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function fmtDatetime(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+/**
+ * Libellé lisible d'une source d'inscription. `leads.source` vaut "newsletter",
+ * ou "newsletter:<utm>" quand le visiteur arrive par un lien tracé.
+ */
+function libelleSource(source: string): string {
+  const s = (source || "").trim();
+  if (!s) return "Origine inconnue";
+  if (s === "newsletter") return "Formulaire du site";
+  if (s.startsWith("newsletter:")) return s.slice("newsletter:".length).replace(/[-_]/g, " ");
+  return s;
+}
+
+function BlocsNewsletter({ onNavigate }: {
+  onNavigate?: (tab: string) => void;
+} = {}) {
+  const { rows: leads, loading } = useTable<Lead>("leads", "created_at", true);
+  const { rows: campagnes } = useTable<Campagne>("newsletter_campaigns", "created_at", true);
+  // Événements par campagne (webhook Resend + désinscriptions attribuées) :
+  // clics, bounces, plaintes, désabonnements.
+  const [stats, setStats] = useState<Record<string, EventStats>>({});
+  // Campagne dont la fiche statistiques est ouverte.
+  const [fiche, setFiche] = useState<Campagne | null>(null);
+  // Date du tout premier événement enregistré : les campagnes envoyées AVANT
+  // n'ont pas de données de délivrabilité — on affiche « — » plutôt qu'un
+  // 100 % que rien n'étaye. (Une campagne récente sans le moindre événement
+  // restera aussi à « — » : on préfère sous-afficher que surestimer.)
+  const [premierEvt, setPremierEvt] = useState<string | null>(null);
   useEffect(() => {
-    supabase.from("feature_flags").select("enabled").eq("key", "newsletter").maybeSingle()
-      .then(({ data }) => { if (data && data.enabled === false) setNewsletterOn(false); });
+    supabase.rpc("newsletter_event_counts").then(({ data }) => {
+      const m: Record<string, EventStats> = {};
+      (data || []).forEach((e: { campaign_id: string; clicks: number; bounces: number; complaints?: number; unsubscribes?: number }) => {
+        m[e.campaign_id] = {
+          clicks: Number(e.clicks), bounces: Number(e.bounces),
+          complaints: Number(e.complaints ?? 0), unsubscribes: Number(e.unsubscribes ?? 0),
+        };
+      });
+      setStats(m);
+    });
+    supabase.from("newsletter_events").select("created_at").order("created_at").limit(1)
+      .then(({ data }) => { if (data && data[0]) setPremierEvt(data[0].created_at); });
   }, []);
 
   const today = new Date();
-  const todayStr = ymdLocal(today);
-  const capacite = tables.filter((t) => t.is_active).reduce((s, t) => s + (t.capacity || 0), 0);
+  const inscrits = leads.filter((l) => l.consent === true);
+  const desinscrits = leads.filter((l) => l.consent === false);
 
-  // Couverts réservés (hors annulés) pour une date + un service
-  const couvertsLe = (dateStr: string, service: "midi" | "soir") =>
-    resa
-      .filter((r) => r.date === dateStr && r.status !== "annule" && (service === "midi" ? estMidi(r.time) : !estMidi(r.time)))
-      .reduce((s, r) => s + (r.covers || 0), 0);
+  // ── Croissance ────────────────────────────────────────────────────────────
+  const moisCourant = moisLocal(today);
+  const moisPrecedent = moisLocal(new Date(today.getFullYear(), today.getMonth() - 1, 1));
+  const nouveauxCeMois = inscrits.filter((l) => moisLocal(new Date(l.created_at)) === moisCourant).length;
+  const nouveauxMoisPrec = inscrits.filter((l) => moisLocal(new Date(l.created_at)) === moisPrecedent).length;
+  const ecartMois = nouveauxCeMois - nouveauxMoisPrec;
 
-  // Uniquement les demandes À VENIR : une réservation en attente pour un service
-  // déjà passé n'a plus à être confirmée (même raison que « À placer » ci-dessous).
-  const att = resa.filter((r) => r.status === "attente" && r.date >= todayStr).length;
+  // 12 mois glissants, du plus ancien au plus récent
+  const douzeMois = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(today.getFullYear(), today.getMonth() - (11 - i), 1);
+    return { cle: moisLocal(d), label: MOIS[d.getMonth()], annee: d.getFullYear() };
+  });
+  const parMois: Record<string, number> = {};
+  douzeMois.forEach((m) => { parMois[m.cle] = 0; });
+  inscrits.forEach((l) => {
+    const k = moisLocal(new Date(l.created_at));
+    if (k in parMois) parMois[k] += 1;
+  });
+  const maxMois = Math.max(1, ...douzeMois.map((m) => parMois[m.cle]));
+  const totalDouzeMois = douzeMois.reduce((s, m) => s + parMois[m.cle], 0);
 
-  // « À placer » : réservation active dont aucune table n'est assignée, ou dont les tables
-  // assignées ne couvrent pas les couverts. Même règle que le plan de service (estPlacee).
-  //
-  // ⚠️ Uniquement les réservations À VENIR. Le tableau de bord charge une fenêtre
-  // de J-90 (pour les statistiques) : sans ce filtre, une réservation passée non
-  // placée gonflait le compteur indéfiniment, et le clic ouvrait le plan sur un
-  // service terminé — donc un écran vide. Placer une table pour un service déjà
-  // passé n'a aucun sens.
-  const capaciteResa = (r: Reservation) =>
-    (r.table_ids || []).reduce((s, tid) => s + (tables.find((t) => t.id === tid)?.capacity || 0), 0);
-  const listeAPlacer = resa.filter(
-    (r) => r.date >= todayStr && r.status !== "annule" && r.status !== "no_show"
-      && !((r.table_ids?.length || 0) > 0 && capaciteResa(r) >= r.covers)
+  // ── Désinscriptions sur 30 jours ──────────────────────────────────────────
+  // Les désinscriptions antérieures à la colonne unsubscribed_at n'ont pas de
+  // date : elles comptent dans le total, jamais dans la période.
+  const d30 = new Date(today); d30.setDate(today.getDate() - 30);
+  const desabo30 = desinscrits.filter((l) => l.unsubscribed_at && new Date(l.unsubscribed_at) >= d30).length;
+  const desaboSansDate = desinscrits.filter((l) => !l.unsubscribed_at).length;
+  // Base de calcul : ceux qui étaient inscrits il y a 30 jours.
+  const baseDesabo = inscrits.length + desabo30;
+  const tauxDesabo = baseDesabo ? Math.round((desabo30 / baseDesabo) * 1000) / 10 : 0;
+
+  // ── Origine des inscriptions ──────────────────────────────────────────────
+  const parSource = new Map<string, number>();
+  inscrits.forEach((l) => {
+    const k = libelleSource(l.source);
+    parSource.set(k, (parSource.get(k) || 0) + 1);
+  });
+  const sources = [...parSource.entries()].sort((a, b) => b[1] - a[1]);
+  const maxSource = Math.max(1, ...sources.map(([, n]) => n));
+
+  // ── Campagnes ─────────────────────────────────────────────────────────────
+  const envoyees = campagnes
+    .filter((c) => c.status === "sent" && c.sent_at)
+    .sort((a, b) => String(b.sent_at).localeCompare(String(a.sent_at)));
+  const derniere = envoyees[0];
+  const programmees = campagnes
+    .filter((c) => c.status === "scheduled" && c.scheduled_at)
+    .sort((a, b) => String(a.scheduled_at).localeCompare(String(b.scheduled_at)));
+  const prochaine = programmees[0];
+  const brouillons = campagnes.filter((c) => c.status === "draft").length;
+  const recentes = envoyees.slice(0, 5);
+
+  // ── Performance moyenne des envois ────────────────────────────────────────
+  // Uniquement sur les campagnes COUVERTES par le webhook (mêmes règles que le
+  // tableau) : agréger des campagnes sans données tirerait les taux vers zéro.
+  const couverte = (c: Campagne) =>
+    !!stats[c.id] || (!!premierEvt && !!c.sent_at && c.sent_at >= premierEvt);
+  const couvertes = envoyees.filter((c) => couverte(c) && (c.sent_count ?? 0) > 0);
+  const perfEnvoyes = couvertes.reduce((s, c) => s + (c.sent_count ?? 0), 0);
+  const perfBounces = couvertes.reduce((s, c) => s + (stats[c.id]?.bounces ?? 0), 0);
+  const perfClics   = couvertes.reduce((s, c) => s + (stats[c.id]?.clicks ?? 0), 0);
+  const perfDesabos = couvertes.reduce((s, c) => s + (stats[c.id]?.unsubscribes ?? 0), 0);
+  const perfDelivres = Math.max(0, perfEnvoyes - perfBounces);
+  const tauxPct = (n: number) => perfEnvoyes > 0 ? `${Math.round((n / perfEnvoyes) * 1000) / 10}%` : "—";
+
+  const versNewsletter = () => onNavigate?.("newsletter");
+  /** Carte cliquable : même comportement au clavier qu'à la souris. */
+  const propsClic = (actif: boolean, titre: string) => actif ? {
+    className: "stat stat-clic",
+    onClick: versNewsletter,
+    role: "button",
+    tabIndex: 0,
+    title: titre,
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); versNewsletter(); }
+    },
+  } : { className: "stat" };
+
+  // Cartes communes aux deux présentations.
+  const cartes = (
+    <>
+          <div className="stat">
+            <div className="lib">Inscrits</div>
+            <div className="val">{inscrits.length}</div>
+            <div className="det">contacts qui reçoivent vos campagnes</div>
+          </div>
+          <div className="stat">
+            <div className="lib">Nouveaux ce mois-ci</div>
+            <div className="val" style={{ color: nouveauxCeMois > 0 ? "var(--ok)" : "var(--ink)" }}>{nouveauxCeMois}</div>
+            <div className="det">
+              {nouveauxMoisPrec === 0 && nouveauxCeMois === 0
+                ? "aucune inscription le mois dernier non plus"
+                : ecartMois === 0
+                ? "autant que le mois dernier"
+                : `${ecartMois > 0 ? "+" : ""}${ecartMois} vs mois dernier`}
+            </div>
+          </div>
+          <div {...propsClic(!!prochaine, "Voir les campagnes programmées")}>
+            <div className="lib">Prochaine campagne</div>
+            <div className="val" style={{ fontSize: 18 }}>{prochaine ? fmtDatetime(prochaine.scheduled_at) : "—"}</div>
+            <div className="det">{prochaine ? "programmée →" : "aucune programmée"}</div>
+          </div>
+          <div {...propsClic(brouillons > 0, "Reprendre un brouillon")}>
+            <div className="lib">Brouillons</div>
+            <div className="val" style={{ color: brouillons > 0 ? "var(--attente)" : "var(--ink)" }}>{brouillons}</div>
+            <div className="det">{brouillons > 0 ? "campagne(s) commencée(s) →" : "aucune campagne en cours"}</div>
+          </div>
+          <div className="stat">
+            <div className="lib">Dernière campagne</div>
+            <div className="val" style={{ fontSize: 18 }}>{derniere ? fmtDate(derniere.sent_at) : "—"}</div>
+            <div className="det">
+              {derniere
+                ? `${derniere.sent_count ?? 0} destinataire${(derniere.sent_count ?? 0) > 1 ? "s" : ""}`
+                : "aucun envoi pour l'instant"}
+            </div>
+          </div>
+    </>
   );
-  const aPlacer = listeAPlacer.length;
-
-  // Date de la réservation concernée la plus proche : c'est là qu'on ouvre l'onglet
-  // au clic sur le KPI. Avec plusieurs réservations, on ne peut en cibler qu'une —
-  // la plus imminente est la plus utile.
-  const triParDate = (l: Reservation[]) =>
-    [...l].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-  const dateAPlacer = triParDate(listeAPlacer)[0]?.date;
-  const serviceAPlacer: "midi" | "soir" | undefined = triParDate(listeAPlacer)[0]
-    ? (estMidi(triParDate(listeAPlacer)[0].time) ? "midi" : "soir") : undefined;
-  const listeAConfirmer = resa.filter((r) => r.status === "attente" && r.date >= todayStr);
-  const dateAConfirmer = triParDate(listeAConfirmer)[0]?.date;
-  const serviceAConfirmer: "midi" | "soir" | undefined = triParDate(listeAConfirmer)[0]
-    ? (estMidi(triParDate(listeAConfirmer)[0].time) ? "midi" : "soir") : undefined;
-  const couvAujTotal = resa.filter((r) => r.date === todayStr && r.status !== "annule").reduce((s, r) => s + (r.covers || 0), 0);
-  const nbResaAuj = resa.filter((r) => r.date === todayStr && r.status !== "annule").length;
-
-  // Répartition par canal (historique complet, hors annulées)
-  const actives = resa.filter((r) => r.status !== "annule");
-  const nbTel = actives.filter((r) => r.source === "telephone").length;
-  const nbSite = actives.length - nbTel;
-  const pctTel = actives.length ? Math.round((nbTel / actives.length) * 100) : 0;
-  const pctSite = actives.length ? 100 - pctTel : 0;
-
-  // --- Indicateurs (30 derniers jours, sauf clients récurrents et affluence qui regardent tout l'historique) ---
-  const ymd = ymdLocal;
-  const d30 = new Date(today); d30.setDate(today.getDate() - 29);
-  const d30Str = ymd(d30);
-  const sumCovers = (l: Reservation[]) => l.reduce((s, r) => s + (r.covers || 0), 0);
-
-  const periode = resa.filter((r) => r.date >= d30Str && r.date <= todayStr);
-  const nbAnnulePeriode = periode.filter((r) => r.status === "annule").length;
-  const tauxAnnulation = periode.length ? Math.round((nbAnnulePeriode / periode.length) * 100) : 0;
-  const nbNoShowPeriode = periode.filter((r) => r.status === "no_show").length;
-  const denomNoShow = periode.filter((r) => r.status === "confirme" || r.status === "no_show").length;
-  const tauxNoShow = denomNoShow ? Math.round((nbNoShowPeriode / denomNoShow) * 100) : 0;
-  const nonAnnulPeriode = periode.filter((r) => r.status !== "annule");
-  const tailleMoyenne = nonAnnulPeriode.length ? sumCovers(nonAnnulPeriode) / nonAnnulPeriode.length : 0;
-
-  const parTel = new Map<string, number>();
-  resa.filter((r) => r.status !== "annule" && r.phone?.trim()).forEach((r) => {
-    const k = r.phone.trim();
-    parTel.set(k, (parTel.get(k) || 0) + 1);
-  });
-  const nbClientsUniques = parTel.size;
-  const nbRecurrents = [...parTel.values()].filter((n) => n > 1).length;
-  const tauxRecurrence = nbClientsUniques ? Math.round((nbRecurrents / nbClientsUniques) * 100) : 0;
-
-  // ── Taux de remplissage (30 derniers jours) ──────────────────────────────
-  // Couverts servis ÷ capacité réellement offerte. Le dénominateur ne compte
-  // que les services OUVERTS : un restaurant fermé le dimanche ne doit pas voir
-  // son taux baisser à cause d'un jour où il ne sert pas.
-  // Comparé aux 30 jours précédents pour donner une tendance — un pourcentage
-  // seul ne dit pas si l'affaire progresse.
-  const tauxRemplissage = (debut: string, fin: string) => {
-    const rs = resa.filter((r) => r.date >= debut && r.date <= fin && r.status !== "annule");
-    const couverts = sumCovers(rs);
-    let offerts = 0;
-    for (let d = new Date(debut); ymdLocal(d) <= fin; d.setDate(d.getDate() + 1)) {
-      const h = hours.find((x) => x.day_of_week === d.getDay());
-      if (!h || h.is_closed) continue;
-      if (h.lunch_open) offerts += capacite;
-      if (h.dinner_open) offerts += capacite;
-    }
-    return offerts ? Math.round((couverts / offerts) * 100) : 0;
-  };
-  const d60 = new Date(); d60.setDate(d60.getDate() - 60);
-  const d60Str = ymdLocal(d60);
-  const d31 = new Date(); d31.setDate(d31.getDate() - 31);
-  const d31Str = ymdLocal(d31);
-  const remplissage30 = tauxRemplissage(d30Str, todayStr);
-  const remplissage30Prec = tauxRemplissage(d60Str, d31Str);
-  const ecartRemplissage = remplissage30 - remplissage30Prec;
-
-  // ── Couverts réservés sur les 7 prochains jours ──────────────────────────
-  // Sert à décider des commandes et du planning : c'est ce qui est DÉJÀ acquis
-  // pour la semaine, à la différence des KPI du jour.
-  const d7 = new Date(); d7.setDate(d7.getDate() + 7);
-  const d7Str = ymdLocal(d7);
-  const resaSemaine = resa.filter(
-    (r) => r.date >= todayStr && r.date <= d7Str && r.status !== "annule" && r.status !== "no_show"
-  );
-  const couvertsSemaine = sumCovers(resaSemaine);
-
-  // ── Adéquation tables / groupes (30 derniers jours) ──────────────────────
-  // Différent du remplissage en couverts : couverts ÷ capacité des tables
-  // ASSIGNÉES, pas de la salle. Mesure si les tables sont bien dimensionnées :
-  // un écart important avec le remplissage signale des tables de 4 occupées par
-  // 2 personnes — donc de la capacité perdue. Avec un parc de tables de 2 et
-  // une clientèle de couples, il reste proche de 100 % par construction.
-  // No-shows exclus : une table réservée par un groupe qui n'est pas venu ne
-  // dit rien de son dimensionnement.
-  const resaPlacees = periode.filter(
-    (r) => r.status !== "annule" && r.status !== "no_show" && (r.table_ids?.length || 0) > 0);
-  const placesAssignees = resaPlacees
-    .reduce((s, r) => s + (r.table_ids || []).reduce(
-      (c, tid) => c + (tables.find((t) => t.id === tid)?.capacity || 0), 0), 0);
-  const tauxOccupTable = placesAssignees ? Math.round((sumCovers(resaPlacees) / placesAssignees) * 100) : 0;
-
-  const JOURS_LONG = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
-  // Quand les clients réservent-ils EN LIGNE (heure de création de la demande) ?
-  // Basé sur created_at — pertinent uniquement pour source='site' (une saisie
-  // téléphone est horodatée au moment où le resto la tape, pas quand le client appelle).
-  const resaEnLigne = resa.filter((r) => r.source === "site");
-  const parHeureCrea = Array.from({ length: 24 }, () => 0);
-  const parJourCrea = [0, 0, 0, 0, 0, 0, 0];
-  resaEnLigne.forEach((r) => {
-    if (!r.created_at) return;
-    const d = new Date(r.created_at);
-    parHeureCrea[d.getHours()] += 1;
-    parJourCrea[d.getDay()] += 1;
-  });
-  const maxHeureCrea = Math.max(1, ...parHeureCrea);
-  const heureTopIdx = parHeureCrea.indexOf(Math.max(...parHeureCrea));
-  const heureTop = resaEnLigne.length > 0 ? `${heureTopIdx}h–${heureTopIdx + 1}h` : null;
-  const maxJourCrea = Math.max(1, ...parJourCrea);
-  const jourCreaTop = resaEnLigne.length > 0 && Math.max(...parJourCrea) > 0
-    ? JOURS_LONG[parJourCrea.indexOf(Math.max(...parJourCrea))] : null;
-  // Plage horaire à afficher : bornée aux heures réellement utilisées (avec 1h de
-  // marge de chaque côté), au lieu d'un 0h–23h majoritairement vide. Plancher à
-  // une fenêtre lisible même si tout est concentré sur une seule heure.
-  const heuresActives = parHeureCrea.map((n, h) => (n > 0 ? h : -1)).filter((h) => h >= 0);
-  let hMin = 8, hMax = 23;
-  if (heuresActives.length > 0) {
-    hMin = Math.max(0, Math.min(...heuresActives) - 1);
-    hMax = Math.min(23, Math.max(...heuresActives) + 1);
-    // garantir au moins 6 colonnes pour que les barres ne soient pas démesurées
-    while (hMax - hMin < 5) { if (hMin > 0) hMin--; else if (hMax < 23) hMax++; else break; }
-  }
-  const plageHeures = Array.from({ length: hMax - hMin + 1 }, (_, i) => hMin + i);
-
-  const couvParJour = [0, 0, 0, 0, 0, 0, 0];
-  resa.filter((r) => r.status !== "annule").forEach((r) => {
-    const d = new Date(r.date + "T12:00:00");
-    couvParJour[d.getDay()] += r.covers || 0;
-  });
-  const maxCouvJour = Math.max(...couvParJour);
-  const jourTop = maxCouvJour > 0 ? JOURS_LONG[couvParJour.indexOf(maxCouvJour)] : null;
-
-  // Disponibilité par service, sur toute la fenêtre de réservation (horizon configuré)
-  const jours = Array.from({ length: horizon }, (_, i) => {
-    const d = new Date(today); d.setDate(today.getDate() + i);
-    const ds = ymdLocal(d);
-    const h = hours.find((x) => x.day_of_week === d.getDay());
-    const ferme = !h || h.is_closed;
-    const sertMidi = !ferme && !!h?.lunch_open;
-    const sertSoir = !ferme && !!h?.dinner_open;
-    const midiRes = couvertsLe(ds, "midi");
-    const soirRes = couvertsLe(ds, "soir");
-    return {
-      d, ds, isToday: i === 0, ferme, sertMidi, sertSoir,
-      midiRes, soirRes,
-      midiDispo: Math.max(0, capacite - midiRes),
-      soirDispo: Math.max(0, capacite - soirRes),
-    };
-  });
-
-  // Jours de la semaine actuellement affichée (7 max), bornés à l'horizon.
-  const debutSem = semaine * 7;
-  const joursSemaine = jours.slice(debutSem, debutSem + 7);
-  // Libellé de la plage affichée (ex. "22 – 28 juin").
-  const plageLabel = joursSemaine.length
-    ? (() => {
-        const a = joursSemaine[0].d;
-        const b = joursSemaine[joursSemaine.length - 1].d;
-        const fin = `${b.getDate()} ${MOIS[b.getMonth()]}`;
-        const debut = a.getMonth() === b.getMonth() ? `${a.getDate()}` : `${a.getDate()} ${MOIS[a.getMonth()]}`;
-        return `${debut} – ${fin}`;
-      })()
-    : "";
-
-  // Une mini-carte de service (midi ou soir) : places libres + jauge + état.
-  function serviceCarte(titre: string, sert: boolean, res: number, dispo: number) {
-    if (!sert) {
-      return (
-        <div className="svc svc-ferme">
-          <div className="svc-titre">{titre}</div>
-          <div className="svc-ferme-txt">Pas de service</div>
-        </div>
-      );
-    }
-    const pct = capacite ? Math.min(100, Math.round((res / capacite) * 100)) : 0;
-    const complet = dispo === 0;
-    const etat = complet ? "complet" : pct >= 75 ? "charge" : pct >= 40 ? "moyen" : "libre";
-    const libelle = complet ? "Complet" : pct >= 75 ? "Presque complet" : pct >= 40 ? "Se remplit" : "Disponible";
-    return (
-      <div className={`svc svc-${etat}`}>
-        <div className="svc-titre">{titre}</div>
-        <div className="svc-places"><b>{dispo}</b><span>place{dispo > 1 ? "s" : ""} libre{dispo > 1 ? "s" : ""}</span></div>
-        <div className="svc-jauge"><div className="svc-jauge-fill" style={{ width: `${pct}%` }} /></div>
-        <div className="svc-bas"><span className="svc-etat">{libelle}</span><span className="svc-res">{res} rés.</span></div>
-      </div>
-    );
-  }
 
   return (
     <>
-      <div className="topbar"><div><h1>Tableau de bord</h1><div className="sous">Vue d'ensemble de votre activité</div></div></div>
-      <div className="contenu">
-        {loading && resa.length === 0 && <Chargement />}
-        {/* Cartes du haut : ce qui concerne AUJOURD'HUI et appelle une action.
-            Les indicateurs de fond (santé de l'affaire) sont dans le bloc
-            « Indicateurs » plus bas. */}
-        <div className="cartes-stat cartes-stat-kpi">
-          <div className="stat"><div className="lib">Couverts aujourd'hui</div><div className="val">{couvAujTotal}</div><div className="det">{nbResaAuj} réservation(s)</div></div>
-          <div className="stat"><div className="lib">Disponibles ce midi</div><div className="val" style={{ color: jours[0].midiDispo === 0 ? "var(--annule)" : "var(--ok)" }}>{jours[0].sertMidi ? jours[0].midiDispo : "—"}</div><div className="det">{jours[0].sertMidi ? `sur ${capacite} couverts` : "pas de service midi"}</div></div>
-          <div className="stat"><div className="lib">Disponibles ce soir</div><div className="val" style={{ color: jours[0].soirDispo === 0 ? "var(--annule)" : "var(--ok)" }}>{jours[0].sertSoir ? jours[0].soirDispo : "—"}</div><div className="det">{jours[0].sertSoir ? `sur ${capacite} couverts` : "pas de service soir"}</div></div>
-          <div
-            className={`stat${att > 0 ? " stat-clic" : ""}`}
-            onClick={att > 0 ? () => onNavigate?.("reservations", dateAConfirmer, serviceAConfirmer) : undefined}
-            role={att > 0 ? "button" : undefined}
-            tabIndex={att > 0 ? 0 : undefined}
-            onKeyDown={att > 0 ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigate?.("reservations", dateAConfirmer, serviceAConfirmer); } } : undefined}
-            title={att > 0 ? "Voir les demandes en attente" : undefined}
-          >
-            <div className="lib">À confirmer</div>
-            <div className="val" style={{ color: att > 0 ? "var(--attente)" : "var(--ink)" }}>{att}</div>
-            <div className="det">{att > 0 ? "demandes en attente →" : "demandes en attente"}</div>
-          </div>
-          <div
-            className={`stat${aPlacer > 0 ? " stat-clic" : ""}`}
-            onClick={aPlacer > 0 ? () => onNavigate?.("reservations", dateAPlacer, serviceAPlacer) : undefined}
-            role={aPlacer > 0 ? "button" : undefined}
-            tabIndex={aPlacer > 0 ? 0 : undefined}
-            onKeyDown={aPlacer > 0 ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigate?.("reservations", dateAPlacer, serviceAPlacer); } } : undefined}
-            title={aPlacer > 0 ? "Voir les réservations à placer" : undefined}
-          >
-            <div className="lib">À placer</div>
-            <div className="val" style={{ color: aPlacer > 0 ? "var(--attente)" : "var(--ink)" }}>{aPlacer}</div>
-            <div className="det">{aPlacer > 0 ? "sans table attribuée →" : "sans table attribuée"}</div>
-          </div>
-          {/* Ce qui est déjà acquis pour la semaine : sert aux commandes et au
-              planning. Complète les chiffres du jour, qui ne disent rien de la suite. */}
-          <div className="stat"><div className="lib">Couverts à venir</div><div className="val">{couvertsSemaine}</div><div className="det">sur les 7 prochains jours</div></div>
-        </div>
+        {loading && leads.length === 0 && <Chargement />}
 
-        {/* Vue semaine — 7 jours glissants depuis aujourd'hui */}
-        <div className="bloc semaine-bloc">
-          <div className="bloc-tete">
-            <div><h2>Cette semaine</h2><div className="desc">Couverts réservés par jour et par service — cliquer sur un jour pour ouvrir le plan de service.</div></div>
-          </div>
-          <div className="semaine-grille">
-            {jours.slice(0, 7).map((j) => {
-              const pctMidi = capacite && j.sertMidi ? Math.min(100, Math.round((j.midiRes / capacite) * 100)) : 0;
-              const pctSoir = capacite && j.sertSoir ? Math.min(100, Math.round((j.soirRes / capacite) * 100)) : 0;
-              const etatMidi = !j.sertMidi ? "ferme" : pctMidi >= 100 ? "complet" : pctMidi >= 75 ? "charge" : pctMidi >= 40 ? "moyen" : "libre";
-              const etatSoir = !j.sertSoir ? "ferme" : pctSoir >= 100 ? "complet" : pctSoir >= 75 ? "charge" : pctSoir >= 40 ? "moyen" : "libre";
-              return (
-                <div
-                  key={j.ds}
-                  className={`semaine-jour${j.isToday ? " semaine-jour-auj" : ""}${j.ferme ? " semaine-jour-ferme" : ""}`}
-                  onClick={() => {
-                    // Service à ouvrir :
-                    //  - un seul service a des réservations → celui-là
-                    //  - les deux (ou aucun) → celui dont l'heure repère (13h/20h, au centre
-                    //    des créneaux habituels) est la plus proche de maintenant. Cohérent
-                    //    pour aujourd'hui (le service en cours ou imminent) comme pour un
-                    //    jour à venir (comparaison purement horaire, jour par jour).
-                    let svc: "midi" | "soir" | undefined;
-                    if (j.midiRes > 0 && j.soirRes === 0) svc = "midi";
-                    else if (j.soirRes > 0 && j.midiRes === 0) svc = "soir";
-                    else if (j.midiRes > 0 || j.soirRes > 0) {
-                      const maintenant = new Date();
-                      const minutesActuelles = maintenant.getHours() * 60 + maintenant.getMinutes();
-                      const ecartMidi = Math.abs(minutesActuelles - 13 * 60);
-                      const ecartSoir = Math.abs(minutesActuelles - 20 * 60);
-                      svc = ecartMidi <= ecartSoir ? "midi" : "soir";
-                    }
-                    onNavigate?.("reservations", j.ds, svc);
-                  }}
-                  title={`Voir le plan de service du ${j.d.getDate()} ${MOIS[j.d.getMonth()]}`}
-                >
-                  <div className="semaine-nom">{j.isToday ? "Auj." : JOURS[j.d.getDay()]}</div>
-                  <div className="semaine-date">{j.d.getDate()} {MOIS[j.d.getMonth()]}</div>
-                  {j.ferme ? (
-                    <div className="semaine-ferme">Fermé</div>
-                  ) : (
-                    <div className="semaine-services">
-                      <div className={`semaine-svc semaine-svc-${etatMidi}`}>
-                        <span className="semaine-svc-label">Midi</span>
-                        <div className="semaine-svc-jauge"><div style={{ width: `${pctMidi}%` }} /></div>
-                        <span className="semaine-svc-val">{j.sertMidi ? `${j.midiRes}/${capacite}` : "—"}</span>
-                      </div>
-                      <div className={`semaine-svc semaine-svc-${etatSoir}`}>
-                        <span className="semaine-svc-label">Soir</span>
-                        <div className="semaine-svc-jauge"><div style={{ width: `${pctSoir}%` }} /></div>
-                        <span className="semaine-svc-val">{j.sertSoir ? `${j.soirRes}/${capacite}` : "—"}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <div className="cartes-stat cartes-stat-kpi">{cartes}</div>
 
+        {/* Croissance de la liste — l'équivalent de « Cette semaine » côté service :
+            la courbe qui dit si le site travaille pour vous. */}
         <div className="bloc">
-          <div className="bloc-tete dispo-tete">
-            <div><h2>Disponibilité par service</h2><div className="desc">Capacité : {capacite} couverts par service. Les places libres tiennent compte des réservations confirmées et en attente. Horizon modifiable dans « Réservations &amp; site ».</div></div>
-            {capacite > 0 && nbSemaines > 1 && (
-              <div className="dispo-nav">
-                <button className="dispo-nav-btn" onClick={() => setSemaine((s) => Math.max(0, s - 1))} disabled={semaine === 0} aria-label="Semaine précédente">‹</button>
-                <span className="dispo-nav-plage">{plageLabel}</span>
-                <button className="dispo-nav-btn" onClick={() => setSemaine((s) => Math.min(nbSemaines - 1, s + 1))} disabled={semaine >= nbSemaines - 1} aria-label="Semaine suivante">›</button>
-              </div>
-            )}
+          <div className="bloc-tete">
+            <div>
+              <h2>Croissance de la liste</h2>
+              <div className="desc">Nouvelles inscriptions par mois, sur douze mois ({totalDouzeMois} au total sur la période).</div>
+            </div>
           </div>
-          {capacite === 0 ? (
-            <div className="vide">Aucune table active. Configurez votre plan de salle pour voir la disponibilité.</div>
+          {totalDouzeMois === 0 ? (
+            <div className="vide">Aucune inscription sur les douze derniers mois.</div>
           ) : (
-            <div className="dispo-jours">
-              {joursSemaine.map((j) => (
-                <div className={`jour-carte${j.isToday ? " jour-auj" : ""}`} key={j.ds}>
-                  <div className="jour-entete">
-                    <span className="jour-nom">{j.isToday ? "Aujourd'hui" : JOURS[j.d.getDay()]}</span>
-                    <span className="jour-date">{j.isToday ? `${JOURS[j.d.getDay()]} ${j.d.getDate()} ${MOIS[j.d.getMonth()]}` : `${j.d.getDate()} ${MOIS[j.d.getMonth()]}`}</span>
-                    {j.ferme && <span className="jour-ferme">Fermé</span>}
+            <div className="crea-histo">
+              {douzeMois.map((m) => {
+                const n = parMois[m.cle];
+                return (
+                  <div key={m.cle} className="crea-col" title={`${m.label} ${m.annee} : ${n} inscription${n > 1 ? "s" : ""}`}>
+                    <div className="crea-barre-zone">
+                      {n > 0 && (
+                        <div className="crea-barre" style={{ height: `${Math.round((n / maxMois) * 100)}%` }}>
+                          <span className="crea-val">{n}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="crea-h">{m.label}</div>
                   </div>
-                  <div className="jour-services">
-                    {serviceCarte("Midi", j.sertMidi, j.midiRes, j.midiDispo)}
-                    {serviceCarte("Soir", j.sertSoir, j.soirRes, j.soirDispo)}
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Origine des inscriptions : formulaire du site et liens tracés. */}
+        <div className="bloc">
+          <div className="bloc-tete">
+            <div>
+              <h2>Origine des inscriptions</h2>
+              <div className="desc">D'où viennent vos {inscrits.length} inscrit{inscrits.length > 1 ? "s" : ""}. Les liens tracés (QR code, réseaux sociaux) apparaissent séparément.</div>
+            </div>
+          </div>
+          {sources.length === 0 ? (
+            <div className="vide">Aucun inscrit pour le moment.</div>
+          ) : (
+            <div className="src-liste">
+              {sources.map(([nom, n]) => (
+                <div key={nom} className="src-ligne">
+                  <div className="src-nom">{nom}</div>
+                  <div className="canal-barre">
+                    <div className="canal-seg canal-site" style={{ width: `${Math.round((n / maxSource) * 100)}%` }} />
+                  </div>
+                  <div className="src-nb">
+                    <b>{n}</b>
+                    <span className="sub-desc"> · {Math.round((n / inscrits.length) * 100)}%</span>
                   </div>
                 </div>
               ))}
@@ -396,89 +274,158 @@ export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string, 
           )}
         </div>
 
+        {/* Santé de la liste */}
         <div className="bloc">
-          <div className="bloc-tete"><div><h2>Indicateurs</h2><div className="desc">Sur les 30 derniers jours, sauf clients récurrents et jour le plus demandé (historique complet).</div></div></div>
+          <div className="bloc-tete">
+            <div>
+              <h2>Santé de la liste</h2>
+              <div className="desc">Les désinscriptions sont normales ; c'est leur accélération qui alerte.</div>
+            </div>
+          </div>
           <div className="cartes-stat">
             <div className="stat">
-              <div className="lib">Taux de remplissage</div>
-              <div className="val">{remplissage30}%</div>
+              <div className="lib">Désinscriptions (30 j.)</div>
+              <div className="val" style={{ color: tauxDesabo >= 2 ? "var(--annule)" : "var(--ink)" }}>{desabo30}</div>
+              <div className="det">{tauxDesabo}% de la liste</div>
+            </div>
+            <div className="stat">
+              <div className="lib">Désinscrits au total</div>
+              <div className="val">{desinscrits.length}</div>
               <div className="det">
-                {ecartRemplissage === 0
-                  ? "stable vs 30 j. précédents"
-                  : `${ecartRemplissage > 0 ? "+" : ""}${ecartRemplissage} pts vs 30 j. précédents`}
+                {desaboSansDate > 0
+                  ? `dont ${desaboSansDate} sans date connue`
+                  : "depuis l'ouverture du site"}
               </div>
             </div>
             <div className="stat">
-              <div className="lib">Adéquation tables / groupes</div>
-              <div className="val">{tauxOccupTable}%</div>
-              <div className="det">des places assignées sont occupées</div>
+              <div className="lib">Campagnes envoyées</div>
+              <div className="val">{envoyees.length}</div>
+              <div className="det">depuis l'ouverture du site</div>
             </div>
-            <div className="stat"><div className="lib">Taux d'annulation</div><div className="val" style={{ color: tauxAnnulation >= 20 ? "var(--annule)" : "var(--ink)" }}>{tauxAnnulation}%</div><div className="det">{nbAnnulePeriode} sur {periode.length} réservation(s)</div></div>
-            <div className="stat"><div className="lib">Taux de no-show</div><div className="val" style={{ color: tauxNoShow >= 10 ? "var(--annule)" : "var(--ink)" }}>{tauxNoShow}%</div><div className="det">{nbNoShowPeriode} absence(s) constatée(s)</div></div>
-            <div className="stat"><div className="lib">Taille de groupe moy.</div><div className="val">{tailleMoyenne.toLocaleString("fr-FR", { maximumFractionDigits: 1 })}</div><div className="det">couverts par réservation</div></div>
-            <div className="stat"><div className="lib">Clients récurrents</div><div className="val">{tauxRecurrence}%</div><div className="det">{nbRecurrents} sur {nbClientsUniques} client(s)</div></div>
-            <div className="stat"><div className="lib">Jour le plus demandé</div><div className="val" style={{ fontSize: jourTop ? undefined : 18 }}>{jourTop || "—"}</div><div className="det">{jourTop ? `${maxCouvJour} couverts cumulés` : "pas encore assez de données"}</div></div>
-            {/* La carte « Contacts récoltés » a été retirée : la section
-                Newsletter en bas de page donne le même chiffre en mieux
-                (inscrits actifs, croissance, origine), et sans elle il n'y a
-                plus rien à afficher quand le module Newsletter est coupé. */}
           </div>
         </div>
 
+        {/* Performance des envois — moyennes sur les campagnes suivies par le
+            webhook. Absent tant qu'aucune campagne n'est couverte : pas de
+            cartes remplies de tirets pour meubler. */}
+        {couvertes.length > 0 && (
+          <div className="bloc">
+            <div className="bloc-tete">
+              <div>
+                <h2>Performance des envois</h2>
+                <div className="desc">
+                  Moyennes sur {couvertes.length === 1 ? "la campagne suivie" : `les ${couvertes.length} campagnes suivies`} ({perfEnvoyes} emails envoyés). Cliquez sur une campagne ci-dessous pour le détail.
+                </div>
+              </div>
+            </div>
+            <div className="cartes-stat">
+              <div className="stat">
+                <div className="lib">Délivrabilité</div>
+                <div className="val">{tauxPct(perfDelivres)}</div>
+                <div className="det">{perfDelivres} emails acceptés · {perfBounces} bounce{perfBounces > 1 ? "s" : ""}</div>
+              </div>
+              <div className="stat">
+                <div className="lib">Taux de clic</div>
+                <div className="val" style={{ color: perfClics > 0 ? "var(--ok)" : "var(--ink)" }}>{tauxPct(perfClics)}</div>
+                <div className="det">{perfClics} personne{perfClics > 1 ? "s ont" : " a"} cliqué au moins un lien</div>
+              </div>
+              <div className="stat">
+                <div className="lib">Désabonnements</div>
+                <div className="val" style={{ color: perfDesabos > 0 ? "var(--attente)" : "var(--ink)" }}>{tauxPct(perfDesabos)}</div>
+                <div className="det">{perfDesabos} via les liens des campagnes</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Dernières campagnes */}
         <div className="bloc">
-          <div className="bloc-tete"><div><h2>Origine des réservations</h2><div className="desc">Répartition sur l'ensemble des réservations ({actives.length} au total, hors annulées).</div></div></div>
-          {actives.length === 0 ? (
-            <div className="vide">Aucune réservation pour le moment.</div>
+          <div className="bloc-tete">
+            <div>
+              <h2>Dernières campagnes</h2>
+              <div className="desc">Les cinq derniers envois — cliquez sur une campagne pour sa fiche complète.</div>
+            </div>
+          </div>
+          {recentes.length === 0 ? (
+            <div className="vide">Aucune campagne envoyée pour le moment.</div>
           ) : (
-            <>
-              <div className="canal-barre">
-                <div className="canal-seg canal-site" style={{ width: `${pctSite}%` }} />
-                <div className="canal-seg canal-tel" style={{ width: `${pctTel}%` }} />
-              </div>
-              <div className="canal-legende">
-                <div><span className="canal-pastille canal-site" /> En ligne — <b>{pctSite}%</b> <span className="sub-desc">({nbSite})</span></div>
-                <div><span className="canal-pastille canal-tel" /> Téléphone — <b>{pctTel}%</b> <span className="sub-desc">({nbTel})</span></div>
-              </div>
-            </>
+            <table className="tbl-cartes">
+                <thead>
+                  <tr><th>Objet</th><th>Envoyée le</th><th>Destinataires</th><th>Délivrés</th><th>Clics</th><th>Désabos</th></tr>
+                </thead>
+                <tbody>
+                  {recentes.map((c) => {
+                    const cibles = c.recipients_count ?? 0;
+                    const envoyes = c.sent_count ?? 0;
+                    const partiel = cibles > 0 && envoyes < cibles;
+                    const st = stats[c.id];
+                    return (
+                      <tr key={c.id} className="tbl-clic" role="button" tabIndex={0}
+                        title={`Statistiques de « ${c.subject} »`}
+                        onClick={() => setFiche(c)}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setFiche(c); } }}>
+                        <td data-label="Objet">{c.subject}</td>
+                        <td data-label="Envoyée le">{fmtDate(c.sent_at)}</td>
+                        <td data-label="Destinataires">
+                          {envoyes}
+                          {partiel && (
+                            <span className="sub-desc" style={{ color: "var(--annule)" }}> · {cibles - envoyes} en échec</span>
+                          )}
+                        </td>
+                        <td data-label="Délivrés">
+                          {(() => {
+                            // Délivrés = acceptés par les serveurs destinataires
+                            // (envoyés moins les échecs). Ne dit PAS boîte de
+                            // réception vs spam — aucun signal n'existe pour ça.
+                            // Couverte = la campagne a des événements (preuve
+                            // directe que le webhook la suivait), OU elle est
+                            // postérieure au premier événement enregistré. La
+                            // seule date ne suffit pas : pour la toute première
+                            // campagne post-webhook, le premier événement est un
+                            // clic sur CETTE campagne — donc toujours après son
+                            // envoi, et elle serait restée à « — » à tort.
+                            const couvert = couverte(c);
+                            if (!couvert || envoyes === 0) return <span className="sub-desc">—</span>;
+                            const del = Math.max(0, envoyes - (st?.bounces ?? 0));
+                            return <>{del}<span className="sub-desc"> · {Math.round((del / envoyes) * 100)}%</span></>;
+                          })()}
+                        </td>
+                        <td data-label="Clics">
+                          {couverte(c)
+                            ? <>{st?.clicks ?? 0}{envoyes > 0 && <span className="sub-desc"> · {Math.round(((st?.clicks ?? 0) / envoyes) * 100)}%</span>}</>
+                            : <span className="sub-desc">—</span>}
+                        </td>
+                        <td data-label="Désabos">
+                          {couverte(c)
+                            ? <>{st?.unsubscribes ?? 0}{envoyes > 0 && <span className="sub-desc"> · {Math.round(((st?.unsubscribes ?? 0) / envoyes) * 100)}%</span>}</>
+                            : <span className="sub-desc">—</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+            </table>
           )}
         </div>
 
-        <div className="bloc">
-          <div className="bloc-tete"><div><h2>Quand vos clients réservent en ligne</h2><div className="desc">Heure à laquelle les demandes sont passées sur le site ({resaEnLigne.length} réservation{resaEnLigne.length > 1 ? "s" : ""} en ligne). Utile pour savoir quand votre site travaille pour vous.</div></div></div>
-          {resaEnLigne.length === 0 ? (
-            <div className="vide">Aucune réservation en ligne pour le moment.</div>
-          ) : (
-            <>
-              <div className="crea-histo">
-                {plageHeures.map((h) => {
-                  const n = parHeureCrea[h];
-                  return (
-                    <div key={h} className="crea-col" title={`${h}h–${h + 1}h : ${n} réservation${n > 1 ? "s" : ""}`}>
-                      <div className="crea-barre-zone">
-                        {n > 0 && (
-                          <div className="crea-barre" style={{ height: `${Math.round((n / maxHeureCrea) * 100)}%` }}>
-                            <span className="crea-val">{n}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="crea-h">{h}h</div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="crea-legende">
-                {heureTop && <div><span className="sub-desc">Créneau le plus actif :</span> <b>{heureTop}</b></div>}
-                {jourCreaTop && <div><span className="sub-desc">Jour où l'on réserve le plus :</span> <b>{jourCreaTop}</b></div>}
-              </div>
-            </>
-          )}
-        </div>
+        {fiche && (
+          <FicheCampagne campagne={fiche} stats={stats[fiche.id]} premierEvt={premierEvt}
+            onClose={() => setFiche(null)} />
+        )}
+    </>
+  );
+}
 
-        {/* Offres qui cumulent réservation et newsletter : les mêmes indicateurs
-            que le tableau de bord « Essentiel + Newsletter », à la suite du
-            service. Composant partagé, donc aucun risque que les deux offres
-            affichent des chiffres différents. */}
-        {newsletterOn && <BlocsNewsletter mode="complement" onNavigate={(tab) => onNavigate?.(tab)} />}
+/** Tableau de bord — offre « Essentiel + Newsletter ». */
+export default function TabTableau({ onNavigate }: { onNavigate?: (tab: string) => void } = {}) {
+  return (
+    <>
+      <div className="topbar"><div>
+        <h1>Tableau de bord</h1>
+        <div className="sous">Votre liste de contacts et vos campagnes</div>
+      </div></div>
+      <div className="contenu">
+        <BlocsNewsletter onNavigate={onNavigate} />
       </div>
     </>
   );

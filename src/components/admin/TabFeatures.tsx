@@ -13,17 +13,15 @@ interface FeatureFlag {
  * Visible UNIQUEMENT pour les comptes @latable-digitale.fr
  * Les changements sont pris en compte au prochain chargement de l'admin.
  */
-// Modules alimentés par les réservations : sans le module Réservation, leurs
-// tables restent vides. Doit rester synchronisé avec DEPENDANCES (AdminApp.tsx).
-const DEPENDANCES: Record<string, string> = {
-  liste_attente: "reservation",
-  crm: "reservation",
-};
+// Modules dépendant d'un autre module. Vide depuis le retrait de la
+// réservation en ligne : la constante est conservée parce que le rendu s'en
+// sert et qu'un futur module optionnel s'y raccrochera naturellement.
+// Doit rester synchronisé avec AdminApp.tsx.
+const DEPENDANCES: Record<string, string> = {};
 
-// Ordre d'affichage des modules de premier niveau. Sans cela, useTable trie par
-// libellé et « Réservation en ligne » se retrouve APRÈS les modules qui en
-// dépendent — l'imbrication devient illisible.
-const ORDRE = ["reservation", "newsletter"];
+// Ordre d'affichage des modules de premier niveau. Sans cela, useTable trie
+// par libellé, et l'ordre change dès qu'on renomme un module.
+const ORDRE = ["newsletter"];
 
 function Ligne({ f, onBascule }: { f: FeatureFlag; onBascule: (f: FeatureFlag, v: boolean) => void }) {
   return (
@@ -53,8 +51,8 @@ export default function TabFeatures() {
   /**
    * Bascule d'un module. Cas particulier de la newsletter : le bloc du site est
    * gouverné par site_content.newsletter_enabled, que le restaurateur règle
-   * depuis « Réservations & site ». Or ce réglage disparaît avec le module. Sans
-   * la propagation ci-dessous, on obtiendrait un formulaire toujours visible sur
+   * depuis « Site & accès ». Or ce réglage disparaît avec le module. Sans la
+   * propagation ci-dessous, on obtiendrait un formulaire toujours visible sur
    * le site, plus aucun onglet pour en exploiter les inscriptions, et personne
    * capable de l'éteindre. Le module est donc l'interrupteur maître.
    */
@@ -83,7 +81,7 @@ export default function TabFeatures() {
               <div className="desc">
                 Ces réglages contrôlent quels <b>onglets sont visibles dans l'administration</b> du
                 restaurateur — ils n'affectent pas l'affichage du site public (géré depuis
-                « Réservations &amp; site »). Un module désactivé masque l'onglet correspondant,
+                « Site &amp; accès »). Un module désactivé masque l'onglet correspondant,
                 au prochain chargement de l'interface. Les modules encadrés dépendent de
                 celui qui les précède : couper le parent les coupe avec lui.
               </div>
@@ -91,8 +89,7 @@ export default function TabFeatures() {
           </div>
           {/* Les dépendants sont imbriqués sous leur parent, et disparaissent
               avec lui : un interrupteur qu'on ne peut pas voir vaut mieux qu'un
-              interrupteur qui n'a aucun effet. Même parti pris que l'opt-in
-              newsletter sous « Réservation en ligne » dans TabParametres. */}
+              interrupteur qui n'a aucun effet. */}
           {parents.map((f) => {
             const enfants = enfantsDe(f.key);
             return (

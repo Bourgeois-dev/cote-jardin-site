@@ -27,26 +27,8 @@ insert into public.layout_settings (section_key, variant) values
   ('contact', 'default')
 on conflict (section_key) do update set variant = excluded.variant;
 
--- Parametres de reservation
-insert into public.reservation_settings
-  (enabled, phone_threshold, min_advance_hours, slot_duration, booking_horizon_days, newsletter_optin,
-   max_covers_per_slot, waitlist_enabled, reminder_enabled)
-values
-  (true,
-   8,
-   2,
-   30,
-   60,
-   true,
-   null,   -- pas de plafond au départ (repli sur capacité physique)
-   false,  -- liste d'attente désactivée par défaut
-   true);  -- rappel J-1 activé par défaut
-
 -- Banniere promo (desactivee par defaut)
 insert into public.promo_banner (is_active) values (false);
-
--- Zone de salle par défaut (le restaurateur en ajoute d'autres via l'admin)
-insert into public.dining_areas (name, position) values ('Salle', 0);
 
 -- Contenus editables
 -- NB : le bloc "Notre cuisine" (story) n'est PAS en base : exception figee au

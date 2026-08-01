@@ -86,8 +86,8 @@ Deno.serve(async (req: Request) => {
   const data = evt.data || {};
   const campaignId = (data.tags?.campaign_id ?? "") as string;
   const email = String(Array.isArray(data.to) ? data.to[0] : data.to || "").toLowerCase().trim();
-  // Événement sans tag : e-mail transactionnel (confirmation de réservation,
-  // bienvenue…) ou test — hors campagne, rien à compter.
+  // Événement sans tag : e-mail transactionnel (bienvenue…) ou test —
+  // hors campagne, rien à compter.
   if (!campaignId || !email) return new Response(JSON.stringify({ ok: true, ignored: "hors campagne" }), { status: 200 });
 
   const url = type === "clicked" ? String(data.click?.link || "").slice(0, 500) || null : null;

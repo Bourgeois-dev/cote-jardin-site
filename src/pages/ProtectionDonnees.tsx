@@ -22,23 +22,19 @@ export default function ProtectionDonnees() {
 
         <h2>Données collectées et finalités</h2>
         <ul className="legal-liste">
-          <li><b>Réservation</b> : nom, e-mail, téléphone et nombre de couverts, utilisés uniquement pour gérer votre réservation.</li>
           <li><b>Newsletter</b> : prénom, nom et e-mail, utilisés pour vous envoyer nos actualités, avec votre consentement explicite.</li>
           <li><b>Clics dans nos e-mails</b> : lorsqu'un lien de nos newsletters est cliqué, l'information est enregistrée par notre prestataire d'envoi. Elle nous sert uniquement à savoir quels contenus vous intéressent. Les ouvertures, elles, ne sont pas mesurées.</li>
         </ul>
 
         <h2>Base légale</h2>
         <p>
-          Les données de réservation sont traitées sur la base de l'exécution de votre demande.
           Les données de newsletter reposent sur votre consentement, que vous pouvez retirer à
           tout moment.
         </p>
 
         <h2>Durée de conservation</h2>
         <p>
-          Les données de réservation sont conservées le temps nécessaire à la gestion de la
-          relation, puis archivées ou supprimées. Les données de newsletter sont conservées
-          jusqu'à votre désinscription.
+          Les données de newsletter sont conservées jusqu'à votre désinscription.
         </p>
 
         <h2>Destinataires et sous-traitants</h2>
@@ -48,12 +44,12 @@ export default function ProtectionDonnees() {
           compte :
         </p>
         <ul className="legal-liste">
-          <li><b>Supabase</b> — hébergement de la base de données (réservations, contacts). Serveurs situés à Paris (région eu-west-3).</li>
+          <li><b>Supabase</b> — hébergement de la base de données (contacts de la newsletter). Serveurs situés à Paris (région eu-west-3).</li>
           <li><b>Netlify</b> — hébergement des pages du site web. Aucune donnée personnelle n'y est stockée.</li>
-          <li><b>Resend</b> — envoi de nos e-mails (confirmations de réservation, newsletters) et mesure des clics. Serveurs situés en Irlande (région eu-west-1).</li>
+          <li><b>Resend</b> — envoi de nos e-mails (newsletters, e-mail de bienvenue) et mesure des clics. Serveurs situés en Irlande (région eu-west-1).</li>
         </ul>
         <p>
-          Vos données personnelles (réservations, contacts, e-mails) sont hébergées et traitées
+          Vos données personnelles (contacts, e-mails) sont hébergées et traitées
           au sein de l'Union européenne — France pour la base de données, Irlande pour l'envoi
           des e-mails — et ne font l'objet d'aucun transfert hors UE.
         </p>

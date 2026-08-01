@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-export default function Navbar({ onReserve, reserveLabel = "Réserver", flags }: {
-  onReserve: () => void;
-  reserveLabel?: string;
+export default function Navbar({ onAppeler, appelLabel = "Appeler", flags }: {
+  onAppeler: () => void;
+  appelLabel?: string;
   flags?: { ardoise?: boolean; takeaway?: boolean; partners?: boolean; newsletter?: boolean };
 }) {
   const f = flags || {};
@@ -30,7 +30,7 @@ export default function Navbar({ onReserve, reserveLabel = "Réserver", flags }:
         </ul>
 
         <div className="nav-droite">
-          <button className="btn btn-accent nav-resa" onClick={onReserve}>{reserveLabel}</button>
+          <button className="btn btn-accent nav-resa" onClick={onAppeler}>{appelLabel}</button>
           {/* Burger mobile */}
           <button
             className={`nav-burger${open ? " ouvert" : ""}`}
@@ -55,8 +55,8 @@ export default function Navbar({ onReserve, reserveLabel = "Réserver", flags }:
             <li><a href="#galerie" onClick={close}>Galerie</a></li>
             {f.newsletter !== false && <li><a href="#contact" onClick={close}>Contact</a></li>}
           </ul>
-          <button className="btn btn-accent nav-mobile-resa" onClick={() => { onReserve(); close(); }}>
-            {reserveLabel}
+          <button className="btn btn-accent nav-mobile-resa" onClick={() => { onAppeler(); close(); }}>
+            {appelLabel}
           </button>
         </nav>
       )}

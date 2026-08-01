@@ -1,765 +1,226 @@
-# Newsletter — ciblage unique en offre « Essentiel + Newsletter » (29/07/2026)
+# Retrait du module Réservation — Côté Jardin
 
-Deux sujets dans ce paquet : la simplification de l'assistant de campagne pour les
-clients sans module Réservation, et la remise à niveau de `schema.sql`.
-
-Validateurs au vert (`check-fond.mjs` et `check-connexions.mjs`, 0 erreur).
-`diff -rq` entre les trois espaces ne montre que les différences de **forme**
-attendues (`Hero.tsx`, `Carte.tsx`, `Histoire.tsx`, `site.css`, `theme.css`,
-`legal.generated.ts`). Les composants admin sont identiques partout.
+Repositionnement de l'offre : La Table Digitale ne propose plus que **Essentiel**
+et **Essentiel + Newsletter**. Tout ce qui relève de la réservation en ligne, du
+plan de salle, de la liste d'attente et du CRM clients est retiré du produit.
 
 ---
 
-## 1. Assistant de campagne : 3 étapes → 2 étapes
+## ⚠️ Ordre d'exécution — à respecter
 
-**Décision.** En offre « Essentiel + Newsletter », le module Réservation est
-désactivé. Sans réservations, la table `customers` n'est jamais alimentée (elle
-l'est par le trigger `attach_customer` sur `reservations`) : les cinq segments qui
-en dépendent — VIP, Habitués, Venus une seule fois, Pas venus depuis 3 à 6 mois,
-Pas venus depuis plus de 6 mois — afficheraient tous « 0 contact ».
+1. **Exporter les données** de production avant toute chose (voir §3).
+2. **Pousser le code** (GitHub Desktop) et attendre que Netlify ait fini.
+3. **Appliquer la migration SQL** seulement ensuite.
+4. **Supprimer les edge functions** et les crons dans le dashboard Supabase.
 
-Plutôt que de proposer une étape de ciblage à vide, l'étape 2 disparaît. Le
-segment est fixé à `optin` et l'assistant passe de trois étapes à deux.
-
-Le déclencheur est le flag `reservation` de la table `feature_flags`, déjà utilisé
-par `AdminApp.tsx` pour masquer les onglets. Aucun réglage supplémentaire : le
-comportement suit l'activation du module, comme le reste de l'admin.
-
-**Ce qui change dans `TabNewsletter.tsx` (fond, identique CJ = AT = PK) :**
-- lecture du flag `reservation` dans le composant parent, transmise à
-  `NouveauForm` via la prop `cibleUnique` ;
-- fil d'étapes renuméroté 1-2 (pas de pastille « 3 » orpheline) ;
-- « Suivant » à l'étape 1 mène directement à la planification ;
-- « Retour » à l'étape de planification revient à la composition ;
-- récap : « Destinataires : tous les inscrits (N) » au lieu de « Segment : … » ;
-- cartes de la liste : la mention du segment est retirée (elle serait constante).
-
-Rien n'est fermé pour l'avenir : la colonne `segment`, `getRecipients()` et
-`newsletter_segment_counts()` restent en place. Réintroduire un segment plus tard
-ne coûtera qu'un rendu conditionnel de plus.
-
-**Pour un client Essentiel :** basculer le flag `reservation` sur `false` depuis
-l'onglet « Fonctionnalités » (compte `@latable-digitale.fr`). L'effet est pris au
-prochain chargement de l'admin.
+Faire la migration avant le déploiement casserait le site en production :
+l'ancien bundle interroge encore `reservations` et `reservation_settings`.
 
 ---
 
-## 2. `schema.sql` — remise à niveau
+## 1. Fichiers à SUPPRIMER
 
-### Ce qui n'était PAS un problème
+À faire à la main dans le repo (GitHub Desktop détectera la suppression) :
 
-La contrainte `chk_segment` et `newsletter_segment_counts()` ont été vérifiées
-directement sur la base de production de Côté Jardin (`jdbxtygycrzqlyzqjpfg`) :
-elles sont à jour et cohérentes avec `SEGMENTS` et `getRecipients()`. Le template
-du kit l'était également. Le décalage venait d'un instantané périmé de
-`schema.sql` conservé hors dépôt.
+```
+src/components/admin/TabReservations.tsx
+src/components/admin/TabPlan.tsx
+src/components/admin/TabListeAttente.tsx
+src/components/admin/TabClients.tsx
+src/components/admin/PlanService.tsx
+src/components/admin/TableSVG.tsx
+src/components/site/ReservationWidget.tsx
+src/pages/WidgetReservation.tsx
+src/pages/Annuler.tsx
+supabase/functions/reservation-email/          (le dossier entier)
+supabase/functions/reservation-reminders/      (le dossier entier)
+```
 
-### `cancel_by_token()` manquait dans le template du kit — corrigé
+## 2. Fichiers à REMPLACER
 
-La fonction existe en production, `src/pages/Annuler.tsx` l'appelle par RPC, et un
-commentaire du template la mentionne — mais aucun `create function` ne la créait.
-**Un client provisionné depuis le kit aurait eu une page d'annulation cassée dès
-le premier lien envoyé dans un e-mail de confirmation.**
+### Renommage
 
-Portée depuis la production dans `provisioning/templates/schema.sql`, avec son
-`grant execute on function public.cancel_by_token(uuid) to anon, authenticated;`.
-Placée juste après `reserve_table`, dont elle est le pendant côté client.
+`src/components/admin/TabTableauNewsletter.tsx` → **`src/components/admin/TabTableau.tsx`**
 
-> Aucune base existante à corriger : Côté Jardin l'a déjà, et c'est le seul client
-> en production. Le correctif ne concerne que les **futurs** clients.
+L'ancien `TabTableau.tsx` (tableau de bord du service) est écrasé : le fichier
+fourni contient le tableau de bord newsletter, seul restant.
 
-### Instantané CJ régénéré
+### Modifiés
 
-`cote-jardin-site/supabase/migrations/00000000000001_schema.sql` datait du
-18/07 et avait 400 lignes de retard sur le template (dossiers de newsletter,
-segments habitués/une visite, `inscrire_newsletter`, `notifier_waitlist_si_liberee`…).
-
-Régénéré depuis le template du kit, placeholders substitués
-(`gerant@cote-jardin.fr`, `jdbxtygycrzqlyzqjpfg`), en-tête précisant qu'il s'agit
-d'un instantané idempotent décrivant l'état cible — pas d'une migration
-incrémentale qui s'empilerait avec les précédentes.
-
-> ⚠️ Le fichier passe de 1079 à 1526 lignes. À relire dans GitHub Desktop avant de
-> pousser. Aucune donnée n'est touchée : les seeds sont dans
-> `00000000000002_seed.sql`, qui n'est pas modifié.
-
----
-
-## 3. Restant à traiter — `rls_auto_enable()`
-
-L'event trigger `ensure_rls` et sa fonction `rls_auto_enable()` tournent en
-production chez Côté Jardin mais **n'existent dans aucun des deux fichiers de
-schéma**. C'est un garde-fou qui active automatiquement la RLS sur toute table
-créée : son absence du kit signifie qu'un futur client ne l'aura pas.
-
-Non corrigé dans ce paquet — repéré en fin de session, et un garde-fou de sécurité
-mérite d'être traité pour lui-même plutôt qu'en marge d'une livraison newsletter.
-
----
-
-## Fichiers à remplacer
-
-### maj-cote-jardin.zip → repo `cote-jardin-site`
-- (modifié) `src/components/admin/TabNewsletter.tsx`
-- (modifié) `supabase/migrations/00000000000001_schema.sql`
-- (nouveau) `A-LIRE.md`
-
-### maj-app-template.zip → repo `app-template`
-- (modifié) `src/components/admin/TabNewsletter.tsx`
-
-### maj-provisioning-kit.zip → repo `provisioning`
-- (modifié) `provisioning/templates/app/src/components/admin/TabNewsletter.tsx`
-- (modifié) `provisioning/templates/schema.sql`
-
-Aucun autre fichier n'est touché. Aucune migration à rejouer sur une base existante.
+```
+src/main.tsx
+src/components/admin/AdminApp.tsx
+src/components/admin/TabTableau.tsx           ← ex TabTableauNewsletter
+src/components/admin/TabParametres.tsx
+src/components/admin/TabFeatures.tsx
+src/components/admin/TabHoraires.tsx
+src/components/admin/TabContacts.tsx
+src/components/admin/TabNewsletter.tsx
+src/components/site/Navbar.tsx
+src/components/site/Hero.tsx
+src/pages/Site.tsx
+src/pages/ProtectionDonnees.tsx
+src/pages/admin.css
+src/site.css
+src/lib/types.ts
+src/lib/supabase.ts
+src/lib/incident.ts
+supabase/functions/send-newsletter/index.ts
+supabase/functions/assistant-newsletter/index.ts
+supabase/functions/resend-webhook/index.ts
+supabase/functions/README.md
+supabase/migrations/00000000000001_schema.sql
+supabase/migrations/00000000000002_seed.sql
+CLAUDE.md
+```
 
 ---
 
-# Correctif — masquage des onglets liés aux réservations (29/07/2026, second envoi)
+## 3. Migration de la base — DESTRUCTIF
 
-Constat en production : basculer le flag `reservation` sur `false` laissait
-visibles « Plan de salle », « Liste d'attente » et « Clients ».
+Fichier : `provisioning/migrations/migration-retrait-reservation.sql` (kit).
 
-Vérifications faites sur la base avant correction : le flag était bien enregistré
-à `false`, et sous l'identité réelle de `gerant@cote-jardin.fr` (JWT simulé)
-`is_admin()` renvoie `true` et la lecture de `feature_flags` retourne les 4 lignes.
-Ni l'écriture ni la RLS n'étaient en cause.
+**Avant de l'appliquer**, exporter ce qui doit être conservé. La migration
+supprime les réservations passées, les fiches clients et la liste d'attente.
 
-## Deux causes distinctes
+```sql
+\copy (select * from public.reservations) to 'reservations.csv' csv header
+\copy (select * from public.customers)    to 'customers.csv'    csv header
+\copy (select * from public.waitlist)     to 'waitlist.csv'     csv header
+```
 
-**« Plan de salle » — défaut.** La clé `plan` était absente de `FEATURE_MAP` dans
-`AdminApp.tsx` : aucun flag ne lui était associé, l'onglet restait donc visible
-quels que soient les réglages. Corrigé par `"plan": "reservation"` — un plan de
-salle sans réservations ne sert à rien.
+Puis essayer d'abord en transaction ouverte :
 
-**« Liste d'attente » et « Clients » — combinaison incohérente.** Ces deux
-modules ont leurs propres flags (`liste_attente`, `crm`), restés à `true`. Ce
-n'était pas un bug, mais leurs tables sont alimentées par les réservations
-(`waitlist` par le widget, `customers` par le trigger `attach_customer`) : sans
-module Réservation, les deux onglets sont définitivement vides.
+```sql
+begin;
+-- coller le contenu de migration-retrait-reservation.sql
+-- vérifier le résultat
+rollback;   -- ou commit; si tout est conforme
+```
 
-Plutôt que d'imposer au studio de penser à couper trois interrupteurs sans se
-tromper, une table `DEPENDANCES` a été ajoutée dans `AdminApp.tsx` : couper
-`reservation` masque aussi les onglets Liste d'attente et Clients. Aucune
-combinaison de flags ne peut plus produire un onglet mort.
+Les contacts newsletter (`leads`) ne sont **pas** touchés.
 
-`TabFeatures.tsx` affiche désormais la raison sur les modules concernés
-(« Sans effet : dépend du module Réservation en ligne, actuellement désactivé »),
-pour que l'interrupteur ne paraisse pas cassé.
+### Ce que fait la migration
 
-## Non traité volontairement
-
-Le **Tableau de bord** reste visible et affichera un service vide chez un client
-Essentiel. « **Réservations & site** » mêle réglages de réservation et réglages de
-site : c'est une section à masquer, pas un onglet. Les deux demandent du travail
-à l'intérieur des composants et méritent leur propre passe.
-
-## Fichiers à remplacer (ce second envoi)
-
-### maj-cote-jardin.zip → repo `cote-jardin-site`
-- (modifié) `src/components/admin/AdminApp.tsx`
-- (modifié) `src/components/admin/TabFeatures.tsx`
-
-### maj-app-template.zip → repo `app-template`
-- (modifié) `src/components/admin/AdminApp.tsx`
-- (modifié) `src/components/admin/TabFeatures.tsx`
-
-### maj-provisioning-kit.zip → repo `provisioning`
-- (modifié) `provisioning/templates/app/src/components/admin/AdminApp.tsx`
-- (modifié) `provisioning/templates/app/src/components/admin/TabFeatures.tsx`
-
-> Les fichiers du premier envoi (TabNewsletter.tsx, schema.sql) sont inclus dans
-> ces mêmes zips — ils remplacent intégralement le paquet précédent.
+| Étape | Effet |
+|---|---|
+| 1 | Désinscrit les jobs pg_cron `rappel-j1` et `waitlist-relance-horaire` |
+| 2 | Retire `reservations` et `waitlist` de `supabase_realtime` |
+| 3 | Supprime 11 fonctions et 4 triggers |
+| 4 | Supprime 6 tables (`reservations`, `waitlist`, `customers`, `restaurant_tables`, `dining_areas`, `reservation_settings`) |
+| 5 | Retire `blocks_reservations` et `custom_message` de `closure_periods` |
+| 6 | Requalifie `leads.source = 'reservation'` en `'newsletter'` + recrée les policies anon |
+| 7 | Réécrit `inscrire_newsletter_statut()` sans la source `reservation` |
+| 8 | Réécrit `newsletter_segment_counts()` : un seul segment `optin` |
+| 9 | Supprime les feature flags `reservation`, `liste_attente`, `crm` |
+| 10 | Ramène les campagnes historiques au segment `optin` |
 
 ---
 
-# Onglet « Réservations & site » adapté à l'offre Essentiel (29/07/2026, troisième envoi)
+## 4. Actions manuelles dans Supabase
 
-Quand le flag `reservation` est sur `false`, l'onglet ne montre plus que ce qui a
-un sens sans réservation en ligne.
-
-## Ce qui disparaît
-
-- le bloc « Réservation en ligne » de la section *Sur le site public*, et son
-  réglage imbriqué « Proposer la newsletter pendant la réservation » ;
-- la section entière **Règles de réservation** (horizon, délai minimum, seuil
-  groupe, couverts max, durée d'occupation) ;
-- la section entière **Confirmation des réservations** ;
-- la section **Quand un créneau est complet** (liste d'attente) ;
-- la section **Rappels automatiques** (rappel J-1) ;
-- le pied de formulaire et son bouton **Enregistrer** — plus rien à enregistrer
-  d'un bloc, le seul réglage restant (« Bloc Newsletter / actualités ») s'applique
-  aussitôt.
-
-## Ce qui reste
-
-Le toggle « Bloc Newsletter / actualités » et le bloc **Comptes admin**.
-
-## Renommage
-
-Un onglet intitulé « Réservations & site » chez un client qui n'a pas la
-réservation était incohérent. Quand le module est coupé :
-
-- le libellé dans la navigation (barre latérale **et** tiroir mobile) devient
-  « Site & accès » ;
-- le titre de page suit, avec le sous-titre « Blocs du site et accès à
-  l'administration ».
-
-## Détail
-
-Le garde `if (!s) return <alerte support technique>` ne se déclenche plus quand le
-module est coupé : sans réservation, l'absence de ligne `reservation_settings`
-n'a rien d'anormal et ne doit pas afficher un message d'erreur au restaurateur.
-
-## Fichiers à remplacer (ce troisième envoi)
-
-### maj-cote-jardin.zip → repo `cote-jardin-site`
-- (modifié) `src/components/admin/AdminApp.tsx`
-- (modifié) `src/components/admin/TabParametres.tsx`
-
-### maj-app-template.zip → repo `app-template`
-- (modifié) `src/components/admin/AdminApp.tsx`
-- (modifié) `src/components/admin/TabParametres.tsx`
-
-### maj-provisioning-kit.zip → repo `provisioning`
-- (modifié) `provisioning/templates/app/src/components/admin/AdminApp.tsx`
-- (modifié) `provisioning/templates/app/src/components/admin/TabParametres.tsx`
-
-> Les zips contiennent l'intégralité des trois envois. Ils remplacent les paquets
-> précédents.
+- **Edge Functions** → supprimer `reservation-email` et `reservation-reminders`.
+- **Database → Cron jobs** → vérifier que `rappel-j1` et
+  `waitlist-relance-horaire` ont bien disparu (l'étape 1 de la migration s'en
+  charge, mais un job créé sous un autre nom survivrait).
+- **Secrets** : `NEWSLETTER_FROM_EMAIL` remplace `RESERVATION_FROM_EMAIL`.
+  **Rien à faire dans l'immédiat** — `send-newsletter` lit le nouveau nom et
+  retombe sur l'ancien s'il est absent. Renommer le secret quand ce sera commode.
+- **Redéployer** `send-newsletter`, `assistant-newsletter` et `resend-webhook` :
+  les edge functions ne partent pas avec un push GitHub.
 
 ---
 
-# Tableau de bord newsletter (29/07/2026, quatrième envoi)
+## 5. Ce qui change pour le restaurateur
 
-En offre Essentiel, le tableau de bord du service n'avait plus rien à montrer.
-Un composant distinct est monté à sa place, entièrement tourné vers la liste et
-les campagnes.
+### Navigation de l'admin — 14 onglets, 3 familles
 
-## Nouveau composant `TabTableauNewsletter.tsx`
+- **Pilotage** : Tableau de bord · Newsletter · Horaires
+- **Vitrine** : La carte · Ardoise du jour · Galerie · Avis clients ·
+  Partenaires · Réseaux sociaux · Bannière promo · À emporter
+- **Paramètres** : Contacts · Site & accès · Fonctionnalités *(éditeur LTD)*
 
-Composant séparé plutôt que conditions dans `TabTableau` : cela évite de lancer
-les requêtes sur `reservations`, `restaurant_tables` et `opening_hours` pour un
-client dont ces tables sont vides par construction. Tout est calculé depuis
-`leads` et `newsletter_campaigns`.
+La barre d'accès rapide mobile passe de « Tableau · Résa · Plan » à
+**« Tableau · Lettre · Carte »**.
 
-**Cartes du haut** — Inscrits · Nouveaux ce mois-ci (avec écart vs mois
-précédent) · Prochaine campagne programmée (cliquable) · Brouillons (cliquable) ·
-Dernière campagne envoyée.
+### Onglet « Réservations & site » → « Site & accès »
 
-**Blocs** — Croissance de la liste (douze mois glissants, histogramme) · Origine
-des inscriptions (`leads.source`, les liens tracés `newsletter:<utm>` apparaissent
-séparément) · Santé de la liste (désinscriptions 30 j., total, campagnes
-envoyées) · Dernières campagnes (cinq derniers envois, avec signalement des
-échecs quand `sent_count < recipients_count`).
+Il ne reste que trois blocs : l'interrupteur du bloc newsletter du site, la voix
+du restaurant (assistant IA) et les comptes admin. Plus de bouton
+« Enregistrer » global : chaque réglage s'applique immédiatement.
 
-`AdminApp.tsx` choisit lequel monter. Un garde a été ajouté : tant que les flags
-ne sont pas lus, aucun des deux n'est affiché — sans quoi un client Essentiel
-verrait passer une fraction de seconde de « Couverts aujourd'hui ».
+### Onglet Horaires
 
-## `leads.unsubscribed_at`
+La section « Fermetures & événements exceptionnels » **reste**, mais change de
+rôle : ce n'est plus ce qui bloque les créneaux du widget, c'est un mémo interne
+repris par l'assistant IA quand il rédige une campagne. Le champ « Message
+personnalisé » (destiné au widget) et la colonne `blocks_reservations`
+disparaissent.
 
-Sans cette colonne, les désinscriptions n'étaient comptables qu'en volume total.
+### Newsletter
 
-- **Appliqué en production sur Côté Jardin** (migration `leads_unsubscribed_at` :
-  colonne + index partiel). Additive et réversible, aucune donnée touchée.
-- Ajoutée au template du kit et à l'instantané CJ.
-- `newsletter-unsubscribe/index.ts` renseigne désormais la date en même temps
-  qu'il passe `consent` à `false`.
-- Les désinscriptions antérieures restent à `null` : elles comptent dans le total
-  mais jamais dans la période. Le tableau de bord le dit explicitement
-  (« dont N sans date connue ») plutôt que de laisser croire à une liste saine.
+L'assistant passe de **3 à 2 étapes** : « 1 · Contenu », « 2 · Envoi ».
+Il n'y a plus d'étape de ciblage — un seul segment existe désormais, `optin`
+(tous les inscrits consentants, hors adresses en bounce). Les cinq autres
+segments reposaient sur `customers`, alimentée par les réservations.
 
-> ⚠️ L'edge function `newsletter-unsubscribe` doit être redéployée, sinon la
-> colonne restera vide. Tant qu'elle ne l'est pas, rien ne casse : la
-> désinscription continue de fonctionner, seule la date manque.
+Les liens `#reserver` proposés sous le champ « Bouton — lien » sont remplacés
+par `#carte`.
 
-## Fichiers à remplacer (ce quatrième envoi)
+### Site public
 
-### maj-cote-jardin.zip → repo `cote-jardin-site`
-- (nouveau)  `src/components/admin/TabTableauNewsletter.tsx`
-- (modifié)  `src/components/admin/AdminApp.tsx`
-- (modifié)  `src/lib/types.ts`
-- (modifié)  `src/pages/admin.css`
-- (modifié)  `supabase/functions/newsletter-unsubscribe/index.ts`
-- (modifié)  `supabase/migrations/00000000000001_schema.sql`
-
-### maj-app-template.zip → repo `app-template`
-- (nouveau)  `src/components/admin/TabTableauNewsletter.tsx`
-- (modifiés) `src/components/admin/AdminApp.tsx`, `src/lib/types.ts`,
-  `src/pages/admin.css`, `supabase/functions/newsletter-unsubscribe/index.ts`
-
-### maj-provisioning-kit.zip → repo `provisioning`
-- (nouveau)  `provisioning/templates/app/src/components/admin/TabTableauNewsletter.tsx`
-- (modifiés) `provisioning/templates/app/src/components/admin/AdminApp.tsx`,
-  `.../src/lib/types.ts`, `.../src/pages/admin.css`,
-  `.../supabase/functions/newsletter-unsubscribe/index.ts`,
-  `provisioning/templates/schema.sql`
-
-> Les zips contiennent l'intégralité des quatre envois.
+Le widget disparaît. Les boutons de la navbar, du hero et le bouton flottant
+deviennent des boutons **« Appeler »** (lien `tel:`) et disparaissent si aucun
+numéro n'est renseigné. Les routes `/annuler` et `/widget-reservation` sont
+retirées.
 
 ---
 
-# `rls_auto_enable()` / event trigger `ensure_rls` (29/07/2026, cinquième envoi)
+## 6. Détails techniques
 
-## Ce que la vérification a montré
+- **Props renommées** : `onReserve` → `onAppeler`, `reserveLabel` → `appelLabel`
+  dans `Navbar.tsx` et `Hero.tsx`.
+- **Classes CSS conservées** : `.nav-resa`, `.nav-mobile-resa` et `.fab-reserv`
+  habillent maintenant le bouton d'appel. Elles ne sont **pas** renommées : ce
+  sont des classes de `site.css`, donc de la forme, et les renommer imposerait
+  de reprendre le CSS de chaque client déjà livré.
+- **`admin.css`** : 2 786 → 2 078 lignes. Sections `.ps-` (plan de service),
+  `.tp-` (plan de salle), `.cli-` (CRM) et widget réservation supprimées, ainsi
+  que les règles devenues orphelines. Aucune classe encore utilisée n'a été
+  retirée : la liste des classes réellement présentes dans le TSX a été extraite
+  et confrontée aux sélecteurs avant chaque suppression.
+- **`site.css`** : bloc `.resa-cal` (calendrier du widget, ~87 lignes) retiré.
+- **`schema.sql`** : 1 635 → 799 lignes.
+- **`getRecipients()`** (`send-newsletter`) ne connaît plus qu'`optin` et
+  renvoie une liste **vide** pour toute autre valeur — une campagne dont le
+  segment aurait mal été enregistré ne part pas plus large que prévu.
 
-`ensure_rls` n'est pas une fonction maison : c'est l'option Supabase
-« Auto-enable RLS for new tables » (Dashboard → Authentication), documentée par
-Supabase et **opt-in**. Un projet neuf ne l'a pas — elle a donc bien été cochée à
-la main sur Côté Jardin à un moment, et un futur client ne l'aurait pas eue.
+### Les trois miroirs à ne jamais désynchroniser
 
-Deuxième point vérifié, parce qu'il décidait de la solution : le rôle `postgres`
-de l'éditeur SQL n'est pas superutilisateur (`usesuper = false`), ce qui interdit
-normalement `create event trigger`. Sonde exécutée en production (event trigger
-temporaire créé à partir de la fonction existante, puis supprimé) : **la création
-passe**. Supabase autorise donc l'opération malgré l'absence de superuser.
+Le segment et sa façon de compter les destinataires sont écrits à trois endroits :
 
-Conclusion : l'objet peut vivre dans `schema.sql`, et n'a pas à dépendre d'une
-case cochée dans le dashboard client par client.
-
-## Ce qui a été fait
-
-- `rls_auto_enable()` et `ensure_rls` ajoutés **en tête** des deux fichiers de
-  schéma, avant la première table — l'event trigger n'agit que sur les tables
-  créées après son installation.
-- Rejouable : `create or replace` pour la fonction, `drop event trigger if
-  exists` puis `create` pour le trigger (les event triggers n'acceptent pas
-  `if not exists`).
-- **Appliqué et testé en production sur Côté Jardin.** Test de bout en bout :
-  création d'une table jetable `ztest_rls_ltd` → `relrowsecurity = true`
-  automatiquement, puis suppression. Contrôle final : table de test absente,
-  `ensure_rls` présent, fonction présente, et **0 table du schéma `public` sans
-  RLS** sur les 23.
-- `SETUP-NOUVEAU-CLIENT.md` : encadré ajouté en section 10 — plus rien à cocher
-  dans le dashboard, avec la requête de vérification après provisioning.
-
-## Portée réelle
-
-Le schéma active déjà la RLS table par table ; le trigger ne change donc rien à
-l'état actuel. Il couvre ce qui viendra plus tard : migration à chaud, table de
-travail, table créée depuis le dashboard. C'est un filet, pas un correctif — une
-table oubliée sera inaccessible plutôt qu'ouverte en grand.
-
-## Fichiers à remplacer (ce cinquième envoi)
-
-### maj-cote-jardin.zip → repo `cote-jardin-site`
-- (modifié) `supabase/migrations/00000000000001_schema.sql`
-
-### maj-provisioning-kit.zip → repo `provisioning`
-- (modifié) `provisioning/templates/schema.sql`
-- (modifié) `provisioning/SETUP-NOUVEAU-CLIENT.md`
-
-> `app-template` n'est pas concerné (pas de schéma, pas de doc de provisioning).
-> Les zips contiennent l'intégralité des cinq envois.
+1. `newsletter_segment_counts()` — base
+2. `getRecipients()` — `supabase/functions/send-newsletter/index.ts`
+3. `SEGMENTS` — `src/components/admin/TabNewsletter.tsx`
 
 ---
 
-# Fermetures exceptionnelles masquées en offre Essentiel (29/07/2026, sixième envoi)
-
-Le bloc « Fermetures & événements exceptionnels » de l'onglet Horaires restait
-visible sans le module Réservation.
-
-Vérifié avant de trancher : `closure_periods` n'est lue que par
-`ReservationWidget.tsx` et par la fonction `check_availability()`. Aucun bloc du
-site public ne l'affiche. Sans réservation, la section est donc **sans effet
-observable** — un restaurateur pouvait y saisir des congés en croyant qu'ils
-s'afficheraient quelque part.
-
-## Ce qui change dans `TabHoraires.tsx`
-
-- le bloc « Fermetures & événements exceptionnels » disparaît entièrement quand
-  `reservation` est sur `false` ;
-- le sous-titre de l'onglet passe de « Ouvertures et fermetures exceptionnelles »
-  à « Horaires d'ouverture affichés sur le site » ;
-- les horaires d'ouverture, eux, restent : ils sont affichés sur le site public,
-  indépendamment de toute réservation.
-
-> Note : `useTable("closure_periods")` continue de s'exécuter (on ne peut pas
-> conditionner un hook React). La requête revient vide et n'a aucun coût visible ;
-> la corriger imposerait de découper le composant, ce qui n'en vaut pas le prix.
-
-## Balayage des autres onglets
-
-J'ai passé en revue les onglets qui restent visibles en offre Essentiel. Il ne
-reste que deux traces, toutes deux sans conséquence :
-
-- **Ardoise/Promo** : le champ « Texte du bouton » propose `Réserver ma place`
-  comme *placeholder*. Simple suggestion grisée, le restaurateur saisit son propre
-  libellé. À changer si tu veux, mais rien ne casse.
-- **Contacts** : la table de correspondance des sources traduit `reservation` en
-  « Réservation ». Comportement correct — cette source n'apparaît simplement
-  jamais chez un client sans réservation.
-
-Aucun autre onglet ne mentionne la réservation. À ma connaissance, le tour est
-complet.
-
-## Fichiers à remplacer (ce sixième envoi)
-
-- (modifié) `src/components/admin/TabHoraires.tsx` — dans les trois espaces
-  (`cote-jardin-site/`, `app-template/`, `provisioning/templates/app/`).
-
-> Les zips contiennent l'intégralité des six envois.
-
----
-
-# Module Newsletter sur `false` — masquage complet (29/07/2026, septième envoi)
-
-Symétrique de l'exercice « Essentiel + Newsletter », côté newsletter cette fois.
-
-## Onglet Contacts
-
-`"contacts": "newsletter"` ajouté à `FEATURE_MAP`. L'onglet n'est **que** la liste
-des inscrits opt-in et les liens d'inscription tracés (avec le QR code) : sans le
-module, il n'a plus de contenu possible.
-
-## Le piège du bloc newsletter sur le site — traité
-
-Le bloc du site n'est pas gouverné par le flag mais par
-`site_content.newsletter_enabled`, que le restaurateur règle depuis
-« Réservations & site ». Or ce réglage disparaît avec le module. En l'état, couper
-le module aurait donné : **formulaire toujours visible sur le site, aucun onglet
-pour exploiter les inscriptions, et personne capable de l'éteindre.**
-
-`TabFeatures.tsx` propage donc désormais la bascule : couper le module écrit
-`newsletter_enabled = false` dans `site_content`, le rallumer écrit `true`. Le
-module est l'interrupteur maître, le réglage du restaurateur reste disponible en
-dessous tant que le module vit.
-
-> Pourquoi pas faire lire le flag par le site ? La policy RLS de `feature_flags`
-> exige `is_admin()` : le visiteur anonyme ne peut pas la lire. Propager à
-> l'écriture est plus simple et ne touche pas à la sécurité.
-
-## Onglet « Réservations & site »
-
-- le toggle « Bloc Newsletter / actualités » disparaît ;
-- « Proposer la newsletter pendant la réservation » disparaît aussi — il dépend
-  des **deux** modules ;
-- si réservation ET newsletter sont coupés, la section « Sur le site public » n'a
-  plus un seul interrupteur : elle disparaît entièrement plutôt que de laisser un
-  titre au-dessus du vide ;
-- le pied de formulaire ne mentionne plus l'exception du bloc newsletter.
-
-## Tableau de bord
-
-- carte « Contacts récoltés » retirée de `TabTableau` (rien ne récolte plus) ;
-- **cas « ni réservation ni newsletter »** (offre vitrine seule) : l'onglet
-  Tableau de bord disparaît. C'est le seul onglet gouverné par deux flags à la
-  fois, il ne pouvait pas passer par `FEATURE_MAP`.
-
-## Deux corrections de robustesse au passage
-
-- Le repli de `Current` retombait en dur sur `TabTableau`, y compris quand cet
-  onglet était masqué. Il prend maintenant le premier onglet visible.
-- Les flags arrivent après le premier rendu : l'onglet retenu depuis le hash (ou
-  « tableau » par défaut) pouvait se révéler masqué, laissant une navigation sans
-  élément actif. Un effet rebascule sur le premier onglet visible.
-
-## Balayage
-
-Reste dans les onglets visibles : un commentaire de code dans `TabArdoise.tsx`
-(invisible), et `QrAffiche.tsx` qui ne sert qu'à l'onglet Contacts, désormais
-masqué. `TabAvis.tsx` annonçait « Carrousel affiché avant la newsletter » —
-reformulé en « Carrousel affiché en bas de page », vrai dans les deux cas et sans
-nouveau flag à lire.
-
-## Fichiers à remplacer (ce septième envoi)
-
-Dans les trois espaces (`cote-jardin-site/`, `app-template/`,
-`provisioning/templates/app/`) :
-
-- (modifié) `src/components/admin/AdminApp.tsx`
-- (modifié) `src/components/admin/TabParametres.tsx`
-- (modifié) `src/components/admin/TabTableau.tsx`
-- (modifié) `src/components/admin/TabFeatures.tsx`
-- (modifié) `src/components/admin/TabAvis.tsx`
-
-> Les zips contiennent l'intégralité des sept envois.
-
----
-
-# Onglet Fonctionnalités — imbrication des modules dépendants (29/07/2026, huitième envoi)
-
-## Régression corrigée
-
-La mention « Sans effet : dépend du module Réservation en ligne » ajoutée au
-sixième envoi s'affichait **collée à la description**, sans séparation :
-« …dans l'administrationSans effet : dépend du module… ». Cause :
-`.ligne-toggle .lib span` est en `inline`, et le second `<span>` se plaçait donc
-dans la continuité du premier. Ma régression.
-
-## Le fond du problème
-
-CRM clients et Liste d'attente gardent une raison d'être : avec la réservation
-active, un client peut vouloir la réservation **sans** fiche client (simplicité
-RGPD) ou **sans** liste d'attente (jamais complet). Ce sont donc de vraies
-sous-options — pas des réglages à supprimer.
-
-Le tort était de les présenter comme des modules de même niveau que « Réservation
-en ligne », avec une note d'excuse quand leur parent est coupé.
-
-## Ce qui change
-
-- CRM clients et Liste d'attente sont **imbriqués** sous « Réservation en ligne »,
-  dans un `.sous-reglages` — le même parti pris que l'opt-in newsletter sous la
-  réservation dans « Réservations & site » : *réglage imbriqué, et non voisin*.
-- Ils **disparaissent** quand le parent est coupé, au lieu d'afficher un
-  interrupteur sans effet. La note d'excuse disparaît donc aussi, et la
-  régression ci-dessus avec elle.
-- Ordre d'affichage explicite (`ORDRE = ["reservation", "newsletter"]`) : `useTable`
-  triait par libellé, si bien que « Réservation en ligne » arrivait **après** les
-  modules qui en dépendent — l'imbrication aurait été illisible.
-- Ligne d'interrupteur extraite en composant `Ligne` pour servir aux deux niveaux.
-- Un module inconnu de `ORDRE` et sans parent est affiché en fin de liste plutôt
-  que d'être perdu silencieusement.
-- La description du bloc précise la règle : « Les modules encadrés dépendent de
-  celui qui les précède : couper le parent les coupe avec lui. »
-
-> Choix assumé : les interrupteurs des dépendants restent en base à `true`. Les
-> masquer n'écrit rien — rallumer « Réservation en ligne » restitue donc l'état
-> exact d'avant, sans réglage perdu.
-
-## Fichiers à remplacer (ce huitième envoi)
-
-- (modifié) `src/components/admin/TabFeatures.tsx` — dans les trois espaces.
-
-> Les zips contiennent l'intégralité des huit envois.
-
----
-
-# Section Newsletter dans le tableau de bord du service (29/07/2026, neuvième envoi)
-
-Les indicateurs newsletter n'étaient visibles qu'en offre « Essentiel +
-Newsletter ». Ils s'affichent désormais **aussi** pour les offres qui cumulent
-réservation et newsletter, à la suite du tableau de bord du service.
-
-## Un seul calcul, deux présentations
-
-`TabTableauNewsletter.tsx` est scindé en deux exports :
-
-- `BlocsNewsletter` — le contenu (cartes + croissance + origines + santé +
-  dernières campagnes), réutilisable ;
-- `TabTableauNewsletter` (export par défaut, inchangé pour AdminApp) — la
-  `topbar` et le `contenu` autour de `BlocsNewsletter mode="seul"`.
-
-`TabTableau` ajoute `<BlocsNewsletter mode="complement" />` en fin de page quand
-le module Newsletter est actif. Composant partagé : les deux offres ne peuvent pas
-afficher des chiffres différents pour la même liste.
-
-Le mode `complement` coiffe les cinq cartes d'un bloc titré « Newsletter » plutôt
-que de les poser en rangée nue au milieu de la page, et ne réaffiche pas
-l'indicateur de chargement — celui du service suffit.
-
-## Carte « Contacts récoltés » retirée
-
-Elle donnait le total des `leads` (opt-in inclus et exclus) sous le libellé
-« newsletter + réservations ». La section Newsletter juste en dessous donne le
-même chiffre en mieux : inscrits actifs, croissance sur douze mois, origines. La
-garder aurait affiché deux nombres voisins mais différents, à quelques
-centimètres l'un de l'autre.
-
-Conséquence : la requête `leads` de `TabTableau` n'avait plus d'usage. Retirée,
-ainsi que l'import de type `Lead` — `BlocsNewsletter` fait la sienne.
-
-## Combinaisons couvertes
-
-| Réservation | Newsletter | Tableau de bord |
-|---|---|---|
-| ✅ | ✅ | Service **+ section Newsletter** |
-| ❌ | ✅ | Newsletter seul (`TabTableauNewsletter`) |
-| ✅ | ❌ | Service seul |
-| ❌ | ❌ | Onglet masqué |
-
-## Fichiers à remplacer (ce neuvième envoi)
-
-Dans les trois espaces :
-
-- (modifié) `src/components/admin/TabTableau.tsx`
-- (modifié) `src/components/admin/TabTableauNewsletter.tsx`
-
-> Les zips contiennent l'intégralité des neuf envois.
-
----
-
-# Statistiques de clics — webhook Resend (30/07/2026, dixième envoi)
-
-Le taux de clic est le seul indicateur d'engagement fiable (les ouvertures sont
-quasi inexploitables depuis le proxy d'images d'Apple Mail). Plutôt que
-d'interroger l'API Resend à l'affichage — lent, soumis à quota, et données chez
-un tiers — Resend pousse chaque événement chez nous.
-
-## La chaîne
-
-1. **`send-newsletter`** ajoute `tags: [{ name: "campaign_id", … }]` à chaque
-   e-mail du batch. C'est l'attribution : l'événement webhook revient avec ce
-   tag. **Pas de tag en mode test** — un clic sur un e-mail de test ne compte pas.
-2. **`resend-webhook`** (nouvelle edge function, déployée sur Côté Jardin,
-   `verify_jwt = false`) reçoit `email.clicked` / `email.bounced` /
-   `email.complained`, vérifie la **signature svix** (HMAC-SHA256, comparaison à
-   temps constant, tolérance 5 min sur l'horodatage contre le rejeu) et insère
-   dans `newsletter_events`. Sans secret posé, la fonction refuse tout.
-   Réponses 200 sur tout ce qui est ignoré volontairement : un autre statut
-   pousserait Resend à réessayer puis à désactiver le webhook.
-3. **`newsletter_events`** (migration appliquée en production) : unicité
-   (campaign_id, email, type) — on compte les PERSONNES qui ont cliqué, pas les
-   clics répétés. Lecture admin par RLS ; écriture réservée au service role.
-   `newsletter_click_counts()` (RPC) agrège pour l'admin.
-4. **Affichage** : carte campagne « N destinataires · N clics » ; tableau des
-   dernières campagnes des tableaux de bord : colonne Clics avec pourcentage.
-   Pas de donnée = « — », jamais un zéro trompeur (campagnes antérieures au
-   webhook).
-
-## ⚠️ Actions manuelles (Côté Jardin)
-
-1. Dashboard Resend → Webhooks → Add webhook — URL :
-   `https://jdbxtygycrzqlyzqjpfg.supabase.co/functions/v1/resend-webhook`,
-   événements `email.clicked`, `email.bounced`, `email.complained`.
-2. Copier le Signing Secret (`whsec_…`) → secret Supabase `RESEND_WEBHOOK_SECRET`.
-3. Redéployer **`send-newsletter`** (les tags n'existent que dans le code livré).
-4. Vérifier le click tracking sur le domaine (Resend → Domains).
-
-`SETUP-NOUVEAU-CLIENT.md` documente la même procédure pour les futurs clients.
-
-## Fichiers à remplacer (ce dixième envoi)
-
-Dans les trois espaces :
-- (nouveau)  `supabase/functions/resend-webhook/index.ts`
-- (modifié)  `supabase/functions/send-newsletter/index.ts`
-- (modifiés) `src/components/admin/TabNewsletter.tsx`, `TabTableauNewsletter.tsx`
-
-CJ et PK également :
-- (modifié) `schema.sql` (table `newsletter_events` + RPC)
-
-PK également :
-- (modifié) `provisioning/SETUP-NOUVEAU-CLIENT.md`
-
-> Les zips contiennent l'intégralité des dix envois.
-
----
-
-# Taux de délivrabilité + exclusion des adresses en échec (30/07/2026, onzième envoi)
-
-## Ce que « Délivrés » veut dire — et ne veut pas dire
-
-Délivrés = e-mails **acceptés par les serveurs destinataires**
-(`sent_count − bounces`). Ça ne dit PAS boîte de réception vs spam : aucun
-signal n'existe pour ça, chez personne. Le libellé et le code le rappellent.
-
-## RPC élargie
-
-`newsletter_click_counts()` est **remplacée** par `newsletter_event_counts()`
-(clics ET bounces par campagne). Migration appliquée en production ; l'ancienne
-fonction est supprimée — l'admin doit être redéployé en même temps que la base
-est à jour, sinon les compteurs de clics disparaissent (appel d'une RPC absente).
-
-## Affichage
-
-Colonne « Délivrés » (« 24 · 96 % ») dans le tableau des dernières campagnes des
-deux tableaux de bord. Aucune mention des bounces nulle part — c'est le chiffre
-positif qui est montré. La carte campagne ne change pas.
-
-Garde-fou d'honnêteté : une campagne envoyée **avant** le tout premier événement
-enregistré affiche « — », pas un 100 % que rien n'étaye. (Revers assumé : une
-campagne récente sans le moindre événement reste aussi à « — » — on préfère
-sous-afficher que surestimer.)
-
-## Exclusion des adresses en échec
-
-Une adresse qui a bouncé ne reçoit plus de campagne — c'est ce qui protège la
-réputation d'expéditeur. Deux exclusions **miroir**, commentées comme telles de
-part et d'autre (même exigence que pour `personnaliser()`) :
-
-- `newsletter_segment_counts()` (base) : la CTE `base` écarte les emails
-  présents dans `newsletter_events` en type `bounced` → les compteurs de
-  l'assistant reflètent les envois réels ;
-- `getOptinRecipients()` (`send-newsletter`) : même filtre à l'envoi.
-
-L'adresse reste dans le CRM et dans l'onglet Contacts — elle n'est plus
-destinataire, elle n'est pas effacée. Pas de distinction hard/soft bounce pour
-l'instant : Resend ne pousse quasiment que des échecs définitifs sur
-`email.bounced`, et un faux positif se corrige en supprimant la ligne de
-`newsletter_events`.
-
-## Fichiers à remplacer (ce onzième envoi)
-
-Dans les trois espaces :
-- (modifiés) `supabase/functions/send-newsletter/index.ts`,
-  `src/components/admin/TabNewsletter.tsx`, `TabTableauNewsletter.tsx`
-
-CJ et PK également :
-- (modifié) `schema.sql`
-
-> Rappel toujours pendant : redéployer `send-newsletter` (tags + exclusion) et
-> `newsletter-unsubscribe`, créer le webhook Resend + secret. Les zips
-> contiennent l'intégralité des onze envois.
-
----
-
-# Correctif — délivrabilité à « — » sur la première campagne (30/07/2026, douzième envoi)
-
-Le garde-fou du onzième envoi considérait une campagne couverte si elle était
-postérieure au premier événement enregistré. Impossible pour la toute première
-campagne post-webhook : le premier événement est un clic sur CETTE campagne,
-donc toujours après son envoi — elle restait à « — » alors qu'elle avait des
-données. Constaté en production sur la campagne test de Victor (clic remonté,
-délivrés absent).
-
-Règle corrigée : couverte = la campagne a des événements enregistrés (preuve
-directe), OU elle est postérieure au premier événement (campagnes suivantes,
-même sans clic).
-
-## Fichier à remplacer (ce douzième envoi)
-
-- (modifié) `src/components/admin/TabTableauNewsletter.tsx` — trois espaces.
-
-> Les zips contiennent l'intégralité des douze envois.
-
----
-
-# Onglets vitrine — habillage éditorial (30/07/2026, treizième envoi)
-
-Ardoise du jour, Avis clients, Partenaires et Bannière promo faisaient
-« back office » par rapport au reste de l'admin. Refonte visuelle + suppression
-des aperçus demandée.
-
-## Aperçus supprimés : Ardoise, Avis, Partenaires
-
-Le rendu étant instantané sur le site, la colonne d'aperçu alourdissait sans
-informer. Conséquences de mise en page :
-
-- **Ardoise** : la photo du plat devient elle-même le visuel de l'onglet — grand
-  panneau média (ratio 4/3, actions en surimpression sur dégradé) en vis-à-vis
-  des champs, composition `adm-edito`. Plus une vignette de 64px perdue dans un
-  champ.
-- **Avis / Partenaires (édition)** : sans colonne d'aperçu, un formulaire pleine
-  largeur flotte — resserré à 680px (`adm-form-etroit`).
-
-**Exception conservée : la Bannière promo garde son aperçu.** Une popup ne se
-voit pas sur le site sans recharger et attendre son déclenchement — c'est le
-seul des quatre où l'aperçu montre quelque chose d'invisible autrement. Il est
-en revanche mis en scène (panneau crème, ombre portée) au lieu d'être posé nu.
-
-## Habillage
-
-- Cartes Partenaires & Avis : rayon 14px, relief doux, réaction au survol
-  (élévation + ombre) — la grille respire au lieu d'aligner des rectangles plats.
-- Avis : registre citation — texte en italique, guillemet décoratif en filigrane
-  (Georgia, teinte `--a12`), **étoiles dorées** (`--or`) au lieu du bordeaux — le
-  bordeaux reste la couleur des actions, pas des notes.
-- Initiale des partenaires sans image : sur dégradé teinté plutôt que fond plat.
-- Tuiles d'ajout et zones média : mêmes rayons que les cartes, teinte au survol.
-
-Aucune classe existante renommée ; nouvelles classes préfixées `adm-` (règle
-anti-collision avec site.css). `admin.css` est un fichier FOND : identique dans
-les trois espaces, vérifié par MD5.
-
-## Fichiers à remplacer (ce treizième envoi)
-
-Dans les trois espaces :
-- (modifiés) `src/components/admin/TabArdoise.tsx`, `TabAvis.tsx`,
-  `TabPartenaires.tsx`
-- (modifié)  `src/pages/admin.css`
-
-`TabPromo.tsx` n'est pas modifié (habillage via CSS uniquement).
-
-> Les zips contiennent l'intégralité des treize envois.
+## 7. Vérifications faites avant livraison
+
+- `esbuild` sur tous les `.ts` / `.tsx` : aucune erreur de syntaxe.
+- Aucun import inutilisé (contrôle automatisé sur tout `src/`).
+- Aucune référence résiduelle aux symboles et tables supprimés dans `src/`.
+- `check-fond.mjs` : 12 blocs, 14 onglets, 5 champs — **0 erreur**.
+- `check-connexions.mjs` : 10 connexions — **0 erreur, 0 alerte**.
+- `diff -rq` CJ / AT / PK : seuls les écarts de forme attendus subsistent
+  (`Hero.tsx`, `Carte.tsx`, `Histoire.tsx`, `site.css`, `theme.css`,
+  `legal.generated.ts`, `admin-theme.css`).
+
+## 8. À faire après le déploiement
+
+- [ ] Ouvrir le site : le bouton « Appeler » compose bien le numéro.
+- [ ] Ouvrir l'admin : 14 onglets, plus aucune trace de réservation.
+- [ ] Créer une campagne de test : l'assistant doit afficher **2 étapes**.
+- [ ] Envoyer un test : vérifier que le compteur de destinataires correspond.
+- [ ] Vérifier que `/annuler` et `/widget-reservation` renvoient bien sur le site
+      (route `*` → `<Site />`).

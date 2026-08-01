@@ -30,29 +30,6 @@ export async function fetchContent(sectionKey: string): Promise<any | null> {
   return data?.content ?? null;
 }
 
-// Les quatre types reconnus par l'edge function reservation-email (voir les
-// `if (type === …)` dans son index.ts) : cette union doit rester leur miroir.
-// `confirmation_immediate` y manquait alors qu'il est envoyé par le widget
-// public quand la table est confirmée d'emblée : `npm run typecheck` échouait,
-// ce qui masquait les vraies erreurs de typage suivantes.
-export type TypeEmailResa = "accuse" | "confirmation" | "confirmation_immediate" | "waitlist_confirm";
-
-export async function sendReservationEmail(type: TypeEmailResa, reservation: any): Promise<void> {
-  try {
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reservation-email`;
-    await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({ type, reservation }),
-    });
-  } catch (e) {
-    console.error("sendReservationEmail", e);
-  }
-}
-
 /**
  * Traduit une erreur d'upload Supabase Storage en libellé humain.
  * Évite d'afficher le message technique brut au restaurateur.

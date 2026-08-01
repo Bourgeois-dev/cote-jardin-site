@@ -2,7 +2,12 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const RESEND_API_KEY   = Deno.env.get("RESEND_API_KEY")!;
-const FROM_EMAIL       = Deno.env.get("RESERVATION_FROM_EMAIL") || "onboarding@resend.dev";
+// Adresse d'expédition Resend. `NEWSLETTER_FROM_EMAIL` est le nom retenu
+// depuis le retrait de la réservation ; `RESERVATION_FROM_EMAIL` reste lu en
+// repli pour les projets déjà déployés dont le secret n'a pas été renommé.
+const FROM_EMAIL       = Deno.env.get("NEWSLETTER_FROM_EMAIL")
+                      || Deno.env.get("RESERVATION_FROM_EMAIL")
+                      || "onboarding@resend.dev";
 const RESTO_NAME       = Deno.env.get("RESTO_NAME") || "Le restaurant";
 const SITE_URL         = Deno.env.get("SITE_URL") || "#";
 const ACCENT_COLOR     = Deno.env.get("ACCENT_COLOR") || "#84B266";
@@ -123,70 +128,20 @@ async function getOptinRecipients(): Promise<Destinataire[]> {
   return out;
 }
 
-async function getVipEmails(): Promise<Set<string>> {
-  const { data } = await db.from("customers").select("email").eq("is_vip", true);
-  const set = new Set<string>();
-  (data || []).forEach((r: any) => { const e = (r.email||"").trim().toLowerCase(); if (e) set.add(e); });
-  return set;
-}
-
-// Emails des clients absents depuis au moins minMois, et depuis moins de
-// maxMois s'il est fourni. Sans maxMois, la tranche est OUVERTE (7 mois et
-// plus) : personne ne sort du radar, quelle que soit l'ancienneté.
-// Doit rester cohérent avec newsletter_segment_counts() côté base.
-async function getInactifEmails(minMois: number, maxMois?: number): Promise<Set<string>> {
-  const borneRecente = new Date();          // last_visit <= aujourd'hui - minMois
-  borneRecente.setMonth(borneRecente.getMonth() - minMois);
-  let q = db.from("customers")
-    .select("email,last_visit")
-    .not("last_visit", "is", null)
-    .lte("last_visit", borneRecente.toISOString().slice(0, 10));
-  if (maxMois !== undefined) {
-    const borneAncienne = new Date();       // last_visit > aujourd'hui - maxMois
-    borneAncienne.setMonth(borneAncienne.getMonth() - maxMois);
-    q = q.gt("last_visit", borneAncienne.toISOString().slice(0, 10));
-  }
-  const { data } = await q;
-  const set = new Set<string>();
-  (data || []).forEach((r: any) => { const e = (r.email||"").trim().toLowerCase(); if (e) set.add(e); });
-  return set;
-}
-
-// Emails des clients selon leur nombre de réservations honorées.
-// (min, max) inclusifs ; max omis = pas de limite haute.
-async function getParVisitesEmails(min: number, max?: number): Promise<Set<string>> {
-  let q = db.from("customers").select("email,bookings_count").gte("bookings_count", min);
-  if (max !== undefined) q = q.lte("bookings_count", max);
-  const { data } = await q;
-  const set = new Set<string>();
-  (data || []).forEach((r: any) => { const e = (r.email||"").trim().toLowerCase(); if (e) set.add(e); });
-  return set;
-}
-
+/**
+ * Destinataires d'une campagne.
+ *
+ * Il n'existe plus qu'un segment (`optin`) depuis le retrait du CRM : la table
+ * `customers` — qui portait le statut VIP, les compteurs de visites et les
+ * dates de dernière venue — n'existe plus. Toute valeur inconnue renvoie une
+ * liste vide plutôt que d'écrire à tout le monde par défaut : une campagne dont
+ * le segment a été mal enregistré ne doit pas partir plus large que prévu.
+ *
+ * MIROIR OBLIGATOIRE avec newsletter_segment_counts() (base) et la constante
+ * SEGMENTS de TabNewsletter.tsx (libellés).
+ */
 async function getRecipients(segment: string): Promise<Destinataire[]> {
-  const optin = await getOptinRecipients();
-  if (segment === "optin") return optin;
-  if (segment === "optin_vip") { const vip = await getVipEmails(); return optin.filter(r => vip.has(r.email)); }
-  // Absence notable, relance encore facile (3 à 6 mois révolus)
-  if (segment === "inactif_3_6") {
-    const emails = await getInactifEmails(3, 7);
-    return optin.filter(r => emails.has(r.email));
-  }
-  // Reconquête : 7 mois et plus, sans limite haute
-  if (segment === "inactif_7") {
-    const emails = await getInactifEmails(7);
-    return optin.filter(r => emails.has(r.email));
-  }
-  // Habitués : 3 réservations honorées ou plus
-  if (segment === "habitues") {
-    const emails = await getParVisitesEmails(3);
-    return optin.filter(r => emails.has(r.email));
-  }
-  // Ont testé une seule fois et ne sont pas revenus
-  if (segment === "une_visite") {
-    const emails = await getParVisitesEmails(1, 1);
-    return optin.filter(r => emails.has(r.email));
-  }
+  if (segment === "optin") return await getOptinRecipients();
   return [];
 }
 

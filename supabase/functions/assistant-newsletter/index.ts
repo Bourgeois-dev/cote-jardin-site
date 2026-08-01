@@ -213,7 +213,7 @@ Format : {"objet":"…","preheader":"…","blocs":[{"type":"pleine_largeur","tit
 - "type" : "pleine_largeur" par défaut. C'est le format normal, celui d'un fil qu'on lit de haut en bas.
 - Emploie "deux_colonnes" UNIQUEMENT quand le bloc met en regard DEUX choses de même nature, qu'on gagne à comparer d'un coup d'œil : deux formules, deux menus, deux soirées, deux dates. Jamais pour aérer une mise en page ni pour couper un texte suivi — deux colonnes se lisent mal sur téléphone, où beaucoup de messageries les empilent. Dans le doute, reste en pleine largeur.
 - Un bloc "deux_colonnes" remplace "titre"/"texte" par : "colonnes":[{"titre":"…","texte":"…","cta_label":"…","photo":"…"},{…}] — exactement DEUX entrées, chacune avec un texte COURT (200 signes maximum, la colonne est étroite).
-- "cta_label" : le libellé du bouton (ex. "Réserver une table", "Découvrir la carte") — uniquement sur le dernier bloc, "" sur les autres. Le lien du bouton est géré par l'éditeur, ne fournis jamais d'URL.
+- "cta_label" : le libellé du bouton (ex. "Découvrir la carte", "Voir le plat du jour") — uniquement sur le dernier bloc, "" sur les autres. Le lien du bouton est géré par l'éditeur, ne fournis jamais d'URL.
 - "photo" : en quelques mots, le visuel à placer dans ce bloc (nomme une photo de la galerie si l'une convient, sinon décris celle à prendre). "" si le bloc se passe d'image. Tu ne fournis JAMAIS d'URL d'image : le restaurateur choisit le fichier dans l'éditeur.
 - Tu peux utiliser **gras** (double astérisque) avec parcimonie pour un mot ou deux.
 - Écris des phrases qu'un restaurateur assumerait telles quelles, en laissant des tournures génériques là où un détail précis manquerait (jamais de crochets à compléter).`,
@@ -231,7 +231,7 @@ Tâche : rédiger la popup d'accueil du site (elle s'ouvre à l'arrivée du visi
 Format : {"titre":"…","sous_titre":"…","cta_label":"…"}
 - "titre" : 40 signes maximum. L'accroche, lisible d'un coup d'œil.
 - "sous_titre" : 110 signes maximum, une seule phrase qui donne l'information utile (ce que c'est, quand, ce qu'il faut faire).
-- "cta_label" : le libellé du bouton, 25 signes maximum (ex. "Réserver ma place", "Voir la carte"). Le lien est géré par l'interface, ne fournis jamais d'URL.
+- "cta_label" : le libellé du bouton, 25 signes maximum (ex. "Voir la carte", "Nous appeler"). Le lien est géré par l'interface, ne fournis jamais d'URL.
 - Une popup s'impose au visiteur : sois bref, concret et courtois. Aucun {{prenom}} ici — le visiteur du site est anonyme.`,
     user: `Nous sommes le ${dateFr}.\nSujet de la bannière : ${sujet}${dateEvent ? `\nDate de l'événement : ${dateEvent}` : ""}${notes ? `\nPrécisions : ${notes}` : ""}\nRédige la popup.`,
   };

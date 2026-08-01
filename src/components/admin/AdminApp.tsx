@@ -2,14 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabase";
 import TabTableau from "./TabTableau";
-import TabTableauNewsletter from "./TabTableauNewsletter";
 import Chargement from "./Chargement";
-import TabReservations from "./TabReservations";
-import TabClients from "./TabClients";
 import TabCarte from "./TabCarte";
 import TabArdoise from "./TabArdoise";
 import TabPromo from "./TabPromo";
-import TabPlan from "./TabPlan";
 import TabHoraires from "./TabHoraires";
 import TabGalerie from "./TabGalerie";
 import TabPartenaires from "./TabPartenaires";
@@ -18,35 +14,30 @@ import TabSocial from "./TabSocial";
 import TabAvis from "./TabAvis";
 import TabParametres from "./TabParametres";
 import TabEmporter from "./TabEmporter";
-import TabListeAttente from "./TabListeAttente";
 import TabFeatures from "./TabFeatures";
 import TabNewsletter from "./TabNewsletter";
 import { ConfirmProvider, useConfirm } from "./Confirm";
 import { ToastProvider } from "./Toast";
 import { DirtyProvider, useDirty } from "./Dirty";
 
-const TABS: { key: string; label: string; comp: React.FC; groupe?: string }[] = [
-  // — Service —
-  { key: "tableau",      label: "Tableau de bord",   comp: TabTableau,      groupe: "Service" },
-  { key: "reservations", label: "Réservations",       comp: TabReservations },
-  { key: "liste-attente", label: "Liste d'attente",    comp: TabListeAttente },
-  { key: "plan",         label: "Plan de salle",      comp: TabPlan },
-  { key: "horaires",     label: "Horaires",           comp: TabHoraires },
-  { key: "clients",      label: "Clients",            comp: TabClients },
-  { key: "newsletter",   label: "Newsletter",          comp: TabNewsletter },
+const TABS: { key: string; label: string; comp: React.FC<any>; groupe?: string }[] = [
+  // — Pilotage —
+  { key: "tableau",      label: "Tableau de bord",   comp: TabTableau,      groupe: "Pilotage" },
+  { key: "newsletter",   label: "Newsletter",        comp: TabNewsletter },
+  { key: "horaires",     label: "Horaires",          comp: TabHoraires },
   // — Vitrine —
-  { key: "carte",        label: "La carte",           comp: TabCarte,        groupe: "Vitrine" },
-  { key: "ardoise",      label: "Ardoise du jour",    comp: TabArdoise },
-  { key: "galerie",      label: "Galerie",            comp: TabGalerie },
-  { key: "avis",         label: "Avis clients",       comp: TabAvis },
-  { key: "partenaires",  label: "Partenaires",        comp: TabPartenaires },
-  { key: "social",       label: "Réseaux sociaux",    comp: TabSocial },
-  { key: "promo",        label: "Bannière promo",     comp: TabPromo },
-  { key: "emporter",     label: "À emporter",         comp: TabEmporter },
+  { key: "carte",        label: "La carte",          comp: TabCarte,        groupe: "Vitrine" },
+  { key: "ardoise",      label: "Ardoise du jour",   comp: TabArdoise },
+  { key: "galerie",      label: "Galerie",           comp: TabGalerie },
+  { key: "avis",         label: "Avis clients",      comp: TabAvis },
+  { key: "partenaires",  label: "Partenaires",       comp: TabPartenaires },
+  { key: "social",       label: "Réseaux sociaux",   comp: TabSocial },
+  { key: "promo",        label: "Bannière promo",    comp: TabPromo },
+  { key: "emporter",     label: "À emporter",        comp: TabEmporter },
   // — Paramètres —
-  { key: "contacts",     label: "Contacts",           comp: TabContacts,     groupe: "Paramètres" },
-  { key: "parametres",   label: "Réservations & site",comp: TabParametres },
-  { key: "features",     label: "Fonctionnalités",    comp: TabFeatures },
+  { key: "contacts",     label: "Contacts",          comp: TabContacts,     groupe: "Paramètres" },
+  { key: "parametres",   label: "Site & accès",      comp: TabParametres },
+  { key: "features",     label: "Fonctionnalités",   comp: TabFeatures },
 ];
 
 /** Onglet initial : lu depuis le hash de l'URL (survit au refresh, lien partageable). */
@@ -74,74 +65,34 @@ export default function AdminApp({ session }: { session: Session }) {
 function AdminShell({ session }: { session: Session }) {
   const [active, setActive] = useState(ongletInitial);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [nbAttente, setNbAttente] = useState(0);
-  const [nbListeAttente, setNbListeAttente] = useState(0);
   const [nbNewsProg, setNbNewsProg] = useState(0);
-  const [forceDate, setForceDate] = useState<string | undefined>();
-  const [forceService, setForceService] = useState<"midi" | "soir" | undefined>();
   const [features, setFeatures] = useState<Record<string, boolean>>({});
   const confirm = useConfirm();
   const dirty = useDirty();
   // isEditor calculé directement depuis la session (synchrone, fiable)
   const isEditor = (session.user.email || "").toLowerCase().includes("latable-digitale");
   // Onglets masqués selon feature flags.
-  // « plan » suit le module Réservation : un plan de salle sans réservations
-  // n'a pas d'objet (il ne sert qu'à placer des couverts).
+  // Le tableau de bord ne résume plus que la newsletter (offre « Essentiel +
+  // Newsletter ») : sans ce module il n'aurait rien à montrer et disparaît,
+  // comme l'onglet Contacts qui n'est QUE la liste des inscrits newsletter
+  // (opt-in actif) et les liens d'inscription tracés.
   const FEATURE_MAP: Record<string, string> = {
-    "reservations": "reservation",
-    "plan": "reservation",
-    "liste-attente": "liste_attente",
-    "clients": "crm",
+    "tableau": "newsletter",
     "newsletter": "newsletter",
-    // L'onglet Contacts n'est QUE la liste des inscrits newsletter (opt-in
-    // actif) et les liens d'inscription tracés : il suit le même module.
     "contacts": "newsletter",
   };
-  // Dépendances entre modules. La liste d'attente et le CRM sont alimentés par
-  // les réservations (trigger attach_customer) : sans le module Réservation ils
-  // resteraient vides quoi qu'il arrive. Couper Réservation les coupe donc aussi,
-  // pour qu'aucune combinaison de flags ne produise un onglet mort.
-  const DEPENDANCES: Record<string, string> = {
-    "liste_attente": "reservation",
-    "crm": "reservation",
-  };
-  function moduleActif(fk: string): boolean {
-    if (features[fk] === false) return false;
-    const parent = DEPENDANCES[fk];
-    return parent ? features[parent] !== false : true;
-  }
-  // Libellé d'onglet dépendant des modules actifs : « Réservations & site »
-  // n'a plus lieu de mentionner la réservation quand le module est coupé.
-  function libelle(t: { key: string; label: string }): string {
-    if (t.key === "parametres" && features["reservation"] === false) return "Site & accès";
-    return t.label;
-  }
-  // Le tableau de bord n'appartient à aucun module : il en résume deux. Sans
-  // réservation NI newsletter (offre vitrine seule), il n'aurait rien à montrer
-  // et disparaît — c'est le seul onglet gouverné par deux flags à la fois.
-  const tableauUtile = features["reservation"] !== false || features["newsletter"] !== false;
-  const TABS_VISIBLES = TABS.filter((t) => {
-    if (t.key === "tableau") return tableauUtile;
-    const fk = FEATURE_MAP[t.key];
-    if (!fk) return true; // pas de flag associé = toujours visible
-    if (Object.keys(features).length === 0) return true; // flags pas encore chargés
-    return moduleActif(fk);
-  });
-  // Sans module Réservation, le tableau de bord du service n'aurait rien à
-  // montrer : on monte celui de la newsletter à la place. Composant distinct,
-  // donc aucune requête inutile sur reservations / restaurant_tables.
-  const sansResa = features["reservation"] === false;
-  // Tant que les flags ne sont pas lus, on n'affiche aucun des deux tableaux de
-  // bord : sinon un client Essentiel verrait passer une fraction de seconde de
-  // « Couverts aujourd'hui » avant la bascule.
+  // Tant que les flags ne sont pas lus, on n'affiche pas le tableau de bord :
+  // sinon un client Essentiel verrait passer une fraction de seconde
+  // d'indicateurs newsletter avant la bascule.
   const flagsCharges = Object.keys(features).length > 0;
-  const tableauDeBord = !flagsCharges
-    ? <Chargement />
-    : sansResa
-    ? <TabTableauNewsletter onNavigate={(tab) => naviguer(tab)} />
-    : <TabTableau onNavigate={(tab, date, service) => { setForceDate(date); setForceService(service); naviguer(tab); }} />;
+  const TABS_VISIBLES = TABS.filter((t) => {
+    const fk = FEATURE_MAP[t.key];
+    if (!fk) return true;           // pas de flag associé = toujours visible
+    if (!flagsCharges) return true; // flags pas encore chargés
+    return features[fk] !== false;
+  });
   const Current = TABS_VISIBLES.find((t) => t.key === active)?.comp
-    || TABS_VISIBLES[0]?.comp || TabTableau;
+    || TABS_VISIBLES[0]?.comp || TabCarte;
 
   // Les flags arrivent après le premier rendu : l'onglet retenu depuis le hash
   // (ou « tableau » par défaut) peut se révéler masqué. On rebascule alors sur
@@ -211,33 +162,22 @@ function AdminShell({ session }: { session: Session }) {
       });
   }, []);
 
-  // Compteurs de la sidebar (résa en attente, liste d'attente, newsletters programmées),
-  // mis à jour en temps réel
+  // Compteur de la sidebar (newsletters programmées), mis à jour en temps réel
   useEffect(() => {
     async function compter() {
-      const [resa, liste, news] = await Promise.all([
-        supabase.from("reservations").select("*", { count: "exact", head: true }).eq("status", "attente"),
-        supabase.from("waitlist").select("*", { count: "exact", head: true })
-          .eq("notified", false).gte("date", new Date().toISOString().slice(0, 10)),
-        supabase.from("newsletter_campaigns").select("*", { count: "exact", head: true }).eq("status", "scheduled"),
-      ]);
-      setNbAttente(resa.count || 0);
-      setNbListeAttente(liste.count || 0);
+      const news = await supabase.from("newsletter_campaigns")
+        .select("*", { count: "exact", head: true }).eq("status", "scheduled");
       setNbNewsProg(news.count || 0);
     }
     compter();
-    const canal = supabase.channel("rt-attente-nav");
+    const canal = supabase.channel("rt-newsletter-nav");
     canal
-      .on("postgres_changes", { event: "*", schema: "public", table: "reservations" }, () => compter())
-      .on("postgres_changes", { event: "*", schema: "public", table: "waitlist" }, () => compter())
       .on("postgres_changes", { event: "*", schema: "public", table: "newsletter_campaigns" }, () => compter())
       .subscribe();
     return () => { supabase.removeChannel(canal); };
   }, []);
 
   function pastille(key: string) {
-    if (key === "reservations" && nbAttente > 0) return <span className="nav-pastille">{nbAttente}</span>;
-    if (key === "liste-attente" && nbListeAttente > 0) return <span className="nav-pastille">{nbListeAttente}</span>;
     if (key === "newsletter" && nbNewsProg > 0) return <span className="nav-pastille sobre">{nbNewsProg}</span>;
     return null;
   }
@@ -273,7 +213,7 @@ function AdminShell({ session }: { session: Session }) {
                 onClick={() => naviguer(t.key)}
                 style={t.key === "features" ? { borderTop: "1px solid rgba(255,255,255,.1)", marginTop: 4, opacity: .7, fontSize: 12 } : undefined}
               >
-                {t.key === "features" ? "⚙ Fonctionnalités" : libelle(t)}
+                {t.key === "features" ? "⚙ Fonctionnalités" : t.label}
                 {pastille(t.key)}
               </button>
             </div>
@@ -286,12 +226,12 @@ function AdminShell({ session }: { session: Session }) {
         </div>
       </aside>
       <main className="main">
-        {active === "tableau" && tableauUtile
-          ? tableauDeBord
-          : active === "reservations"
-          ? <TabReservations initialDate={forceDate} initialService={forceService} />
-          : active === "features" && !isEditor && tableauUtile
-          ? tableauDeBord
+        {active === "tableau" && !flagsCharges
+          ? <Chargement />
+          : active === "tableau"
+          ? <TabTableau onNavigate={(tab: string) => naviguer(tab)} />
+          : active === "features" && !isEditor
+          ? <TabCarte />
           : <Current />}
       </main>
       {/* Tiroir de navigation mobile (menu burger) */}
@@ -305,7 +245,7 @@ function AdminShell({ session }: { session: Session }) {
                 className={active === t.key ? "actif" : ""}
                 onClick={() => { setMenuOpen(false); naviguer(t.key); }}
               >
-                {t.key === "features" ? "⚙ Fonctionnalités" : libelle(t)}
+                {t.key === "features" ? "⚙ Fonctionnalités" : t.label}
                 {pastille(t.key)}
               </button>
             </div>
@@ -318,17 +258,17 @@ function AdminShell({ session }: { session: Session }) {
         </div>
       </div>
 
-      {/* Barre d'accès rapide mobile : les 3 onglets du service en cours */}
+      {/* Barre d'accès rapide mobile : les trois onglets ouverts le plus souvent */}
       <nav className="quickbar" aria-label="Accès rapide">
         <button className={active === "tableau" ? "qb-btn actif" : "qb-btn"} onClick={() => naviguer("tableau")}>
           <span className="qb-ico" aria-hidden="true">◧</span>Tableau
         </button>
-        <button className={active === "reservations" ? "qb-btn actif" : "qb-btn"} onClick={() => naviguer("reservations")}>
-          <span className="qb-ico" aria-hidden="true">☰</span>Résa
-          {nbAttente > 0 && <span className="qb-pastille">{nbAttente}</span>}
+        <button className={active === "newsletter" ? "qb-btn actif" : "qb-btn"} onClick={() => naviguer("newsletter")}>
+          <span className="qb-ico" aria-hidden="true">✉</span>Lettre
+          {nbNewsProg > 0 && <span className="qb-pastille">{nbNewsProg}</span>}
         </button>
-        <button className={active === "plan" ? "qb-btn actif" : "qb-btn"} onClick={() => naviguer("plan")}>
-          <span className="qb-ico" aria-hidden="true">⌗</span>Plan
+        <button className={active === "carte" ? "qb-btn actif" : "qb-btn"} onClick={() => naviguer("carte")}>
+          <span className="qb-ico" aria-hidden="true">☰</span>Carte
         </button>
       </nav>
     </div>

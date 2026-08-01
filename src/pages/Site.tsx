@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase, fetchActive, fetchContent } from "../lib/supabase";
-import type { MenuItem, GalleryImage, Partner, Review, SocialLink, OpeningHour, ReservationSettings, PromoBanner, TakeawayItem } from "../lib/types";
+import { fetchActive, fetchContent } from "../lib/supabase";
+import type { MenuItem, GalleryImage, Partner, Review, SocialLink, OpeningHour, PromoBanner, TakeawayItem } from "../lib/types";
 import Navbar from "../components/site/Navbar";
 import Hero from "../components/site/Hero";
 import Histoire from "../components/site/Histoire";
@@ -12,7 +12,6 @@ import Avis from "../components/site/Avis";
 import Newsletter from "../components/site/Newsletter";
 import Footer from "../components/site/Footer";
 import HorairesModal from "../components/site/HorairesModal";
-import ReservationWidget from "../components/site/ReservationWidget";
 import PromoPopup from "../components/site/PromoPopup";
 import Emporter from "../components/site/Emporter";
 
@@ -27,12 +26,10 @@ export default function Site() {
   const [catMeta, setCatMeta] = useState<any>(null);
   const [menuFile, setMenuFile] = useState<{ url: string; name?: string } | null>(null);
   const [flags, setFlags] = useState<{ partners: boolean; reviews: boolean; newsletter: boolean }>({ partners: true, reviews: true, newsletter: true });
-  const [resaEnabled, setResaEnabled] = useState(true);
   const [promo, setPromo] = useState<PromoBanner | null>(null);
   const [takeaway, setTakeaway] = useState<TakeawayItem[]>([]);
   const [takeawayEnabled, setTakeawayEnabled] = useState(false);
   const [horairesOpen, setHorairesOpen] = useState(false);
-  const [widgetOpen, setWidgetOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -50,7 +47,6 @@ export default function Site() {
         fetchContent("partners_enabled"),
         fetchContent("reviews_enabled"),
         fetchContent("newsletter_enabled"),
-        fetchActive<ReservationSettings>("reservation_settings", "id"),
         fetchActive<PromoBanner>("promo_banner", "id"),
         fetchContent("menu_file"),
         fetchActive<TakeawayItem>("takeaway_items"),
@@ -58,10 +54,10 @@ export default function Site() {
       ]);
       const get = (i: number, fallback: any = []) =>
         results[i].status === "fulfilled" ? (results[i] as PromiseFulfilledResult<any>).value : fallback;
-      const [m, g, p, r, s, h, ard, cm, pf, rf, nf, rs, pb, mf, tw, twf] = [
+      const [m, g, p, r, s, h, ard, cm, pf, rf, nf, pb, mf, tw, twf] = [
         get(0), get(1), get(2), get(3), get(4), get(5),
         get(6, null), get(7, null), get(8, null), get(9, null), get(10, null),
-        get(11), get(12), get(13, null), get(14), get(15, null),
+        get(11), get(12, null), get(13), get(14, null),
       ];
       setMenu((m as MenuItem[]).filter((x) => x.is_active));
       setGallery((g as GalleryImage[]).filter((x) => x.is_active));
@@ -73,7 +69,6 @@ export default function Site() {
       setCatMeta(cm);
       setMenuFile(mf?.url ? mf : null);
       setFlags({ partners: pf?.enabled ?? true, reviews: rf?.enabled ?? true, newsletter: nf?.enabled ?? true });
-      setResaEnabled(rs[0]?.enabled ?? true);
       setPromo(pb[0] || null);
       setTakeaway((tw as TakeawayItem[]).filter((x) => x.is_active));
       setTakeawayEnabled(twf?.enabled ?? false);
@@ -81,44 +76,23 @@ export default function Site() {
     })();
   }, []);
 
-  // Ouverture du widget depuis un lien externe (#reserver), typiquement le
-  // bouton « Réserver » d'une newsletter. Sans cela, le lien amènerait sur la
-  // page d'accueil sans ouvrir le formulaire — promesse non tenue.
-  //
-  // ⚠️ Cet effet doit rester AVANT le `return` conditionnel ci-dessous : React
-  // exige que tous les Hooks soient appelés dans le même ordre à chaque rendu.
-  // Placé après, il n'était pas exécuté pendant le chargement puis l'était
-  // ensuite — incohérence qui casse le rendu de toute la page.
-  useEffect(() => {
-    if (!resaEnabled) return;
-    const ouvrirSiAncre = () => {
-      if (window.location.hash.replace(/\?.*$/, "") === "#reserver") setWidgetOpen(true);
-    };
-    ouvrirSiAncre();
-    window.addEventListener("hashchange", ouvrirSiAncre);
-    return () => window.removeEventListener("hashchange", ouvrirSiAncre);
-  }, [resaEnabled]);
-
   if (loading) return <div className="loading">Chargement…</div>;
 
   const phone = import.meta.env.VITE_RESTO_PHONE || "";
   const phoneHref = `tel:${phone.replace(/\s/g, "")}`;
-  // Action des boutons "Réserver" : ouvre le widget si la résa en ligne est active, sinon appel téléphone
-  const reserve = () => {
-    if (resaEnabled) setWidgetOpen(true);
-    else if (phone) window.location.href = phoneHref;
-  };
-  const reserveLabel = resaEnabled ? "Réserver" : "Appeler";
+  // Les réservations se prennent par téléphone : le bouton d'appel est la seule
+  // action de contact du site.
+  const appeler = () => { if (phone) window.location.href = phoneHref; };
 
   return (
     <>
-      <Navbar onReserve={reserve} reserveLabel={reserveLabel} flags={{
+      <Navbar onAppeler={appeler} appelLabel="Appeler" flags={{
         ardoise: ardoise?.enabled !== false && !!ardoise?.plat,
         takeaway: takeawayEnabled && takeaway.length > 0,
         partners: flags.partners && partners.length > 0,
         newsletter: flags.newsletter,
       }} />
-      <Hero onReserve={reserve} onHours={() => setHorairesOpen(true)} reserveLabel={resaEnabled ? "Réserver une table" : "Appeler le restaurant"} />
+      <Hero onAppeler={appeler} onHours={() => setHorairesOpen(true)} appelLabel="Appeler le restaurant" />
       <Histoire />
       {ardoise?.enabled !== false && <Ardoise ardoise={ardoise} />}
       <Carte menu={menu} catMeta={catMeta} menuFile={menuFile} />
@@ -130,9 +104,8 @@ export default function Site() {
       <Footer hours={hours} socials={socials} />
       <HorairesModal hours={hours} open={horairesOpen} onClose={() => setHorairesOpen(false)} />
       <PromoPopup promo={promo} />
-      {resaEnabled && <ReservationWidget hours={hours} open={widgetOpen} onClose={() => setWidgetOpen(false)} />}
-      {(resaEnabled || phone) && (
-        <button className="btn btn-accent fab-reserv" onClick={reserve}>{reserveLabel}</button>
+      {phone && (
+        <button className="btn btn-accent fab-reserv" onClick={appeler}>Appeler</button>
       )}
     </>
   );

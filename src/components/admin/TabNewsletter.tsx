@@ -53,29 +53,25 @@ type Bloc =
   | { type: "deux_colonnes"; colonnes: [Colonne, Colonne] };
 
 function blocVide(type: "pleine_largeur" | "deux_colonnes"): Bloc {
-  // Lien de réservation pré-rempli : c'est la destination attendue dans la
+  // Lien vers la carte pré-rempli : c'est la destination attendue dans la
   // grande majorité des campagnes. Le LIBELLÉ reste vide — sans libellé, aucun
   // bouton n'est rendu dans l'email. Le restaurateur choisit donc d'afficher le
   // bouton en nommant simplement l'action, sans avoir à retrouver l'URL.
   const base = (import.meta.env.VITE_SITE_URL || "").replace(/\/+$/, "");
-  const resa = base ? { cta_url: `${base}/#reserver` } : {};
+  const dest = base ? { cta_url: `${base}/#carte` } : {};
   return type === "deux_colonnes"
-    ? { type, colonnes: [{ ...resa }, { ...resa }] }
-    : { type, ...resa };
+    ? { type, colonnes: [{ ...dest }, { ...dest }] }
+    : { type, ...dest };
 }
 
-// Segments de ciblage. Chacun correspond à une intention distincte : inutile de
-// multiplier les tranches d'inactivité, le message de reconquête est le même.
-// Toute modification ici doit être répercutée dans newsletter_segment_counts()
-// (base) ET dans send-newsletter/index.ts (envoi réel) — les trois doivent
-// rester cohérents, sinon le décompte annoncé ne correspond pas aux envois.
+// Segment de ciblage. Il n'en reste qu'un depuis le retrait du CRM : la table
+// `customers` — qui portait le VIP, les compteurs de visites et les tranches
+// d'inactivité — n'existe plus. Toute modification ici doit être répercutée
+// dans newsletter_segment_counts() (base) ET dans send-newsletter/index.ts
+// (envoi réel) : les trois doivent rester cohérents, sinon le décompte annoncé
+// ne correspond pas aux envois.
 const SEGMENTS: Record<string, { label: string; desc: string }> = {
-  optin:       { label: "Opt-in newsletter", desc: "Tous les inscrits — via le formulaire newsletter ou l'opt-in proposé à la réservation" },
-  optin_vip:   { label: "VIP",               desc: "Inscrits newsletter marqués VIP dans le CRM" },
-  habitues:    { label: "Habitués",          desc: "Inscrits venus au moins 3 fois — vos meilleurs clients" },
-  une_visite:  { label: "Venus une seule fois", desc: "Ont testé le restaurant mais ne sont jamais revenus" },
-  inactif_3_6: { label: "Pas venus depuis 3 à 6 mois", desc: "Absence notable — une relance peut suffire à les faire revenir" },
-  inactif_7:   { label: "Pas venus depuis plus de 6 mois", desc: "Reconquête — dernière venue il y a 7 mois ou davantage" },
+  optin: { label: "Opt-in newsletter", desc: "Tous les inscrits via le formulaire du site" },
 };
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
@@ -387,12 +383,10 @@ function tailleImage(file: File): Promise<{ w: number; h: number }> {
 // Liens proposés sous le champ « Bouton — lien ».
 // Dans une newsletter de restaurant, le bouton renvoie presque toujours vers le
 // site : autant éviter au restaurateur de retenir ou recopier les URL.
-// `#reserver` ouvre directement le formulaire de réservation (voir Site.tsx).
 function liensSuggeres(): { label: string; url: string }[] {
   const base = (import.meta.env.VITE_SITE_URL || "").replace(/\/+$/, "");
   if (!base) return [];
   return [
-    { label: "Réserver une table", url: `${base}/#reserver` },
     { label: "Voir la carte",      url: `${base}/#carte` },
     { label: "Plat du jour",       url: `${base}/#jour` },
     { label: "Galerie photos",     url: `${base}/#galerie` },
@@ -567,15 +561,14 @@ function ChampsBloc({ val, onChange, onUpload }: {
   );
 }
 
-function NouveauForm({ onSaved, initial, cibleUnique, step, setStep, welcome }: {
+function NouveauForm({ onSaved, initial, step, setStep, welcome }: {
   onSaved: () => void;
   /* `content` porte aussi les blocs (tableau) : `any` plutôt que
      Record<string,string>, qui décrivait mal la réalité même avant. */
   initial?: { id?: string; template: string; segment: string; subject: string; content: any };
-  /** Module Réservation désactivé : un seul ciblage possible, l'étape 2 est retirée. */
-  cibleUnique: boolean;
-  /* L'étape est portée par le parent : le fil « 1 · Contenu / 2 · Destinataires /
-     3 · Envoi » vit dans l'en-tête de page, au-dessus de ce composant. */
+  /* L'étape est portée par le parent : le fil « 1 · Contenu / 2 · Envoi » vit
+     dans l'en-tête de page, au-dessus de ce composant. Le ciblage n'a plus
+     d'étape : il n'existe qu'un segment (tous les inscrits). */
   step: 1 | 2 | 3;
   setStep: (n: 1 | 2 | 3) => void;
   /* Mode « email de bienvenue » : le MÊME éditeur, avec deux différences —
@@ -589,9 +582,8 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep, welcome }: 
   // d'onglet, fermeture navigateur). Nettoyé au démontage (sauvegarde ou sortie).
   useEffect(() => { dirty.set(true); return () => dirty.set(false); }, []); // eslint-disable-line
   const [template] = useState(initial?.template || "blocs");
-  // Sans module Réservation, `customers` reste vide : tous les segments sauf
-  // « optin » seraient à 0. On force le seul ciblage qui a du sens.
-  const [segment, setSegment] = useState(cibleUnique ? "optin" : (initial?.segment || "optin"));
+  // Un seul ciblage possible depuis le retrait du CRM : tous les inscrits.
+  const [segment] = useState("optin");
   const [counts, setCounts] = useState<Record<string, number> | null>(null);
 
   // Nombre de destinataires par segment (RPC : même logique que l'envoi réel)
@@ -655,7 +647,7 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep, welcome }: 
   // L'assistant PROPOSE, ce composant DISPOSE : il applique l'objet ou la
   // rédaction complète dans l'état de l'éditeur, avec confirmation quand du
   // contenu serait écrasé. Le lien des boutons est le même que celui des
-  // blocs neufs (page réservation du site).
+  // blocs neufs (la carte du site).
   const confirmIa = useConfirm();
   // Visuels suggérés par l'assistant, bloc par bloc. Affichés en rappel sous le
   // panneau : l'assistant ne peut pas poser d'image lui-même (il n'a pas les
@@ -686,7 +678,7 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep, welcome }: 
         ? b.colonnes.map((c) => String(c.photo || "").trim()).filter(Boolean).join(" · ")
         : String((b as { photo?: string }).photo || "").trim()));
     const base = (import.meta.env.VITE_SITE_URL || "").replace(/\/+$/, "");
-    const cta = base ? `${base}/#reserver` : "";
+    const cta = base ? `${base}/#carte` : "";
     if (r.objet) setSubject(r.objet.slice(0, 150));
     setContent((c: any) => ({
       ...c,
@@ -1074,7 +1066,7 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep, welcome }: 
                   if (!subject.trim()) { setManqueEtape1("Indiquez l'objet de l'email avant de continuer."); return; }
                   if (!blocs.length)   { setManqueEtape1("Ajoutez au moins un bloc de contenu avant de continuer."); return; }
                   setManqueEtape1("");
-                  setStep(cibleUnique ? 3 : 2);
+                  setStep(3);
                 }}>
                   Suivant →
                 </button>
@@ -1085,38 +1077,6 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep, welcome }: 
           <div>
             <BlocsCanvas subject={subject} content={content} restoName={restoName} logoUrl={logoUrl}
               avecPrenom={avecPrenom} onBascule={setAvecPrenom} />
-          </div>
-        </div>
-      )}
-
-      {/* Étape 2 : Segment */}
-      {step === 2 && (
-        <div>
-          <p className="desc">À qui envoyer cette campagne ?</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-            {Object.entries(SEGMENTS).map(([key, s]) => (
-              <button key={key} onClick={() => setSegment(key)} style={{
-                padding: "12px 16px", borderRadius: 10, textAlign: "left", cursor: "pointer", fontFamily: "var(--font-body)",
-                border: segment === key ? "2px solid var(--admin-accent)" : "1px solid var(--line)",
-                background: segment === key ? "var(--a06)" : "#fff",
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-              }}>
-                <div>
-                  <span style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>{s.label}</span>
-                  <span style={{ fontSize: 12, color: "var(--ink-soft)", marginLeft: 10 }}>{s.desc}</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-                  <span className="seg-compteur">
-                    {counts ? `${counts[key] ?? 0} contact${(counts[key] ?? 0) > 1 ? "s" : ""}` : "…"}
-                  </span>
-                  {segment === key && <span style={{ color: "var(--admin-accent)", fontWeight: 700 }}>✓</span>}
-                </div>
-              </button>
-            ))}
-          </div>
-          <div className="pan-actions">
-            <button className="btn btn-ligne" onClick={() => setStep(1)}>← Retour</button>
-            <button className="btn btn-accent" onClick={() => setStep(3)}>Suivant →</button>
           </div>
         </div>
       )}
@@ -1159,7 +1119,7 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep, welcome }: 
           )}
 
           <div style={{ background: "var(--cream)", borderRadius: 8, padding: "12px 16px", fontSize: 13, marginBottom: 20 }}>
-            <b>Récap</b> — Template : {TEMPLATES[template]?.label} · {cibleUnique ? "Destinataires : tous les inscrits" : `Segment : ${SEGMENTS[segment]?.label}`}{counts ? ` (${counts[segment] ?? 0} destinataire${(counts[segment] ?? 0) > 1 ? "s" : ""})` : ""} · Objet : {subject}
+            <b>Récap</b> — Template : {TEMPLATES[template]?.label} · Destinataires : tous les inscrits{counts ? ` (${counts[segment] ?? 0} destinataire${(counts[segment] ?? 0) > 1 ? "s" : ""})` : ""} · Objet : {subject}
           </div>
 
           {erreur && <div className="alerte">{erreur}</div>}
@@ -1198,7 +1158,7 @@ function NouveauForm({ onSaved, initial, cibleUnique, step, setStep, welcome }: 
           </div>
 
           <div className="pan-actions">
-            <button className="btn btn-ligne" onClick={() => setStep(cibleUnique ? 1 : 2)}>← Retour</button>
+            <button className="btn btn-ligne" onClick={() => setStep(1)}>← Retour</button>
             <button className="btn btn-ligne" disabled={busy} onClick={() => sauvegarder(false)}>Sauvegarder en brouillon</button>
             <button className="btn btn-accent" disabled={busy} onClick={() => {
               if (!canSend) { setErreur("Choisissez une date d'envoi, ou sélectionnez « Envoyer maintenant »."); return; }
@@ -1264,15 +1224,6 @@ export default function TabNewsletter() {
   const [welcomeInit, setWelcomeInit] = useState<{ subject: string; content: any } | null>(null);
   const restoName = import.meta.env.VITE_RESTO_NAME || "";
   const [logoUrl, setLogoUrl] = useState(""); // logo newsletter, pour l'aperçu du Welcome
-  // Offre « Essentiel + Newsletter » : module Réservation désactivé. Sans
-  // réservations, `customers` n'est jamais alimentée et les cinq segments qui
-  // en dépendent afficheraient tous 0 contact. On retire alors purement et
-  // simplement l'étape de ciblage — l'assistant passe de trois étapes à deux.
-  const [cibleUnique, setCibleUnique] = useState(false);
-  useEffect(() => {
-    supabase.from("feature_flags").select("enabled").eq("key", "reservation").maybeSingle()
-      .then(({ data }) => { if (data && data.enabled === false) setCibleUnique(true); });
-  }, []);
   useEffect(() => {
     supabase.from("site_content").select("content").eq("section_key", "newsletter_logo").maybeSingle()
       .then(({ data }) => { if (data?.content?.url) setLogoUrl(data.content.url); });
@@ -1528,16 +1479,16 @@ function dateRef(c: Campaign): string {
           ) : mode === "nouveau" ? (
             <>
               <div className="nl-fil">
-                {/* L'étape 2 (ciblage) disparaît du fil quand elle est sautée :
-                    les repères sont renumérotés pour ne pas afficher un « 3 »
-                    orphelin. Ils sont cliquables vers l'arrière seulement — on
-                    ne saute pas une étape qu'on n'a pas remplie. */}
-                {(cibleUnique ? ([1, 3] as const) : ([1, 2, 3] as const)).map((n, i) => (
+                {/* Deux étapes seulement : le ciblage n'en est plus une, il
+                    n'existe qu'un segment. Les repères sont cliquables vers
+                    l'arrière seulement — on ne saute pas une étape qu'on n'a
+                    pas remplie. */}
+                {([1, 3] as const).map((n, i) => (
                   <button key={n} type="button"
                     className={`nl-fil-etape${step === n ? " actif" : ""}`}
                     disabled={n > step}
                     onClick={() => setStep(n)}>
-                    {i + 1} · {n === 1 ? "Contenu" : n === 2 ? "Destinataires" : "Envoi"}
+                    {i + 1} · {n === 1 ? "Contenu" : "Envoi"}
                   </button>
                 ))}
               </div>
@@ -1566,13 +1517,13 @@ function dateRef(c: Campaign): string {
         {mode === "welcome" && welcomeInit && (
           <NouveauForm key="welcome" welcome
             initial={{ template: "blocs", segment: "optin", subject: welcomeInit.subject, content: welcomeInit.content }}
-            cibleUnique={cibleUnique} step={1} setStep={() => { /* pas d'étapes ici */ }}
+            step={1} setStep={() => { /* pas d'étapes ici */ }}
             onSaved={() => { setWelcomeInit(null); setMode("liste"); charger(); }} />
         )}
 
         {mode === "nouveau" && (
           <NouveauForm key={prefill?.id || (prefill ? "dup" : "neuf")} initial={prefill}
-            cibleUnique={cibleUnique} step={step} setStep={setStep}
+            step={step} setStep={setStep}
             onSaved={() => { setPrefill(undefined); setStep(1); setMode("liste"); charger(); }} />
         )}
 
@@ -1709,7 +1660,6 @@ function dateRef(c: Campaign): string {
                               <b title={c.subject}>{c.subject}</b>
                               <span className="nl-l-meta">
                                 {cibles != null ? `${cibles} destinataire${cibles > 1 ? "s" : ""}` : "à envoyer"}
-                                {!cibleUnique && ` · ${SEGMENTS[c.segment]?.label || c.segment}`}
                                 {c.folder && ` · ${c.folder}`}
                                 {/* Clics : personnes distinctes ayant cliqué au moins un lien
                                     (webhook Resend). Absent = pas de donnée, pas un zéro. */}

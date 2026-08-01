@@ -1,38 +1,4 @@
-/* ==========================================================================
-   admin.css — La Table Digitale
-   Architecture modulaire : 1 préfixe = 1 onglet.
-   Un changement dans une section ne peut pas casser une autre.
 
-   01. Variables & reset   :root, *
-   02. Layout              .app .side .main .topbar .contenu
-   03. Composants partagés .bloc .stat .champ .toggle .btn .modal
-   04. Login               .login-*
-   05. Tableau de bord     .semaine-* .dispo-* .jour-* .svc-* .crea-*
-   06. Plan de service     .ps-*
-   07. Plan de salle       .tp-*
-   08. Horaires            .tab-horaires .creneau-edit
-   09. CRM Clients         .clients-* .fiche-* .carnet-*
-   10. Widget réservation  .panneau .creno .etapes
-   11. Autres onglets      ardoise galerie carte bannière
-   12. Vitrine             .adm-vit — refonte éditoriale des 6 onglets vitrine
-   ========================================================================== */
-
-
-/* ── 01. VARIABLES & RESET ─────────────────────────────────────────────── */
-:root {
-  --admin-accent:       #7a1f24;
-  --admin-accent-dark:  #5c161a;
-  --admin-accent-light: #b8636a;
-  --admin-ink:          #1d1a16;
-  --or:                 #c8872a;
-  --ok:                 #3e7d5a;
-  --attente:            #c18a2e;
-  --annule:             #a3433a;
-  --a06: rgba(122,31,36,.06);
-  --a08: rgba(122,31,36,.08);
-  --a12: rgba(122,31,36,.12);
-  --a25: rgba(122,31,36,.25);
-}
 *, *::before, *::after { box-sizing: border-box }
 
 
@@ -136,8 +102,8 @@
 
 .cartes-stat { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:26px }
 .cartes-stat-kpi { grid-template-columns:repeat(6,1fr) }
-@media(max-width:1300px) { .cartes-stat-kpi { grid-template-columns:repeat(3,1fr) } }
-@media(max-width:680px)  { .cartes-stat-kpi { grid-template-columns:repeat(2,1fr) } }
+@media(max-width:1300px) { .cartes-stat-kpi { grid-template-columns:repeat(3,1fr) }}
+@media(max-width:680px)  { .cartes-stat-kpi { grid-template-columns:repeat(2,1fr) }}
 .stat { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px }
 .stat .lib { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); font-weight:700 }
 .stat .val { font-family:var(--font-body); font-weight:700; font-size:34px; line-height:1; margin-top:6px }
@@ -180,7 +146,7 @@ tr:last-child td { border-bottom:none }
 .champ .aide, .aide, .champ-aide { display:block; font-size:12px; color:var(--ink-soft);
   margin-top:5px; line-height:1.45 }
 .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px }
-@media(max-width:600px) { .grid2 { grid-template-columns:1fr } }
+@media(max-width:600px) { .grid2 { grid-template-columns:1fr }}
 
 /* Fermetures & événements exceptionnels (onglet Horaires).
    Le formulaire d'ajout vit dans son propre panneau : empilé nu sous le
@@ -207,8 +173,7 @@ tr:last-child td { border-bottom:none }
   .ferm-dates { grid-template-columns:1fr }
   .ferm-actions { flex-direction:column-reverse; align-items:stretch }
   .ferm-actions .btn { width:100% }
-  .ferm-aide { text-align:center }
-}
+  .ferm-aide { text-align:center }}
 .consent { display:flex; gap:10px; font-size:13px; color:var(--ink-soft); margin:12px 0 }
 .consent input { margin-top:3px; accent-color:var(--admin-accent) }
 
@@ -284,10 +249,6 @@ tr:last-child td { border-bottom:none }
   display:inline-flex; align-items:center; font-family:var(--font-body) }
 .puce-mini:hover { border-color:var(--a25) }
 .puce-mini.active { background:var(--admin-accent); border-color:var(--admin-accent); color:#fff }
-.ps-pip { background:var(--admin-accent); color:#fff; font-size:9px; font-weight:700;
-  min-width:16px; height:16px; border-radius:99px; display:inline-flex;
-  align-items:center; justify-content:center; padding:0 4px; margin-left:5px }
-.puce-mini.active .ps-pip { background:#fff; color:var(--admin-accent) }
 
 /* Comptes admin */
 .liste-admins { margin-bottom:4px }
@@ -370,210 +331,8 @@ tr:last-child td { border-bottom:none }
 .crea-legende { display:flex; flex-wrap:wrap; gap:24px; margin-top:12px; font-size:13px; padding-top:12px; border-top:1px solid var(--line) }
 
 
-/* ── 06. PLAN DE SERVICE (.ps-) ────────────────────────────────────────── */
-.ps-wrap { display:flex; flex-direction:column; height:100vh; max-height:100vh; overflow:hidden }
-
-.ps-entete { display:flex; align-items:center; justify-content:space-between; padding:16px 24px 14px; gap:16px; flex-shrink:0 }
-.ps-sous-titre { font-size:11px; color:var(--ink-soft); font-weight:700; letter-spacing:.14em; text-transform:uppercase }
-/* Date du plan de service : typo bâton — c'est une donnée d'interface, pas un
-   titre éditorial. Même choix pour les autres textes de données ci-dessous ;
-   la serif ne reste que sur l'identité (logo, connexion) et sur les aperçus
-   fidèles du site (ardoise, promo, affiche QR). */
-.ps-date-grande { font-family:var(--font-body); font-size:18px; font-weight:700; letter-spacing:.01em; color:var(--ink);
-  display:flex; align-items:center; gap:10px; margin-top:2px }
-.ps-date-grande::first-letter { text-transform:uppercase }
-.ps-badge-auj { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
-  background:var(--admin-accent); color:#fff; padding:3px 10px; border-radius:99px; flex-shrink:0 }
-.ps-entete-droite { display:flex; align-items:center; gap:12px }
-.ps-nav-date { display:flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:5px 6px }
-.ps-date-courante { font-size:14px; font-weight:600; color:var(--ink); min-width:96px; text-align:center }
-.ps-fleche { background:transparent; border:none; color:var(--ink); width:28px; height:28px; border-radius:7px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.15s }
-.ps-fleche:hover { background:var(--cream) }
-.ps-date-input { font-size:12px; border:none; border-left:1px solid var(--line); padding:4px 6px; color:var(--ink-soft); background:transparent; cursor:pointer }
-.ps-btn-resa { background:var(--admin-accent); color:#fff; border:none; font-size:14px; font-weight:600; padding:11px 20px; border-radius:10px; cursor:pointer; transition:.15s; white-space:nowrap }
-.ps-btn-resa:hover { background:var(--admin-accent-dark) }
-
-/* Rappels des autres jours à traiter — UNE seule ligne.
-   Avec du volume, l'ancienne version listait tous les jours concernés
-   (24 pastilles sur 3 lignes) : illisible, et le plan était repoussé hors
-   écran. Ici : 3 jours par catégorie + un compteur dépliable. */
-.ps-rappels { display:flex; align-items:center; gap:16px; flex-wrap:wrap;
-  background:rgba(193,138,46,.07); border:1px solid rgba(193,138,46,.22);
-  border-radius:10px; padding:7px 14px; margin:0 24px 12px; flex-shrink:0 }
-.ps-rappel-groupe { display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0 }
-.ps-rappel-lab { font-size:10px; font-weight:700; color:var(--attente);
-  text-transform:uppercase; letter-spacing:.1em; flex-shrink:0 }
-.ps-rappel-jour { display:inline-flex; align-items:center; gap:5px; background:#fff;
-  border:1px solid var(--line); color:var(--ink-soft); border-radius:999px;
-  padding:3px 9px; font-size:12px; font-weight:600; cursor:pointer;
-  font-family:var(--font-body); transition:.15s; white-space:nowrap }
-.ps-rappel-jour:hover { border-color:var(--attente); color:var(--attente) }
-/* Les demandes en attente sont plus urgentes : elles gardent la couleur */
-.ps-rappel-jour.attente { border-color:var(--attente); color:var(--attente) }
-.ps-rappel-jour.attente:hover { background:var(--attente); color:#fff }
-.ps-rappel-jour.attente:hover .ps-rappel-nb { background:#fff; color:var(--attente) }
-.ps-rappel-nb { background:var(--attente); color:#fff; border-radius:999px;
-  min-width:16px; height:16px; display:inline-flex; align-items:center;
-  justify-content:center; font-size:10px; font-weight:700; padding:0 4px }
-.ps-rappel-plus, .ps-rappel-replier { background:none; border:1px dashed var(--a25);
-  color:var(--ink-soft); border-radius:999px; padding:3px 10px; font-size:11.5px;
-  font-weight:600; cursor:pointer; font-family:var(--font-body); white-space:nowrap }
-.ps-rappel-plus:hover, .ps-rappel-replier:hover { border-color:var(--attente); color:var(--attente) }
-.ps-rappel-replier { margin-left:auto }
-@media (max-width: 640px) {
-  .ps-rappels { margin:0 16px 10px; gap:10px }
-}
-
-.ps-services { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:4px 24px 16px; flex-shrink:0 }
-.ps-service-bloc { padding:16px 20px; cursor:pointer; transition:.2s; user-select:none; background:#fff; border:1px solid var(--line); border-radius:14px }
-.ps-service-bloc:hover:not(.actif) { border-color:var(--a25) }
-.ps-service-bloc.actif { background:var(--admin-accent); border-color:var(--admin-accent) }
-.ps-service-haut { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px }
-.ps-service-gauche { display:flex; flex-direction:column; gap:4px }
-.ps-service-nom { font-size:10px; font-weight:700; letter-spacing:.28em; color:var(--ink-soft); font-family:monospace; line-height:1 }
-.ps-service-bloc.actif .ps-service-nom   { color:rgba(255,255,255,.6) }
-.ps-service-stats { font-size:13px; font-weight:500; color:var(--ink-soft) }
-.ps-service-bloc.actif .ps-service-stats { color:rgba(255,255,255,.9) }
-.ps-service-dispo { font-size:24px; font-weight:700; color:var(--ink); font-family:monospace; line-height:1 }
-.ps-service-bloc.actif .ps-service-dispo { color:#fff }
-.ps-service-jauge { height:6px; background:#ddd; border-radius:99px; overflow:hidden; border:1px solid #ccc }
-.ps-service-bloc.actif .ps-service-jauge { background:rgba(255,255,255,.2); border-color:rgba(255,255,255,.3) }
-.ps-service-jauge div { height:100%; background:var(--or); border-radius:99px; transition:width .5s cubic-bezier(.4,0,.2,1) }
-.ps-service-bloc.actif .ps-service-jauge div { background:rgba(255,255,255,.85) }
-
-.ps-grid { display:grid; grid-template-columns:520px 1fr; gap:0; flex:1; min-height:0; overflow:hidden; padding:0 24px 20px }
-@media(max-width:960px) { .ps-grid { grid-template-columns:1fr; overflow:auto } }
-.ps-col-liste { display:flex; flex-direction:column; height:100%; min-height:0; padding-right:20px; overflow:hidden }
-.ps-liste { overflow-y:auto; display:flex; flex-direction:column; gap:0; flex:1; min-height:0;
-  padding-right:6px; scrollbar-width:thin; scrollbar-color:var(--line) transparent; -webkit-overflow-scrolling:touch }
-.ps-liste-titre { font-size:10px; font-weight:700; letter-spacing:.18em; text-transform:uppercase;
-  color:var(--ink-soft); padding:4px 2px 8px; display:flex; align-items:center; gap:7px; flex-shrink:0 }
-.ps-liste-titre.aplacer { color:var(--admin-accent) }
-.ps-liste-nb { background:var(--admin-accent); color:#fff; font-size:9px; font-weight:700; padding:2px 7px; border-radius:99px; letter-spacing:0 }
-.ps-vide-mini { font-size:13px; color:var(--ink-soft); padding:16px 2px; font-style:italic }
-
-/* ============ Plan de service : arrivées par créneau ============ */
-/* Bande compacte : sur un service complet, lire l'heure table par table ne dit
-   pas où se situe le coup de feu. Chaque pastille donne l'horaire + les
-   couverts, la barre sous le chiffre indique le poids relatif du créneau.
-   Survoler isole les tables concernées sur le plan. */
-.ps-creneaux { display:flex; align-items:center; gap:12px; flex-wrap:wrap;
-  margin:0 24px 14px; padding:8px 14px; background:#fff;
-  border:1px solid var(--line); border-radius:12px }
-.ps-creneaux-titre { font-size:10px; font-weight:700; letter-spacing:.14em;
-  text-transform:uppercase; color:var(--ink-soft); flex-shrink:0 }
-.ps-creneaux-liste { display:flex; gap:5px; align-items:center;
-  overflow-x:auto; flex:1; min-width:0; padding:1px 0 }
-.ps-creneau { flex:0 0 auto; background:none; border:1px solid var(--line);
-  border-radius:8px; padding:4px 9px 5px; cursor:pointer; display:flex;
-  flex-direction:column; align-items:center; gap:2px; min-width:50px;
-  transition:background .15s, border-color .15s }
-.ps-creneau:hover, .ps-creneau.actif { background:var(--a06); border-color:var(--admin-accent) }
-.ps-creneau-ligne { display:flex; align-items:baseline; gap:5px }
-.ps-creneau-h { font-size:11px; font-weight:600; color:var(--ink-soft);
-  font-variant-numeric:tabular-nums; line-height:1 }
-.ps-creneau.actif .ps-creneau-h { color:var(--admin-accent) }
-.ps-creneau-couv { font-size:13px; font-weight:700; color:var(--admin-accent); line-height:1 }
-.ps-creneau-barre { width:100%; height:2.5px; background:var(--cream);
-  border-radius:99px; overflow:hidden }
-.ps-creneau-barre i { display:block; height:100%; background:var(--admin-accent);
-  border-radius:99px; opacity:.65; transition:opacity .15s }
-.ps-creneau:hover .ps-creneau-barre i, .ps-creneau.actif .ps-creneau-barre i { opacity:1 }
-
-/* Mise en évidence des tables du créneau visé */
-.ps-table.creneau-hors { opacity:.28 }
-.ps-table.creneau-vise .ps-svg .tp-plateau { stroke:var(--admin-accent); stroke-width:3 }
-.ps-table.creneau-vise { z-index:4 }
-
-/* Jour sans service */
-.ps-service-ferme { grid-column:1 / -1; text-align:center; padding:16px;
-  font-size:13px; color:var(--ink-soft); font-style:italic;
-  background:#fff; border:1px dashed var(--line); border-radius:14px }
-.ps-services-solo { grid-template-columns:1fr }
-
-@media (max-width: 640px) {
-  .ps-creneaux { margin:0 16px 12px; gap:8px }
-  .ps-creneaux-titre { display:none }
-}
-
-/* ===== Rotation de table & conflits (plan de service) =====
-   Une réservation occupe une table 1h30 : une table peut donc servir deux fois
-   dans un même service. Le plan doit le montrer plutôt que de bloquer. */
-
-/* Heure de libération, affichée sous le client */
-.ps-table-jusqua { font-size:8.5px; color:rgba(255,255,255,.75); font-style:italic; line-height:1.1 }
-.ps-table.t-petite .ps-table-jusqua { font-size:8px }
-
-/* Rotation possible : la table est occupée plus tôt mais libre à l'heure visée.
-   Liseré vert pointillé pendant le glisser-déposer. */
-.ps-table.rotation .ps-svg .tp-plateau { stroke:var(--ok); stroke-width:3; stroke-dasharray:6 4 }
-.ps-table.rotation { opacity:1; z-index:4 }
-
-/* Conflit avéré : deux réservations se chevauchent sur la même table. */
-.ps-table.conflit .ps-svg .tp-plateau { stroke:var(--annule); stroke-width:3 }
-.ps-table.conflit::after { content:"!"; position:absolute; top:-4px; right:-4px;
-  width:16px; height:16px; border-radius:50%; background:var(--annule); color:#fff;
-  font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;
-  z-index:5; box-shadow:0 1px 4px rgba(0,0,0,.25) }
-
-/* Placement automatique des réservations */
-.ps-liste-titre.aplacer { display:flex; align-items:center; gap:8px; flex-wrap:wrap }
-.ps-auto-btn { margin-left:auto; font-family:inherit; font-size:11px; font-weight:600;
-  color:var(--admin-accent); background:var(--a06); border:1px solid var(--a25);
-  border-radius:99px; padding:4px 11px; cursor:pointer; letter-spacing:0;
-  text-transform:none; transition:background .15s, border-color .15s }
-.ps-auto-btn:hover { background:var(--admin-accent); border-color:var(--admin-accent); color:#fff }
-.ps-auto-info { font-size:11.5px; color:var(--ink); background:var(--cream);
-  border:1px solid var(--line); border-left:3px solid var(--ok); border-radius:8px;
-  padding:8px 11px; margin-bottom:10px; cursor:pointer; line-height:1.45 }
-
-/* Zone temporairement fermée (terrasse sous la pluie, salle privatisée) */
-.tp-zone-fermee { display:inline-flex; align-items:center; font-size:10.5px; font-weight:700;
-  letter-spacing:.08em; text-transform:uppercase; color:var(--annule);
-  background:rgba(163,67,58,.1); border:1px solid rgba(163,67,58,.3);
-  border-radius:99px; padding:2px 9px; margin-left:10px }
-/* Onglet d'une zone fermée dans le plan de service */
 .zone-onglet.fermee { opacity:.55 }
 .zone-onglet.fermee::after { content:" · fermée"; font-size:10px; font-weight:600; color:var(--annule) }
-
-/* Choix de la zone avant placement automatique (plusieurs zones actives) */
-.ps-zone-choix { background:var(--a06); border:1px solid var(--a25); border-radius:10px;
-  padding:11px 13px; margin-bottom:10px }
-.ps-zone-choix-titre { font-size:12.5px; font-weight:600; color:var(--ink); margin-bottom:9px }
-.ps-zone-choix-liste { display:flex; flex-wrap:wrap; gap:7px }
-.ps-zone-btn { display:inline-flex; flex-direction:column; align-items:flex-start; gap:1px;
-  background:#fff; border:1px solid var(--line); border-radius:9px; padding:7px 12px;
-  cursor:pointer; font-family:var(--font-body); font-size:12.5px; font-weight:600;
-  color:var(--ink); transition:border-color .15s, background .15s }
-.ps-zone-btn:hover { border-color:var(--admin-accent); background:var(--a06) }
-.ps-zone-btn.partout { border-style:dashed }
-.ps-zone-btn-nb { font-size:10.5px; font-weight:500; color:var(--ink-soft) }
-.ps-zone-annuler { margin-top:9px; background:none; border:none; padding:0;
-  font-family:var(--font-body); font-size:11.5px; color:var(--ink-soft);
-  cursor:pointer; text-decoration:underline }
-.ps-zone-annuler:hover { color:var(--admin-accent) }
-
-/* Table utilisée plusieurs fois dans le même service (rotation) */
-.ps-table-multi { position:absolute; top:-5px; left:-5px; z-index:5;
-  min-width:19px; height:19px; padding:0 5px; border-radius:99px;
-  background:var(--admin-accent); color:#fff; font-size:10px; font-weight:700;
-  display:flex; align-items:center; justify-content:center;
-  box-shadow:0 1px 4px rgba(0,0,0,.28) }
-.ps-table-suite { font-size:8.5px; font-weight:600; color:#fff; line-height:1.15;
-  margin-top:2px; padding-top:2px; border-top:1px solid rgba(255,255,255,.35) }
-.ps-table.t-petite .ps-table-suite { font-size:8px }
-/* La table contient la réservation sélectionnée dans la liste */
-.ps-table.contient-eclairee .ps-svg .tp-plateau { stroke:var(--admin-accent); stroke-width:3.5 }
-.ps-table.contient-eclairee { z-index:6 }
-
-/* Légende du plan : rappel des deux nouveaux états */
-.ps-legende-rotation { display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--ink-soft) }
-.ps-legende-rotation::before { content:""; width:10px; height:10px; border-radius:3px;
-  border:2px dashed var(--ok) }
-.ps-legende-conflit { display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--annule); font-weight:600 }
-.ps-legende-conflit::before { content:"!"; width:14px; height:14px; border-radius:50%;
-  background:var(--annule); color:#fff; font-size:10px; font-weight:700;
-  display:flex; align-items:center; justify-content:center }
 
 /* ============ Affiche QR à imprimer (onglet Contacts) ============ */
 .qr-editeur { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin:12px 0 18px }
@@ -597,7 +356,7 @@ tr:last-child td { border-bottom:none }
 .qr-url code { background:var(--cream); border:1px solid var(--line); padding:3px 8px;
   border-radius:6px; overflow-wrap:anywhere }
 
-@media (max-width: 640px) { .qr-editeur { grid-template-columns:1fr } }
+@media (max-width: 640px) { .qr-editeur { grid-template-columns:1fr }}
 
 /* À l'impression : ne sortir que l'affiche, centrée sur la page.
    Tout le reste de l'admin (menu, listes, boutons) est masqué. */
@@ -609,8 +368,7 @@ tr:last-child td { border-bottom:none }
   .qr-affiche { border:none; box-shadow:none; max-width:none; width:auto;
     padding:0; transform:scale(1.35); transform-origin:center }
   .qr-no-print { display:none !important }
-  @page { margin:16mm }
-}
+  @page { margin:16mm }}
 
 /* Réglages dépendant d'un interrupteur (ex. confirmation automatique) :
    indentés et sur fond crème pour montrer qu'ils lui sont subordonnés. */
@@ -661,203 +419,11 @@ tr:last-child td { border-bottom:none }
   border-radius:99px; padding:1px 7px }
 .ct-filtre.actif .ct-filtre-nb { background:rgba(255,255,255,.2); color:#fff }
 @media (max-width: 640px) {
-  .ct-lien-nom { min-width:0; width:100% }
-}
-
-/* Carte « À placer » (défaut) : fond teinté accent → appelle l'action */
-.ps-resa { background:var(--a06); border:1px solid var(--a25); border-left:4px solid var(--admin-accent);
-  border-radius:10px; padding:12px 14px; margin-bottom:8px; cursor:grab;
-  transition:box-shadow .15s, border-color .15s; user-select:none }
-.ps-resa:hover   { box-shadow:0 3px 12px rgba(0,0,0,.07) }
-.ps-resa.drag    { opacity:.5 }
-.ps-resa.partiel  { border-left-color:var(--attente); background:rgba(193,138,46,.06) }
-/* Carte « Placée » : calme, blanche, liseré vert */
-.ps-resa.placee   { background:#fff; border-color:var(--line); border-left:4px solid var(--ok) }
-/* Sélection (clic sur la carte OU sur sa table dans le plan) — déclarée après
-   .placee pour ne pas être écrasée par son fond blanc. */
-.ps-resa.eclairee, .ps-resa.placee.eclairee {
-  box-shadow:0 0 0 2px var(--admin-accent); border-left-color:var(--admin-accent);
-  background:var(--a06); scroll-margin:12px }
-.ps-resa-haut { display:flex; align-items:baseline; gap:10px; margin-bottom:7px }
-.ps-resa-heure { font-family:monospace; font-size:15px; font-weight:700; color:var(--ink) }
-.ps-resa-nom   { font-size:14px; font-weight:600; color:var(--ink); flex:1 }
-.ps-resa-glisser { font-size:11px; color:var(--admin-accent); font-weight:600; white-space:nowrap }
-.ps-resa-bas { display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin-bottom:6px }
-.ps-resa-couv { font-size:12px; color:var(--ink-soft) }
-.ps-resa-tel  { font-size:11px; color:var(--ink-soft); font-family:monospace }
-.ps-resa-recue  { font-size:11px; color:var(--attente); font-weight:600; margin-top:4px }
-.ps-resa-manque { font-size:11px; color:var(--attente); font-weight:600; margin-top:4px; background:rgba(193,138,46,.1); border-radius:5px; padding:4px 8px }
-.ps-resa-note { font-size:11px; color:var(--ink-soft); font-style:italic; margin-top:4px }
-.ps-resa-noshow-tag { font-size:11.5px; color:var(--annule); background:rgba(196,77,77,.08); border-radius:5px; padding:4px 8px; margin-top:6px; font-weight:600 }
-.ps-resa-actions { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px }
-.ps-confirmer { font-size:11px; font-weight:700; background:var(--ok); color:#fff; border:none; padding:4px 11px; border-radius:5px; cursor:pointer }
-.ps-confirmer:hover { opacity:.88 }
-.ps-noshow-btn,.ps-annuler-btn,.ps-detacher { font-size:11px; font-weight:500; background:transparent; border:1px solid var(--line); color:var(--ink-soft); padding:4px 11px; border-radius:5px; cursor:pointer; transition:.15s }
-.ps-noshow-btn:hover { border-color:var(--annule); color:var(--annule) }
-.ps-annuler-btn { background:var(--annule); border-color:var(--annule); color:#fff }
-.ps-annuler-btn:hover { filter:brightness(.9) }
-.ps-detacher:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
-
-.ps-badge-statut { font-size:10px; font-weight:600; padding:2px 8px; border-radius:99px }
-.ps-badge-statut.attente  { background:rgba(193,138,46,.14); color:var(--attente) }
-.ps-badge-statut.confirme { background:rgba(62,125,90,.14);  color:var(--ok) }
-.ps-badge-statut.no_show,.ps-badge-statut.annule { background:var(--cream); color:var(--ink-soft) }
-.ps-badge-table   { font-size:10px; font-weight:600; color:var(--admin-accent); background:var(--a08); padding:2px 8px; border-radius:99px }
-.ps-badge-aplacer { font-size:10px; font-weight:600; color:var(--admin-accent); border:1px solid var(--a25); padding:2px 8px; border-radius:99px }
-
-.ps-col-plan { display:flex; flex-direction:column; min-height:0; background:#fff; border:1px solid var(--line); border-radius:16px; overflow:hidden }
-.ps-salle-tete { display:flex; align-items:center; justify-content:space-between; padding:16px 20px 14px; gap:12px; flex-shrink:0; border-bottom:1px solid var(--line) }
-.ps-salle-gauche { display:flex; align-items:center; gap:12px }
-.ps-salle-nom  { font-size:18px; font-weight:500; color:var(--ink) }
-.ps-salle-pill { font-size:11px; font-weight:600; color:var(--ink-soft); background:var(--cream); border:1px solid var(--line); padding:4px 11px; border-radius:99px }
-.ps-legende { display:flex; align-items:center; gap:14px; font-size:12px; font-weight:500; color:var(--ink-soft) }
-.ps-leg-dot { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:5px; vertical-align:middle; flex-shrink:0 }
-.ps-leg-dot.occupee { background:var(--or) }
-.ps-leg-dot.libre   { background:#fcfaf2; border:2px dashed var(--a25) }
-.ps-leg-dot.eclairee { background:transparent; border:2.5px solid var(--admin-accent) }
-.ps-salle-jauge-row { display:flex; align-items:center; gap:14px; padding:6px 20px 16px; flex-shrink:0; border-bottom:1px solid var(--line) }
-.ps-salle-jauge { flex:1; height:10px; background:#ddd; border-radius:99px; overflow:hidden; border:1px solid #ccc }
-.ps-salle-jauge div { height:100%; background:var(--or); border-radius:99px; transition:width .5s; box-shadow:0 1px 4px rgba(200,135,42,.4) }
-.ps-salle-compteur { font-size:12px; font-weight:700; color:var(--ink); white-space:nowrap; font-family:monospace }
-.ps-plan { position:relative; flex:1; overflow:auto; background:var(--cream); margin:12px 16px 0;
-  border-radius:12px; min-height:340px; background-image:radial-gradient(circle,rgba(0,0,0,.06) 1px,transparent 1px); background-size:24px 24px }
-.ps-vide-plan { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--ink-soft); font-style:italic }
-
-.ps-table { position:absolute; display:grid; place-items:center; cursor:default;
-  transition:transform .1s; user-select:none; box-sizing:border-box }
-.ps-table > * { grid-area:1 / 1 }
-/* Tailles alignées sur le SVG (plateau + chaises débordantes) */
-.ps-table.t-petite  { width:108px; height:108px }
-.ps-table.t-moyenne { width:134px; height:134px }
-.ps-table.t-grande  { width:166px; height:166px }
-
-/* Le SVG « mobilier » porte désormais la surface (plateau) et les chaises. */
-.ps-svg { display:block; overflow:visible; pointer-events:none }
-.ps-svg .tp-chaise  { fill:#fff; stroke:var(--a25); stroke-width:1.5 }
-.ps-svg .tp-plateau { transition:fill .15s, stroke .15s }
-/* Libre : plateau blanc, contour pointillé rappelé sur le plateau */
-.ps-table.libre   .ps-svg .tp-plateau { fill:#fff; stroke:var(--a25); stroke-width:2; stroke-dasharray:5 4 }
-.ps-table.libre   .ps-svg .tp-chaise  { fill:#fff; stroke:var(--a25) }
-/* Occupée : plateau or plein, chaises assorties */
-.ps-table.occupee { cursor:pointer }
-.ps-table.occupee .ps-svg .tp-plateau { fill:var(--or); stroke:rgba(0,0,0,.10); stroke-width:2; stroke-dasharray:none }
-.ps-table.occupee .ps-svg .tp-chaise  { fill:var(--or); stroke:rgba(0,0,0,.12) }
-.ps-table.occupee:hover { transform:translateY(-2px) }
-/* États d'interaction : halo porté par le plateau, épouse rond/carré */
-.ps-table.survol   .ps-svg .tp-plateau { stroke:var(--admin-accent); stroke-width:3; stroke-dasharray:none }
-.ps-table.retrait  .ps-svg .tp-plateau { stroke:var(--annule); stroke-width:3; stroke-dasharray:none }
-.ps-table.eclairee { z-index:5; transform:translateY(-2px) }
-.ps-table.eclairee .ps-svg .tp-plateau { stroke:var(--admin-accent); stroke-width:3; stroke-dasharray:none;
-  animation:psPulsePlateau 1.6s ease-in-out infinite }
-.ps-table.survol, .ps-table.eclairee { z-index:5 }
+  .ct-lien-nom { min-width:0; width:100% }}
 @keyframes psPulsePlateau {
   0%,100% { stroke-width:3 }
   50%     { stroke-width:4.5 }
 }
-.ps-table.trop-petit { opacity:.4; cursor:not-allowed }
-
-/* Contenu texte superposé au plateau */
-/* Contenu : tout centré et empilé (mêmes règles pour carrées et rondes),
-   comme une étiquette posée au centre du plateau. */
-.ps-table-contenu { display:flex; flex-direction:column; justify-content:center; align-items:center;
-  text-align:center; gap:2px; width:80%; pointer-events:none; z-index:2 }
-.ps-table-tete { display:flex; flex-direction:column; align-items:center; gap:2px }
-.ps-table-label { font-size:14px; font-weight:700; line-height:1; font-family:var(--font-body) }
-.ps-table.occupee .ps-table-label { color:#fff }
-.ps-table.libre   .ps-table-label { color:var(--ink) }
-.ps-table-cap { font-size:9.5px; font-weight:500 }
-.ps-table.occupee .ps-table-cap { color:rgba(255,255,255,.9) }
-.ps-table.libre   .ps-table-cap { color:var(--ink-soft) }
-.ps-table-client { font-size:10.5px; font-weight:600; color:#fff; line-height:1.15; white-space:nowrap; margin-top:1px; max-width:100%; overflow:hidden; text-overflow:ellipsis }
-.ps-table.t-petite .ps-table-client { font-size:9.5px }
-.ps-table-libre  { font-size:9.5px; color:var(--ink-soft); font-style:italic; margin-top:1px }
-.ps-aide { font-size:11px; color:var(--ink-soft); padding:8px 16px; font-style:italic; border-top:1px solid var(--line); flex-shrink:0 }
-
-.ps-saisie { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px }
-.ps-saisie-tete { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px }
-.ps-saisie-tete h3 { font-size:15px; font-weight:600; color:var(--ink) }
-.ps-saisie-fermer { background:transparent; border:none; font-size:18px; cursor:pointer; color:var(--ink-soft); line-height:1; padding:2px 6px }
-.ps-saisie-date { font-size:12px; color:var(--ink-soft); margin-bottom:12px; font-weight:500; display:flex; align-items:center; gap:8px; flex-wrap:wrap }
-.ps-saisie-nav { width:26px; height:26px; border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer; font-size:15px; line-height:1; color:var(--ink) }
-.ps-saisie-nav:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
-.ps-saisie-datefield { border:1px solid var(--line); border-radius:6px; padding:4px 8px; font-size:12px; font-family:inherit }
-.ps-saisie-row { display:grid; grid-template-columns:1fr 1fr; gap:10px }
-
-
-/* ── 07. PLAN DE SALLE (.tp-) ──────────────────────────────────────────── */
-.tp-nb-zones { display:flex; flex-direction:column; align-items:flex-end; gap:1px; flex-shrink:0 }
-.tp-nb-zones-chiffre { font-family:var(--font-body); font-size:32px; font-weight:700; color:var(--admin-accent); line-height:1 }
-.tp-nb-zones-label { font-size:11px; color:var(--ink-soft); letter-spacing:.06em }
-
-.tp-zones-barre { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:16px }
-.tp-zone-pill { display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:99px;
-  font-size:14px; font-weight:600; cursor:pointer; transition:.15s; border:1.5px solid var(--line); background:#fff; color:var(--ink-soft) }
-.tp-zone-pill:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
-.tp-zone-pill.active { background:var(--admin-accent); border-color:var(--admin-accent); color:#fff }
-.tp-zone-pill-count { font-size:12px; font-weight:500; opacity:.75 }
-.tp-zone-pill.active .tp-zone-pill-count { opacity:.85; color:rgba(255,255,255,.9) }
-.tp-zone-add { padding:8px 16px; border-radius:99px; font-size:14px; font-weight:600;
-  cursor:pointer; border:1.5px dashed var(--admin-accent); background:transparent; color:var(--admin-accent); transition:.15s }
-.tp-zone-add:hover { background:var(--a06) }
-
-.tp-zone-bloc { display:grid; grid-template-columns:1fr 280px; gap:20px; align-items:start }
-.tp-zone-main { background:#fff; border:1px solid var(--line); border-radius:16px; overflow:hidden }
-.tp-zone-entete { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--line); gap:12px; flex-wrap:wrap }
-.tp-zone-entete-gauche { display:flex; align-items:center; gap:14px }
-.tp-zone-nom { font-family:var(--font-body); font-size:16px; font-weight:700; color:var(--ink) }
-.tp-zone-stats { font-size:12px; font-weight:500; color:var(--ink-soft); background:var(--cream); border:1px solid var(--line); padding:3px 12px; border-radius:99px }
-.tp-zone-entete-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap }
-.tp-plan { position:relative; overflow:hidden; background:var(--cream);
-  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size:32px 32px }
-
-.tp-table { position:absolute; display:grid; place-items:center; cursor:grab;
-  user-select:none; touch-action:none; transition:filter .15s }
-.tp-table > * { grid-area:1 / 1 }
-.tp-table:active { cursor:grabbing }
-.tp-table-svg { display:block; overflow:visible; pointer-events:none }
-.tp-chaise { fill:#fff; stroke:var(--a25); stroke-width:1.5; transition:stroke .15s }
-.tp-plateau { fill:#fff; stroke:var(--a25); stroke-width:2.5; transition:stroke .15s }
-.tp-table:hover .tp-plateau { stroke:var(--admin-accent) }
-.tp-table:hover .tp-chaise  { stroke:var(--admin-accent-light) }
-.tp-table:hover { filter:drop-shadow(0 3px 10px var(--a12)) }
-.tp-table.selectionnee .tp-plateau { stroke:var(--admin-accent); stroke-width:3 }
-.tp-table.selectionnee .tp-chaise  { stroke:var(--admin-accent-light) }
-.tp-table.selectionnee { filter:drop-shadow(0 0 0 var(--a12)); z-index:5 }
-.tp-table-texte { display:flex; flex-direction:column; align-items:center; gap:2px; pointer-events:none; z-index:2 }
-.tp-table-label { font-family:var(--font-body); font-size:15px; font-weight:700; color:var(--admin-accent); line-height:1 }
-.tp-table-cap { font-size:10px; color:var(--ink-soft) }
-
-.tp-zone-pied { display:flex; align-items:center; gap:10px; padding:12px 20px; border-top:1px solid var(--line); font-size:13.5px; color:var(--ink-soft); flex-wrap:wrap }
-.tp-zone-pied b { color:var(--ink); font-weight:700 }
-.tp-pied-sep  { color:var(--line); font-size:16px }
-.tp-pied-note { margin-left:auto; font-size:12px; font-style:italic; color:var(--ink-soft); text-align:right }
-
-.tp-panneau { background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px;
-  display:flex; flex-direction:column; gap:0; align-self:start; position:sticky; top:72px; width:100% }
-.tp-panneau-tete { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px }
-.tp-panneau-titre { font-family:var(--font-body); font-size:16px; font-weight:700; color:var(--ink) }
-.tp-panneau-zone-badge { font-size:10px; font-weight:700; letter-spacing:.14em; background:var(--cream); border:1px solid var(--line); color:var(--ink-soft); padding:3px 9px; border-radius:4px }
-.tp-panneau-section { margin-bottom:18px }
-.tp-panneau-label { font-size:9.5px; font-weight:700; letter-spacing:.2em; color:var(--ink-soft); text-transform:uppercase; margin-bottom:10px }
-.tp-capacite-ctrl { display:flex; align-items:center; gap:12px; justify-content:space-between }
-.tp-cap-btn { width:36px; height:36px; border-radius:50%; border:1.5px solid var(--line); background:#fff;
-  font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center;
-  color:var(--admin-accent); font-weight:700; transition:.15s; flex-shrink:0 }
-.tp-cap-btn:hover:not(:disabled) { border-color:var(--admin-accent); background:var(--a06) }
-.tp-cap-btn:disabled { opacity:.35; cursor:not-allowed }
-.tp-cap-val  { display:flex; flex-direction:column; align-items:center; gap:2px; flex:1 }
-.tp-cap-n    { font-family:var(--font-body); font-size:30px; font-weight:700; color:var(--ink); line-height:1 }
-.tp-cap-unit { font-size:11px; color:var(--ink-soft) }
-.tp-forme-toggle { display:grid; grid-template-columns:1fr 1fr; border:1.5px solid var(--line); border-radius:10px; overflow:hidden }
-.tp-forme-btn { padding:10px; font-size:13px; font-weight:600; background:#fff; border:none; cursor:pointer; color:var(--ink-soft); transition:.15s }
-.tp-forme-btn:first-child { border-right:1.5px solid var(--line) }
-.tp-forme-btn.active { background:var(--admin-accent); color:#fff }
-.tp-forme-btn:hover:not(.active) { background:var(--cream) }
-.tp-zone-select { width:100%; padding:8px 10px; border:1.5px solid var(--line); border-radius:8px; font-size:13px; color:var(--ink); background:#fff; cursor:pointer }
-.tp-supprimer-btn { padding:10px; width:100%; border:1.5px solid var(--a25); border-radius:10px;
-  color:var(--admin-accent); background:transparent; font-size:13px; font-weight:600; cursor:pointer; transition:.15s; text-align:center }
-.tp-supprimer-btn:hover { background:var(--a06); border-color:var(--admin-accent) }
 .plan-vide { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); font-size:14px; font-style:italic; text-align:center; padding:20px }
 
 
@@ -874,61 +440,16 @@ tr:last-child td { border-bottom:none }
 .creneau-edit input[type=time]:focus { outline:none; border-color:var(--admin-accent); box-shadow:0 0 0 2px var(--a12) }
 .creneau-edit span { color:var(--ink-soft); font-size:13px; flex-shrink:0 }
 
-
-/* ── 09. CRM CLIENTS ───────────────────────────────────────────────────── */
-.clients-layout { display:grid; grid-template-columns:340px 1fr; gap:24px; padding:24px 32px; align-items:start }
-@media(max-width:900px) { .clients-layout { grid-template-columns:1fr } }
-.clients-liste { display:flex; flex-direction:column; gap:10px }
-.clients-tri   { display:flex; gap:6px; flex-wrap:wrap }
-.clients-items { list-style:none; display:flex; flex-direction:column; gap:6px; max-height:64vh; overflow-y:auto }
-.client-item { width:100%; text-align:left; background:#fff; border:1px solid var(--line); border-radius:10px; padding:11px 13px; cursor:pointer; transition:border-color .15s, box-shadow .15s }
-.client-item:hover { border-color:var(--admin-accent) }
 .client-item.actif { border-color:var(--admin-accent); box-shadow:0 0 0 1px var(--admin-accent) }
-.client-item-tete { display:flex; justify-content:space-between; align-items:baseline; gap:10px }
-.client-item-nom { font-weight:700; font-size:14px; color:var(--ink) }
-.client-item-nb  { font-size:12px; color:var(--admin-accent); font-weight:600; white-space:nowrap }
-.vip-pastille { color:var(--admin-accent); margin-left:6px; font-size:13px }
-.clients-fiche { background:#fff; border:1px solid var(--line); border-radius:12px; padding:24px 26px; min-height:300px }
-.fiche-vide { display:flex; align-items:center; justify-content:center; min-height:260px }
-.fiche-tete { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:18px }
-.fiche-nom  { font-family:var(--font-body); font-size:19px; font-weight:700; line-height:1.15 }
-.fiche-coord { display:flex; flex-wrap:wrap; gap:24px; padding:14px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line) }
-.fiche-coord > div { display:flex; flex-direction:column; gap:2px }
-.fiche-lab  { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft) }
-.fiche-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:18px }
-@media(max-width:520px) { .fiche-stats { grid-template-columns:repeat(2,1fr) } }
-.fiche-stat  { background:var(--cream); border-radius:10px; padding:14px 10px; text-align:center }
-.fiche-stat b { display:block; font-family:var(--font-body); font-weight:700; font-size:24px; color:var(--admin-accent); line-height:1 }
-.fiche-stat span { font-size:11.5px; color:var(--ink-soft); margin-top:5px; display:block }
-.fiche-histo-titre { font-family:var(--font-body); font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin:22px 0 10px }
-.fiche-histo { width:100%; border-collapse:collapse; font-size:13.5px }
-.fiche-histo th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); font-weight:700; padding:7px 8px; border-bottom:1px solid var(--line) }
-.fiche-histo td { padding:8px; border-bottom:1px solid var(--line) }
-.carnet-barre { display:flex; gap:16px; align-items:center; margin-bottom:16px; flex-wrap:wrap }
+
 .carnet-search { flex:none; width:100%; padding:9px 14px; border:1px solid var(--line); border-radius:8px; font-family:var(--font-body); font-size:14px }
 .carnet-search:focus { outline:none; border-color:var(--admin-accent) }
 
-
-/* ── 10. WIDGET RÉSERVATION ────────────────────────────────────────────── */
-.panneau { position:fixed; bottom:0; right:0; z-index:70; width:min(430px,100%); max-height:92vh;
-  overflow:auto; background:var(--cream); border-radius:6px 6px 0 0;
-  box-shadow:0 -10px 60px rgba(0,0,0,.2); transform:translateY(106%); transition:transform .3s; padding:30px 26px }
-@media(min-width:520px) { .panneau { right:24px; bottom:24px; border-radius:6px } }
 .panneau.ouvert { transform:translateY(0) }
-.panneau h3 { font-size:24px; margin-bottom:4px }
 .panneau .sous { font-size:13px; color:var(--ink-soft); margin-bottom:18px }
-.etapes { display:flex; gap:6px; margin-bottom:20px }
-.etapes i { flex:1; height:3px; border-radius:99px; background:var(--line) }
 .etapes i.fait { background:var(--accent) }
-.creneaux { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0 }
-.creno { position:relative; padding:10px; border:1px solid var(--line); border-radius:6px;
-  background:#fff; font-weight:600; font-size:14px; cursor:pointer; font-family:var(--font-body); transition:.12s }
-.creno:hover:not(:disabled) { border-color:var(--accent) }
 .creno.choisi { background:var(--accent); border-color:var(--accent); color:#fff }
-.creno:disabled { opacity:.5; cursor:not-allowed }
 .creno.complet { text-decoration:line-through; color:var(--ink-soft) }
-.creno-complet { display:block; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; text-decoration:none; margin-top:2px; color:var(--ink-soft) }
-.dispo-load { font-size:13px; color:var(--ink-soft); margin:8px 0; font-style:italic }
 .alerte { background:#fbeee9; border:1px solid #e8c4b8; color:#9e5340; border-radius:6px; padding:12px 14px; font-size:13.5px; margin:12px 0 }
 .recap { background:var(--cream); border-radius:6px; padding:10px 14px; font-weight:600; font-size:14px; margin-bottom:16px }
 .pan-actions { display:flex; gap:10px; margin-top:16px }
@@ -975,7 +496,7 @@ tr:last-child td { border-bottom:none }
 .form-duo { display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:30px; align-items:start; max-width:1120px }
 .apercu-note { text-align:center; font-size:11.5px; color:var(--ink-soft); margin-top:10px }
 .ta-confort { min-height:190px; resize:vertical; line-height:1.6 }
-@media(max-width:980px) { .form-duo { grid-template-columns:1fr } }
+@media(max-width:980px) { .form-duo { grid-template-columns:1fr }}
 
 /* Réseaux sociaux : une carte par réseau, avec le picto réellement utilisé
    dans le footer du site (SOCIAL_SVG). La liste en lignes obligeait à lire le
@@ -1001,10 +522,8 @@ tr:last-child td { border-bottom:none }
 .rs-tester { color:var(--admin-accent); text-decoration:none; font-weight:700 }
 .rs-tester:hover { text-decoration:underline }
 
-/* Réglages « Réservations & site » : sections nommées.
-   Tous les réglages vivaient dans une seule .grid2, interrupteurs compris :
-   « Confirmation automatique » se retrouvait à côté de « Durée d'occupation »
-   par accident de flux, pas par intention. */
+/* Réglages « Site & accès » : sections nommées, titre + description au-dessus
+   d'un groupe d'interrupteurs. */
 .reglages-section { border-top:1px solid var(--line); margin-top:22px; padding-top:18px }
 .reglages-section:first-of-type { border-top:none; margin-top:0; padding-top:0 }
 .reglages-titre { font-size:12px; font-weight:700; text-transform:uppercase;
@@ -1019,14 +538,13 @@ tr:last-child td { border-bottom:none }
    pendant qu'on remplissait les champs. */
 .apercu-col { position:sticky; top:16px }
 
-@media(max-width:860px) { .apercu-col { position:static } }
+@media(max-width:860px) { .apercu-col { position:static }}
 @media(max-width:700px) {
   .form-pied { flex-direction:column-reverse; align-items:stretch }
   .form-pied .btn { width:100% }
   .form-pied-aide { text-align:center }
   .champ-court { max-width:none }
-  .media-vignette { width:100%; max-width:280px; height:auto; aspect-ratio:3/2 }
-}
+  .media-vignette { width:100%; max-width:280px; height:auto; aspect-ratio:3/2 }}
 
 .ardoise-apercu { border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,.08) }
 .ardoise-apercu-img { height:140px; background:var(--cream) center/cover; display:flex; align-items:center; justify-content:center }
@@ -1108,33 +626,7 @@ tr:last-child td { border-bottom:none }
 
 /* Bannière promo — garde var(--accent) pour refléter le rendu site */
 .promo-apercu .promo-entete { background:var(--accent) }
-
-/* Plan de salle drag (ancien canvas) */
-.plan { position:relative; background:var(--cream); border:1px solid var(--line);
-  border-radius:12px; height:380px; overflow:hidden;
-  background-image:linear-gradient(var(--a06) 1px,transparent 1px),
-    linear-gradient(90deg,var(--a06) 1px,transparent 1px);
-  background-size:28px 28px }
-
-
-/* ── CLASSES MANQUANTES (ajoutées après refactor) ─────────────────────── */
-
-/* .puce — bouton pill utilisé dans TabReservations (Plan de service / Carnet)
-   et filtres du carnet (À venir / Passées / Toutes) */
-.puce { font-size:13px; font-weight:500; background:#fff; border:1px solid var(--line);
-  color:var(--ink-soft); padding:7px 16px; border-radius:99px; cursor:pointer;
-  transition:.15s; display:inline-flex; align-items:center; font-family:var(--font-body) }
-.puce:hover { border-color:var(--a25); color:var(--admin-accent) }
 .puce.active { background:var(--admin-accent); border-color:var(--admin-accent); color:#fff }
-
-/* Navigation semaine dans la disponibilité par service (TabTableau) */
-.dispo-nav { display:flex; align-items:center; gap:10px }
-.dispo-nav-btn { background:transparent; border:1px solid var(--line); width:30px; height:30px;
-  border-radius:50%; font-size:16px; cursor:pointer; display:flex; align-items:center;
-  justify-content:center; color:var(--ink); transition:.15s; font-family:var(--font-body) }
-.dispo-nav-btn:hover:not(:disabled) { border-color:var(--admin-accent); color:var(--admin-accent) }
-.dispo-nav-btn:disabled { opacity:.35; cursor:not-allowed }
-.dispo-nav-plage { font-size:14px; font-weight:600; color:var(--ink) }
 
 /* Barre de répartition des canaux (en ligne / téléphone) dans TabTableau */
 .canal-barre { height:10px; border-radius:99px; overflow:hidden; display:flex; margin-bottom:10px; background:var(--line) }
@@ -1155,10 +647,8 @@ tr:last-child td { border-bottom:none }
 .src-nb { font-size:13px; color:var(--ink-soft); white-space:nowrap }
 @media (max-width:640px){
   .src-ligne { grid-template-columns:1fr auto; row-gap:6px }
-  .src-ligne .canal-barre { grid-column:1 / -1; order:3 }
-}
+  .src-ligne .canal-barre { grid-column:1 / -1; order:3 }}
 
-/* Zones de filtres réservations (carnet) */
 .filtres-resa { display:flex; gap:6px; flex-wrap:wrap; align-items:center }
 
 
@@ -1182,7 +672,7 @@ tr:last-child td { border-bottom:none }
 /* ── TabPromo — Bannière promotionnelle ────────────────────────────────── */
 /* Grille 2 colonnes : formulaire | aperçu */
 .promo-admin-grid { display:grid; grid-template-columns:1fr 340px; gap:40px; align-items:start }
-@media(max-width:860px) { .promo-admin-grid { grid-template-columns:1fr } }
+@media(max-width:860px) { .promo-admin-grid { grid-template-columns:1fr }}
 
 /* Aperçu de la popup côté site */
 .eyebrow { font-size:10px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:var(--admin-accent) }
@@ -1202,93 +692,6 @@ tr:last-child td { border-bottom:none }
 .promo-apercu .btn-accent:hover,
 .app .promo-apercu .btn-accent:hover { background:var(--accent-dark, var(--accent)) }
 
-
-/* ── 09. CRM CLIENTS (.cli-) — refonte maquette ────────────────────────── */
-.cli-contenu { padding:0; max-width:none; overflow:hidden; height:calc(100vh - 72px) }
-.cli-layout { display:grid; grid-template-columns:380px 1fr; height:100%; overflow:hidden }
-
-/* Colonne liste */
-.cli-col-liste { display:flex; flex-direction:column; gap:12px; padding:24px 20px;
-  border-right:1px solid var(--line); overflow-y:auto; background:var(--cream) }
-.cli-items { list-style:none; display:flex; flex-direction:column; gap:8px }
-.cli-item { width:100%; text-align:left; background:#fff; border:1px solid var(--line);
-  border-radius:12px; padding:14px 16px; cursor:pointer;
-  transition:border-color .15s, box-shadow .15s; display:block }
-.cli-item:hover { border-color:var(--admin-accent); box-shadow:0 2px 8px var(--a08) }
-.cli-item.actif { border-color:var(--admin-accent); box-shadow:0 0 0 1px var(--admin-accent) }
-.cli-item-tete { display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:4px }
-.cli-item-nom { font-weight:700; font-size:15px; color:var(--ink) }
-.cli-item-nb  { font-size:12px; color:var(--admin-accent); font-weight:600; white-space:nowrap }
-.cli-item-det { font-size:12px; color:var(--ink-soft) }
-
-/* Badges client */
-.cli-badge { display:inline-block; font-size:10px; font-weight:700; letter-spacing:.08em;
-  text-transform:uppercase; padding:2px 8px; border-radius:99px; margin-left:8px;
-  vertical-align:middle }
-.cli-badge-nouveau { background:rgba(193,138,46,.14); color:var(--attente) }
-.cli-badge-fidele  { background:rgba(62,125,90,.14);  color:var(--ok) }
-.cli-badge-vip     { background:var(--admin-accent); color:#fff }
-.vip-pastille { color:var(--admin-accent); margin-left:6px; font-size:13px }
-
-/* Colonne fiche */
-.cli-col-fiche { overflow-y:auto; background:#fff }
-.cli-fiche-vide { display:flex; align-items:center; justify-content:center; height:100% }
-.cli-fiche { padding:32px; display:flex; flex-direction:column; gap:0 }
-
-/* En-tête fiche */
-.cli-fiche-tete { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:20px }
-.cli-fiche-tete-gauche { display:flex; flex-direction:column; gap:4px }
-.cli-fiche-nom { font-family:var(--font-body); font-size:22px; font-weight:700; color:var(--ink); display:flex; align-items:center; flex-wrap:wrap; gap:0 }
-
-/* Coordonnées */
-.cli-coord { display:flex; gap:48px; padding:18px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); margin-bottom:20px }
-.cli-coord > div { display:flex; flex-direction:column; gap:4px }
-.cli-coord-val { font-size:15px; color:var(--ink); font-weight:500; text-decoration:none }
-a.cli-coord-val { color:var(--admin-accent) }
-a.cli-coord-val:hover { text-decoration:underline }
-
-/* Stats */
-.cli-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:8px }
-.cli-stat { background:var(--cream); border:1px solid var(--line); border-radius:12px; padding:18px 14px; text-align:center }
-.cli-stat b { display:block; font-family:var(--font-body); font-size:30px; font-weight:700; color:var(--admin-accent); line-height:1; margin-bottom:6px }
-.cli-stat span { font-size:11px; color:var(--ink-soft); text-transform:none }
-
-/* Sections */
-.cli-section { margin-top:22px; padding-top:22px; border-top:1px solid var(--line) }
-.cli-section-titre { font-size:10px; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:12px }
-
-/* Préférences pills */
-.cli-prefs { display:flex; flex-wrap:wrap; gap:8px; align-items:center }
-.cli-pref-pill { display:inline-flex; align-items:center; gap:5px; background:var(--cream);
-  border:1px solid var(--line); border-radius:99px; padding:5px 12px;
-  font-size:13px; color:var(--ink) }
-.cli-pref-del { background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:14px; line-height:1; padding:0 2px }
-.cli-pref-del:hover { color:var(--annule) }
-.cli-pref-add { display:flex }
-.cli-pref-input { border:1.5px dashed var(--admin-accent); background:transparent; border-radius:99px;
-  padding:5px 14px; font-size:13px; color:var(--ink); outline:none; width:140px;
-  font-family:var(--font-body) }
-.cli-pref-input::placeholder { color:var(--admin-accent); opacity:.7 }
-.cli-pref-input:focus { border-style:solid; background:var(--a04) }
-
-/* Notes */
-.cli-notes { width:100%; border:1px solid var(--line); border-radius:10px; padding:12px 14px;
-  font-family:var(--font-body); font-size:14px; color:var(--ink); resize:vertical;
-  min-height:80px; background:var(--cream) }
-.cli-notes:focus { outline:none; border-color:var(--admin-accent); background:#fff }
-.cli-save-notes { background:none; border:none; color:var(--admin-accent); font-size:13px;
-  font-weight:600; cursor:pointer; padding:6px 0; font-family:var(--font-body);
-  margin-top:6px; display:block }
-.cli-save-notes:disabled { opacity:.45; cursor:default }
-.cli-save-notes:not(:disabled):hover { text-decoration:underline }
-
-/* Supprimer */
-.cli-supprimer { margin-top:28px; padding:14px; width:100%; border:1px solid var(--line);
-  border-radius:10px; color:var(--admin-accent); background:#fff; font-size:14px;
-  font-weight:600; cursor:pointer; text-align:center; font-family:var(--font-body);
-  transition:.15s }
-.cli-supprimer:hover { border-color:var(--annule); color:var(--annule); background:rgba(163,67,58,.04) }
-
 /* Légende de photo dans la vignette galerie admin */
 .ga-legende {
   position:absolute; left:0; right:0; bottom:0;
@@ -1296,12 +699,6 @@ a.cli-coord-val:hover { text-decoration:underline }
   background:linear-gradient(to top, rgba(0,0,0,.72), transparent);
   pointer-events:none; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
-
-/* Bouton "Charger plus" sous la liste clients */
-.cli-plus { display:flex; align-items:center; gap:12px; margin-top:12px; padding:0 2px }
-
-/* Barre de filtres statut (Toutes / En attente / Confirmées) dans le plan de service */
-.ps-filtres { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px }
 
 /* ============ Onglet La carte — groupes, drag & drop, prix inline ============ */
 .carte-outils { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:14px }
@@ -1371,47 +768,13 @@ a.cli-coord-val:hover { text-decoration:underline }
   .carte-plat-nom { flex:1 1 100%; order:1 }
   .drag-poignee { order:0 }
   .carte-plat-prix { order:2; width:auto; text-align:left; margin-right:auto }
-  .carte-plat-actions { order:3 }
-}
-
-/* Onglets de zones dans le plan de service (Salle / Terrasse…) */
-.zones-barre { display:flex; align-items:center; gap:6px; flex-wrap:wrap }
-.zone-onglet {
-  padding:6px 14px; border-radius:99px;
-  border:1.5px solid var(--line); background:#fff; color:var(--ink-soft);
-  font-family:inherit; font-size:13px; font-weight:600;
-  cursor:pointer; transition:.15s;
-}
-.zone-onglet:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
+  .carte-plat-actions { order:3 }}
 .zone-onglet.active { background:var(--admin-accent); border-color:var(--admin-accent); color:#fff }
 
-/* Compteur de destinataires sur les cartes de segment (newsletter) */
-.seg-compteur {
-  font-family:var(--font-mono, monospace); font-size:11.5px; font-weight:600;
-  color:var(--ink-soft); background:var(--cream); border:1px solid var(--line);
-  border-radius:99px; padding:3px 10px; white-space:nowrap;
-}
-
-/* Cartes KPI cliquables du tableau de bord (À confirmer / À placer) */
 .stat-clic { cursor:pointer; transition:border-color .15s, box-shadow .15s, transform .15s }
 .stat-clic:hover { border-color:var(--admin-accent); box-shadow:0 4px 14px rgba(122,31,36,.10); transform:translateY(-2px) }
 .stat-clic:focus-visible { outline:2px solid var(--admin-accent); outline-offset:2px }
 
-/* ── Page widget seul (iframe sur le site d'un client externe) ──────────
-   .panneau est conçu pour flotter en position:fixed sur un site complet.
-   En iframe pleine page, on le remet en flux normal, sans ombre/coin arrondi
-   (le site hôte encadre déjà l'iframe à sa façon) et sans marge parasite. */
-.widget-seul { background:transparent }
-.widget-seul .panneau {
-  position:static; width:100%; max-width:520px; margin:0 auto;
-  transform:none; box-shadow:none; border-radius:8px;
-  max-height:none; padding:24px 20px;
-}
-
-/* Le widget est un élément du SITE : ses couleurs suivent la charte du
-   restaurant (--accent). Les classes du widget (.etapes, .confirm-ok .rond,
-   .btn-accent) sont définies plus haut avec --accent, donc rien à surcharger
-   ici même quand cette page charge admin.css pour la structure du popup. */
 
 /* ── 12. UX 2026-07 : toast, chargement, quickbar mobile, erreurs inline ─── */
 
@@ -1445,7 +808,6 @@ a.cli-coord-val:hover { text-decoration:underline }
 .mob-burger { display:none }
 .mob-drawer { display:none }
 .mob-drawer-fond { display:none }
-.cli-retour { display:none }
 /* Éditeur newsletter : grille formulaire + aperçu (remplace les styles inline
    qui empêchaient toute adaptation mobile) */
 .news-editor-grid { display:grid; grid-template-columns:minmax(0,1fr) 560px; gap:28px }
@@ -1456,8 +818,8 @@ a.cli-coord-val:hover { text-decoration:underline }
    MOBILE ≤ 820px — refonte complète de l'admin sur petit écran
    Objectif : chaque onglet réellement utilisable au doigt sur téléphone.
    - Navigation : bandeau haut horizontal scrollable + quickbar bas + menu complet
-   - Tables (Réservations, Liste d'attente, Newsletter, Horaires) → cartes empilées
-   - Tableau de bord, Clients, Plan de salle : mises en page repensées
+   - Tables (Newsletter, Horaires, Contacts) → cartes empilées
+   - Tableau de bord : mise en page repensée
    ═══════════════════════════════════════════════════════════════════════════ */
 @media(max-width:820px) {
 
@@ -1541,12 +903,7 @@ a.cli-coord-val:hover { text-decoration:underline }
   .bloc { padding:16px 14px }
   .bloc-tete { flex-wrap:wrap; gap:10px }
   .bloc-tete h2 { font-size:17px }
-
-  /* Barres d'outils (recherche, filtres, onglets internes) : passent à la ligne */
-  .carnet-barre, .clients-tri, .ps-entete, .ps-entete-droite,
-  .actions-ligne, .puces, .filtres, .segments { flex-wrap:wrap }
-  .carnet-search, .clients-recherche input { width:100%; min-width:0 }
-  .puce { flex:1; text-align:center; min-height:38px }
+  .carnet-search { width:100%; min-width:0 }
 
   /* Boutons : cibles tactiles confortables */
   .btn { min-height:42px; padding:11px 18px }
@@ -1598,52 +955,6 @@ a.cli-coord-val:hover { text-decoration:underline }
   .semaine-date { margin-bottom:0; min-width:64px; font-size:13px }
   .semaine-services { flex:1; margin-left:auto }
 
-  /* ═══ CLIENTS (CRM) — master/detail ═══
-     Le CRM desktop fige la hauteur (100vh - 72px, overflow:hidden) : sur mobile
-     ça COUPAIT la fiche. On libère les hauteurs, et on bascule en master/detail :
-     fiche ouverte = liste masquée, bouton « ← Tous les clients » pour revenir. */
-  .cli-contenu { height:auto; overflow:visible }
-  .cli-layout, .clients-layout { grid-template-columns:1fr; height:auto; overflow:visible }
-  .cli-col-liste { border-right:none; height:auto; max-height:none;
-    overflow:visible; padding:16px 14px }
-  .cli-col-fiche { overflow:visible }
-  .cli-items, .clients-items { max-height:none }
-  .cli-fiche { padding:20px 16px }
-  .cli-layout.fiche-ouverte .cli-col-liste { display:none }
-  .cli-retour { display:inline-flex; align-self:flex-start; margin-bottom:14px;
-    min-height:40px }
-  .fiche-stats, .cli-stats { grid-template-columns:repeat(2,1fr) }
-  .fiche-coord { gap:14px }
-
-  /* ═══ PLAN DE SALLE ═══
-     Le canevas absolu n'est pas manipulable au doigt : sur mobile on privilégie
-     la LISTE des réservations (attribution via le formulaire), et le plan devient
-     un aperçu défilable en dessous plutôt qu'une zone de glisser-déposer. */
-  .ps-wrap { height:auto; max-height:none; overflow:visible }
-  .ps-entete { flex-wrap:wrap; padding:14px 16px 10px }
-  .ps-services { grid-template-columns:1fr; gap:10px; padding:4px 14px 12px }
-  .ps-grid { grid-template-columns:1fr; overflow:visible; padding:0 14px 16px }
-  .ps-col-liste { height:auto; padding-right:0; overflow:visible }
-  .ps-liste { overflow-y:visible; max-height:none }
-  .ps-col-plan { min-height:340px; margin-top:16px }
-  .ps-plan { margin:12px 0 0 }              /* le canevas garde son overflow:auto natif */
-  .ps-resa-bas, .ps-resa-actions { flex-wrap:wrap }
-  .ps-resa-actions .btn { flex:1 }
-
-  /* ═══ PLAN DE SALLE — ÉDITEUR (onglet « Plan de salle », .tp-) ═══
-     Desktop : canevas 1fr + panneau latéral 280px. Sur 380px, le canevas
-     s'écrasait à ~100px (colonne blanche filiforme). On empile, et le canevas
-     devient défilable horizontalement avec une largeur minimale qui préserve
-     la géométrie des tables (positions en px absolus). */
-  .tp-zone-bloc { grid-template-columns:1fr; gap:14px }
-  .tp-zone-main { overflow-x:auto; -webkit-overflow-scrolling:touch }
-  .tp-plan { min-width:640px }
-  .tp-nb-zones { display:none }                    /* le gros « 1 zone » du topbar : superflu ici */
-  .tp-zones-barre { overflow-x:auto; flex-wrap:nowrap; padding-bottom:6px;
-    scrollbar-width:none }
-  .tp-zones-barre::-webkit-scrollbar { display:none }
-  .tp-zone-pill, .tp-zone-add { flex-shrink:0 }
-
   /* Modales / panneaux : plein écran confortable */
   .modal-in { width:calc(100% - 24px); max-width:none; margin:12px; padding:20px 18px }
 
@@ -1656,16 +967,13 @@ a.cli-coord-val:hover { text-decoration:underline }
   .news-grid2 { grid-template-columns:1fr }
 
   /* Toasts au-dessus de la quickbar */
-  .toasts { bottom:calc(72px + env(safe-area-inset-bottom)) }
-}
+  .toasts { bottom:calc(72px + env(safe-area-inset-bottom)) }}
 
 /* Très petit écran ≤ 480px : on resserre encore */
 @media(max-width:480px) {
   .cartes-stat, .cartes-stat-kpi { grid-template-columns:1fr }
-  .fiche-stats { grid-template-columns:1fr }
   .topbar h1 { font-size:19px }
-  .contenu td { font-size:13.5px }
-}
+  .contenu td { font-size:13.5px }}
 
 /* ============================================================
    Newsletter — vue en cartes (5 par ligne) + dossiers
@@ -1774,7 +1082,6 @@ a.cli-coord-val:hover { text-decoration:underline }
 }
 .nl-doss-puce:hover { border-color:var(--admin-accent); color:var(--admin-accent) }
 .nl-doss-puce.on { background:var(--admin-accent); color:#fff; border-color:var(--admin-accent) }
-.nl-doss-puce.on .ps-pip { background:#fff; color:var(--admin-accent) }
 /* Puce composée (nom + suppression) : les boutons internes héritent du style */
 .nl-doss-nom, .nl-doss-x {
   border:none; background:transparent; cursor:pointer; color:inherit;
@@ -1787,10 +1094,10 @@ a.cli-coord-val:hover { text-decoration:underline }
 .nl-doss-x:hover { opacity:1 !important }
 
 /* Responsive : 5 → 4 → 3 → 2 → 1 colonnes */
-@media(max-width:1400px) { .nl-grille { grid-template-columns:repeat(4,1fr) } }
-@media(max-width:1100px) { .nl-grille { grid-template-columns:repeat(3,1fr) } }
-@media(max-width:820px)  { .nl-grille { grid-template-columns:repeat(2,1fr) } }
-@media(max-width:560px)  { .nl-grille { grid-template-columns:1fr } }
+@media(max-width:1400px) { .nl-grille { grid-template-columns:repeat(4,1fr) }}
+@media(max-width:1100px) { .nl-grille { grid-template-columns:repeat(3,1fr) }}
+@media(max-width:820px)  { .nl-grille { grid-template-columns:repeat(2,1fr) }}
+@media(max-width:560px)  { .nl-grille { grid-template-columns:1fr }}
 
 /* ============================================================
    Scan d'ardoise (IA) — modale de capture + validation
@@ -1853,8 +1160,7 @@ a.cli-coord-val:hover { text-decoration:underline }
 
 @media(max-width:560px) {
   .scan-plat-ligne1, .scan-plat-ligne2 { flex-wrap:wrap }
-  .scan-in-cat, .scan-in-desc { width:100% }
-}
+  .scan-in-cat, .scan-in-desc { width:100% }}
 
 
 /* ── ONGLETS VITRINE (Ardoise, Avis, Partenaires, Promo) — habillage éditorial.
@@ -1913,8 +1219,7 @@ a.cli-coord-val:hover { text-decoration:underline }
 .promo-apercu { border-radius:16px; overflow:hidden; box-shadow:0 22px 48px rgba(29,26,22,.16) }
 
 @media (max-width:820px){
-  .adm-edito { grid-template-columns:1fr }
-}
+  .adm-edito { grid-template-columns:1fr }}
 
 
 /* ── 12. VITRINE — refonte éditoriale (.adm-vit) ───────────────────────────
@@ -1922,9 +1227,8 @@ a.cli-coord-val:hover { text-decoration:underline }
    Partenaires, Bannière) : registre éditorial proche du site public — fond
    crème sans cartes blanches, filets fins, labels en petites capitales
    espacées, champs soulignés, titres en Fraunces. Scopé par la classe
-   .adm-vit posée sur .topbar et .contenu : le reste de l'admin (gestion,
-   réservations, CRM…) garde son habillage d'interface. Zéro changement
-   fonctionnel. */
+   .adm-vit posée sur .topbar et .contenu : le reste de l'admin garde son
+   habillage d'interface. Zéro changement fonctionnel. */
 
 .adm-vit {
   --vit-line:   #e2d8c4;            /* filets */
@@ -2323,10 +1627,9 @@ a.cli-coord-val:hover { text-decoration:underline }
   .contenu.adm-vit .rs-ident { flex:1 1 auto }
   .contenu.adm-vit .rs-lien { flex:1 1 100%; order:3 }
   .contenu.adm-vit .rs-actions { margin-left:auto; gap:16px }
-  .contenu.adm-vit .rs-lien { flex:1 1 100% }
-}
+  .contenu.adm-vit .rs-lien { flex:1 1 100% }}
 
-/* ══ PARAMÈTRES — Réservations & site, Contacts ═══════════════════════════
+/* ══ PARAMÈTRES — Site & accès, Contacts ═════════════════════════════════
    Mêmes conventions éditoriales que les onglets Vitrine (la classe s'appelle
    toujours .adm-vit pour raison historique : elle désigne aujourd'hui
    l'habillage éditorial, Vitrine ET Paramètres). */
@@ -2429,8 +1732,7 @@ a.cli-coord-val:hover { text-decoration:underline }
   .contenu.adm-vit .qr-zone-impression { position:absolute; inset:0; display:flex;
     align-items:center; justify-content:center; padding:0 }
   .contenu.adm-vit .qr-affiche { background:#fff; border:none; box-shadow:none;
-    max-width:none; width:auto; padding:0; transform:scale(1.35); transform-origin:center }
-}
+    max-width:none; width:auto; padding:0; transform:scale(1.35); transform-origin:center }}
 
 /* ─ Contacts : filtres et tableau ─ */
 .contenu.adm-vit .ct-filtres { gap:26px; margin:0 0 6px }
@@ -2454,14 +1756,12 @@ a.cli-coord-val:hover { text-decoration:underline }
 .contenu.adm-vit tbody td:last-child { text-align:right; color:var(--vit-encre) }
 
 @media (max-width: 900px) {
-  .qr-duo { grid-template-columns:1fr; gap:32px }
-}
+  .qr-duo { grid-template-columns:1fr; gap:32px }}
 @media (max-width: 700px) {
   .contenu.adm-vit .ligne-admin, .contenu.adm-vit .ct-lien { flex-wrap:wrap; gap:6px 16px }
   .adm-acces-nom, .contenu.adm-vit .ct-lien-nom { flex:1 1 100% }
   .adm-acces-ajout { flex-wrap:wrap; gap:18px }
-  .adm-acces-ajout .champ { flex:1 1 100% }
-}
+  .adm-acces-ajout .champ { flex:1 1 100% }}
 
 /* ══ BANNIÈRE PROMO — assistant et destinations ══════════════════════════ */
 
@@ -2516,8 +1816,7 @@ a.cli-coord-val:hover { text-decoration:underline }
   .contenu.adm-vit .nl-ia { padding:16px 16px }
   .ia-saisie-pied { flex-direction:column; align-items:stretch; gap:12px }
   .ia-saisie-pied .btn-accent { width:100% }
-  .ia-actions { flex-direction:column; align-items:stretch; gap:12px }
-}
+  .ia-actions { flex-direction:column; align-items:stretch; gap:12px }}
 
 /* ══ HORAIRES ════════════════════════════════════════════════════════════
    Le tableau perd ses cadres : des lignes séparées par des filets, des heures
@@ -2554,8 +1853,7 @@ a.cli-coord-val:hover { text-decoration:underline }
 
 @media (max-width: 820px) {
   .contenu.adm-vit .tab-horaires tbody td + td { padding-left:0 }
-  .contenu.adm-vit .tab-horaires tbody td b { font-size:15.5px }
-}
+  .contenu.adm-vit .tab-horaires tbody td b { font-size:15.5px }}
 
 /* ══ NEWSLETTER — liste des campagnes ════════════════════════════════════
    La grille de cartes devient une liste groupée par état : on lit d'abord ce
@@ -2645,13 +1943,11 @@ a.cli-coord-val:hover { text-decoration:underline }
   .nl-l-ident { flex:1 1 60% }
   .nl-l-date { flex:0 0 auto; text-align:left; order:5 }
   .nl-l-actions { margin-left:auto; order:6 }
-  .contenu.adm-vit .nl-groupe-tete { font-size:21px }
-}
+  .contenu.adm-vit .nl-groupe-tete { font-size:21px }}
 @media (max-width: 560px) {
   .nl-l-vignette { width:42px; height:42px }
   .nl-l-ident b { font-size:13.5px }
-  .nl-l-tag { order:4 }
-}
+  .nl-l-tag { order:4 }}
 
 /* ══ NEWSLETTER — éditeur de campagne ════════════════════════════════════
    Le fil des étapes vit dans l'en-tête de page ; l'éditeur perd sa carte
@@ -2743,12 +2039,10 @@ a.cli-coord-val:hover { text-decoration:underline }
 /* Empilement plus tôt : avec une colonne de 640 px fixes, la composition
    devient inconfortable bien avant 1100 px. */
 @media (max-width: 1360px) {
-  .contenu.adm-vit .news-editor-grid { grid-template-columns:1fr; gap:32px }
-}
+  .contenu.adm-vit .news-editor-grid { grid-template-columns:1fr; gap:32px }}
 @media (max-width: 820px) {
   .nl-fil { gap:14px }
-  .nl-contenu-actions { gap:14px }
-}
+  .nl-contenu-actions { gap:14px }}
 
 /* Sur mobile, la règle de base (≤700 px) fait passer le nom sur sa propre ligne
    et remet le prix à gauche. Les sélecteurs .contenu.adm-vit étant plus
@@ -2758,8 +2052,7 @@ a.cli-coord-val:hover { text-decoration:underline }
   .contenu.adm-vit .carte-plat { padding:14px 0; gap:8px 12px }
   .contenu.adm-vit .carte-plat-nom { flex:1 1 100%; max-width:none }
   .contenu.adm-vit .carte-plat-prix { margin-left:0 }
-  .contenu.adm-vit .carte-plat-actions { margin-left:auto }
-}
+  .contenu.adm-vit .carte-plat-actions { margin-left:auto }}
 
 /* ─ Mobile ─ */
 @media (max-width: 820px) {
@@ -2782,5 +2075,4 @@ a.cli-coord-val:hover { text-decoration:underline }
   .topbar.adm-vit h1 { font-size:25px }
   .contenu.adm-vit { padding-top:22px; padding-bottom:60px }
   .adm-vit-visible { text-align:left; margin-top:2px }
-  .adm-vit-topbar-actions { flex-wrap:wrap; gap:12px }
-}
+  .adm-vit-topbar-actions { flex-wrap:wrap; gap:12px }}

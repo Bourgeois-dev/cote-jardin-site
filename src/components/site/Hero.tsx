@@ -7,13 +7,13 @@ import { useEffect, useRef } from "react";
  * Structure : 1 image (VITE_HERO_IMAGE), dégradé latéral encre, liseré or.
  */
 export default function Hero({
-  onReserve,
+  onAppeler,
   onHours,
-  reserveLabel = "Réserver une table",
+  appelLabel = "Appeler le restaurant",
 }: {
-  onReserve: () => void;
+  onAppeler: () => void;
   onHours: () => void;
-  reserveLabel?: string;
+  appelLabel?: string;
 }) {
   const name    = import.meta.env.VITE_RESTO_NAME    || "Côté Jardin";
   const tagline = import.meta.env.VITE_RESTO_TAGLINE || "";
@@ -79,8 +79,8 @@ export default function Hero({
           </p>
 
           <div className="cj-hero-cta">
-            <button className="btn btn-accent" onClick={onReserve}>
-              {reserveLabel}
+            <button className="btn btn-accent" onClick={onAppeler}>
+              {appelLabel}
             </button>
             <button className="cj-btn-horaires" onClick={onHours}>
               Voir les horaires
