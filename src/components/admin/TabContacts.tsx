@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTable } from "../../hooks/useTable";
 import type { Lead, SocialLink } from "../../lib/types";
 import Chargement from "./Chargement";
@@ -22,6 +22,11 @@ export default function TabContacts() {
   const [filtre, setFiltre] = useState<string>("toutes");
   const [persoSource, setPersoSource] = useState("");
   const [copie, setCopie] = useState<string | null>(null);
+  // Au-delà de quelques centaines d'inscrits, tout afficher d'un bloc rend la
+  // page interminable et le tableau illisible. On pagine — l'export CSV, lui,
+  // continue de porter sur la totalité du filtre courant.
+  const PAR_PAGE = 50;
+  const [page, setPage] = useState(1);
 
   // Sources distinctes présentes dans les contacts, avec compteurs,
   // triées par volume décroissant → on voit d'un coup d'œil qui collecte le plus.
@@ -32,6 +37,28 @@ export default function TabContacts() {
   }, [rows]);
 
   const visibles = filtre === "toutes" ? rows : rows.filter((l) => (l.source || "newsletter") === filtre);
+
+  const nbPages = Math.max(1, Math.ceil(visibles.length / PAR_PAGE));
+  // La page courante peut devenir hors bornes : changement de filtre, ou
+  // contacts arrivés/partis pendant la consultation. On revient sur la
+  // dernière page existante plutôt que d'afficher un tableau vide.
+  useEffect(() => { if (page > nbPages) setPage(nbPages); }, [page, nbPages]);
+  const pageSure = Math.min(page, nbPages);
+  const debut = (pageSure - 1) * PAR_PAGE;
+  const pageContacts = visibles.slice(debut, debut + PAR_PAGE);
+
+  /** Changer de filtre remet au début : rester page 4 d'une liste qui n'en a
+   *  plus que deux n'a aucun sens. */
+  function choisirFiltre(f: string) { setFiltre(f); setPage(1); }
+
+  /** Numéros affichés : début, fin, et une fenêtre autour de la page courante.
+   *  Les trous sont marqués par une ellipse — au-delà de dix pages, aligner
+   *  tous les numéros repousserait le tableau hors de l'écran. */
+  const numeros: (number | "…")[] = [];
+  for (let n = 1; n <= nbPages; n++) {
+    if (n === 1 || n === nbPages || Math.abs(n - pageSure) <= 1) numeros.push(n);
+    else if (numeros[numeros.length - 1] !== "…") numeros.push("…");
+  }
 
   // Générateur de liens : format standard ?utm_source=…#contact (l'ancre
   // fonctionne). Le site accepte aussi #contact?utm_source=… en lecture.
@@ -100,31 +127,52 @@ export default function TabContacts() {
 
         <div className="bloc">
           <div className="bloc-tete">
-            <div><h2>{visibles.length} contact{visibles.length > 1 ? "s" : ""}</h2></div>
+            <div>
+              <h2>{visibles.length} contact{visibles.length > 1 ? "s" : ""}</h2>
+              {visibles.length > PAR_PAGE && (
+                <div className="desc">Affichage {debut + 1}–{Math.min(debut + PAR_PAGE, visibles.length)} sur {visibles.length}.</div>
+              )}
+            </div>
             <button className="adm-vit-lien accent" onClick={exportCsv}>Exporter en CSV</button>
           </div>
           {sources.length > 1 && (
             <div className="ct-filtres">
-              <button className={`ct-filtre${filtre === "toutes" ? " actif" : ""}`} onClick={() => setFiltre("toutes")}>
+              <button className={`ct-filtre${filtre === "toutes" ? " actif" : ""}`} onClick={() => choisirFiltre("toutes")}>
                 Toutes <span className="ct-filtre-nb">· {rows.length}</span>
               </button>
               {sources.map(([src, nb]) => (
-                <button key={src} className={`ct-filtre${filtre === src ? " actif" : ""}`} onClick={() => setFiltre(src)}>
+                <button key={src} className={`ct-filtre${filtre === src ? " actif" : ""}`} onClick={() => choisirFiltre(src)}>
                   {libelleSource(src)} <span className="ct-filtre-nb">· {nb}</span>
                 </button>
               ))}
             </div>
           )}
-          <table><thead><tr><th>Nom</th><th>Email</th><th>Source</th><th>Date</th></tr></thead><tbody>
-            {visibles.length ? visibles.map((l) => (
+          <table className="tbl-cartes"><thead><tr><th>Nom</th><th>Email</th><th>Source</th><th>Date</th></tr></thead><tbody>
+            {pageContacts.length ? pageContacts.map((l) => (
               <tr key={l.id}>
-                <td>{l.first_name} {l.last_name}</td>
-                <td>{l.email}</td>
-                <td>{libelleSource(l.source)}</td>
-                <td>{new Date(l.created_at).toLocaleDateString("fr-FR")}</td>
+                <td data-label="Nom">{l.first_name} {l.last_name}</td>
+                <td data-label="Email">{l.email}</td>
+                <td data-label="Source">{libelleSource(l.source)}</td>
+                <td data-label="Date">{new Date(l.created_at).toLocaleDateString("fr-FR")}</td>
               </tr>
             )) : <tr><td colSpan={4} className="vide">Aucun contact pour cette source.</td></tr>}
           </tbody></table>
+
+          {nbPages > 1 && (
+            <nav className="adm-pages" aria-label="Pagination des contacts">
+              <button className="adm-page-fleche" disabled={pageSure === 1}
+                onClick={() => setPage(pageSure - 1)} aria-label="Page précédente">←</button>
+              <div className="adm-page-nums">
+                {numeros.map((n, i) => n === "…"
+                  ? <span key={`e${i}`} className="adm-page-ell" aria-hidden="true">…</span>
+                  : <button key={n} className={`adm-page-num${n === pageSure ? " actif" : ""}`}
+                      aria-current={n === pageSure ? "page" : undefined}
+                      onClick={() => setPage(n)}>{n}</button>)}
+              </div>
+              <button className="adm-page-fleche" disabled={pageSure === nbPages}
+                onClick={() => setPage(pageSure + 1)} aria-label="Page suivante">→</button>
+            </nav>
+          )}
         </div>
       </div>
     </>
