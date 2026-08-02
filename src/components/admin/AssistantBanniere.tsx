@@ -100,7 +100,15 @@ export default function AssistantBanniere({ dateEvent, onProposition }: {
             <input id="ia-banniere" className="ia-champ" value={sujet} maxLength={200} disabled={!!busy}
               onChange={(e) => setSujet(e.target.value)}
               placeholder="Ex. soirée beaujolais le 20, menu de Noël, fermeture annuelle en août…"
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); sujet.trim() ? rediger() : proposerIdees(); } }} />
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                // Entrée s'adapte au champ : vide → des idées, rempli → la rédaction.
+                // Deux instructions, pas un ternaire : une expression nue en position
+                // d'instruction est refusée par `no-unused-expressions` (build bloquant).
+                if (sujet.trim()) rediger();
+                else proposerIdees();
+              }} />
             <div className="ia-saisie-pied">
               <span className="ia-compteur">{sujet.length}/200</span>
               <span className="ia-actions">

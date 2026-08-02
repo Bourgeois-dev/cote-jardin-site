@@ -64,16 +64,6 @@ function blocVide(type: "pleine_largeur" | "deux_colonnes"): Bloc {
     : { type, ...dest };
 }
 
-// Segment de ciblage. Il n'en reste qu'un depuis le retrait du CRM : la table
-// `customers` — qui portait le VIP, les compteurs de visites et les tranches
-// d'inactivité — n'existe plus. Toute modification ici doit être répercutée
-// dans newsletter_segment_counts() (base) ET dans send-newsletter/index.ts
-// (envoi réel) : les trois doivent rester cohérents, sinon le décompte annoncé
-// ne correspond pas aux envois.
-const SEGMENTS: Record<string, { label: string; desc: string }> = {
-  optin: { label: "Opt-in newsletter", desc: "Tous les inscrits via le formulaire du site" },
-};
-
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
   draft:     { label: "Brouillon",  cls: "t-annule" },
   scheduled: { label: "Planifiée", cls: "t-attente" },
@@ -582,7 +572,15 @@ function NouveauForm({ onSaved, initial, step, setStep, welcome }: {
   // d'onglet, fermeture navigateur). Nettoyé au démontage (sauvegarde ou sortie).
   useEffect(() => { dirty.set(true); return () => dirty.set(false); }, []); // eslint-disable-line
   const [template] = useState(initial?.template || "blocs");
-  // Un seul ciblage possible depuis le retrait du CRM : tous les inscrits.
+  // Un seul ciblage possible depuis le retrait du CRM : « optin », tous les
+  // inscrits consentants. La table `customers` — qui portait le VIP, les
+  // compteurs de visites et les tranches d'inactivité — n'existe plus, et
+  // l'étape de ciblage a été retirée de l'assistant avec elle.
+  //
+  // MIROIR À TROIS FACES si un segment revient un jour : newsletter_segment_counts()
+  // en base, getRecipients() dans send-newsletter/index.ts, et ici. Les trois
+  // doivent rester cohérents, sinon le décompte affiché ne correspond pas aux
+  // envois réels. La contrainte chk_segment doit être élargie en même temps.
   const [segment] = useState("optin");
   const [counts, setCounts] = useState<Record<string, number> | null>(null);
 
